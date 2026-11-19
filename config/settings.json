@@ -171,6 +171,18 @@
       "main": false
     },
     {
+      "id": "bus_stops",
+      "no": 7,
+      "field": "교통",
+      "name": "인구 1만명당 버스정류장",
+      "unit": "곳",
+      "dir": 1,
+      "digits": 1,
+      "source": "국토교통부 정류장별 정차 노선수",
+      "show": true,
+      "main": false
+    },
+    {
       "id": "taxi",
       "no": 7,
       "field": "교통",

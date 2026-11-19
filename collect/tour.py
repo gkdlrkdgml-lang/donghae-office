@@ -402,6 +402,76 @@ def taxi(C):
             o.pop('list'); o.pop('stand_list')
         else:
             o['list'].sort(key=lambda x: -x[1]); o['stand_list'].sort(key=lambda x: -x[1])
-    if len(out) < 10:
-        raise RuntimeError('택시: 강원 시·군 %d곳만 찾음' % len(out))
+    if not out.get(C['me']):
+        raise RuntimeError('택시: 동해시 자료가 없음(강원 %d곳)' % len(out))
     return out
+
+
+# ---------------------------------------------------------------- 시내버스 정류장(국토부 정류장별 정차 노선수, 시·군별)
+def bus_stops(C):
+    import os
+    from urllib.parse import unquote
+    import json as _json
+    from common import http_get
+    key = unquote(os.environ.get(KEY, '').strip())
+    url = 'https://apis.data.go.kr/1613000/NumberofRoutesServingEachStop/getNumberofRoutesServingEachStop'
+    # 가장 최근 기준일 찾기(매월 1일 → 15일 순)
+    t = now()
+    cands = []
+    for back in range(0, 14):
+        y, m = t.year, t.month - back
+        while m < 1:
+            y, m = y - 1, m + 12
+        cands += ['%04d%02d01' % (y, m), '%04d%02d15' % (y, m)]
+    ymd = None
+    me = next(r for r in C['regions'] if r['name'] == C['me'])
+    for d in cands:
+        if d > t.strftime('%Y%m%d'):
+            continue
+        try:
+            txt = http_get(url, {'serviceKey': key, 'pageNo': '1', 'numOfRows': '1', 'opr_ymd': d, 'ctpv_cd': '51', 'sgg_cd': me['sgg'], 'dataType': 'JSON'}, tries=1)
+            if '"item"' in txt:
+                ymd = d
+                break
+        except Exception:  # noqa: BLE001
+            continue
+    if not ymd:
+        raise RuntimeError('정류장 자료의 기준일을 찾지 못함')
+    out = {}
+    for r in C['regions']:
+        rows, page = [], 1
+        while page <= 10:
+            try:
+                txt = http_get(url, {'serviceKey': key, 'pageNo': str(page), 'numOfRows': '1000', 'opr_ymd': ymd, 'ctpv_cd': '51', 'sgg_cd': r['sgg'], 'dataType': 'JSON'}, tries=2)
+            except Exception as e:  # noqa: BLE001
+                log('정류장 %s 실패: %s' % (r['name'], e))
+                break
+            j = _json.loads(txt)
+            body = ((j.get('Response') or j.get('response') or {}).get('body') or {})
+            items = (body.get('items') or {}).get('item') or []
+            if isinstance(items, dict):
+                items = [items]
+            rows += items
+            if len(items) < 1000:
+                break
+            page += 1
+        stops = {}
+        for it in rows:
+            sid = str(it.get('sttn_id'))
+            o = stops.setdefault(sid, {'n': it.get('sttn_nm'), 'emd': it.get('emd_nm'), 'r': 0})
+            o['r'] = max(o['r'], int(it.get('rte_cnt') or 0))
+        if not stops:
+            continue
+        emd = {}
+        for o in stops.values():
+            e = emd.setdefault(o['emd'] or '기타', [0, 0])
+            e[0] += 1
+            e[1] += o['r']
+        o = {'stops': len(stops), 'avg_routes': round(sum(x['r'] for x in stops.values()) / len(stops), 2), 'max_routes': max(x['r'] for x in stops.values())}
+        if r['name'] == C['me']:
+            o['emd'] = emd
+            o['top'] = sorted(([x['n'], x['emd'], x['r']] for x in stops.values()), key=lambda x: -x[2])[:12]
+        out[r['name']] = o
+    if C['me'] not in out:
+        raise RuntimeError('정류장: 동해시 자료가 없음')
+    return {'ymd': ymd, 'regions': out}

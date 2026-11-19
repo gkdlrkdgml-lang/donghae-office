@@ -1053,13 +1053,14 @@ function startApp() {
   function screenTrafficTabs() {
     var L = D.life || {}, tabs = [];
     if (L.cars) tabs.push(['cars', '자동차 등록']);
+    if (L.bus) tabs.push(['busst', '시내버스']);
+    if (L.taxi) tabs.push(['taxi', '택시']);
     if (L.ev) tabs.push(['ev', '전기차 충전']);
     if (L.tsafe) tabs.push(['safe', '교통안전·도로']);
-    if (L.taxi) tabs.push(['taxi', '택시']);
     if (L.parking) tabs.push(['park', '공영주차장']);
     tabs.push(['bus', '라이브 버스']);
     if (!tabs.some(function (t) { return t[0] === trTab; })) trTab = tabs[0][0];
-    ({ cars: screenCars, ev: screenTraffic, safe: screenTSafe, taxi: screenTaxi, park: screenPark, bus: screenBus })[trTab]();
+    ({ cars: screenCars, ev: screenTraffic, safe: screenTSafe, taxi: screenTaxi, busst: screenBusStat, park: screenPark, bus: screenBus })[trTab]();
     var title = view.querySelector('.title');
     if (title && tabs.length > 1) title.insertBefore(tabsBar(tabs, trTab, function (k) { trTab = k; }), title.children[1] || null);
   }
@@ -1095,6 +1096,34 @@ function startApp() {
     var road = RD[SN] || {};
     panel('도로 · ' + fullName(SN), '종류별 개통 길이(m) · 아래는 시·군별 포장률(%)', [el('div', { style: 'flex:0 0 44%;min-height:0;display:flex;flex-direction:column' }, [donut(kindsR.filter(function (k) { return road[k] && road[k]['개통']; }).map(function (k, i) { return [k + ' ' + fmtK(road[k]['개통']) + 'm', road[k]['개통'], ['#1F6FD1', '#F0A04B', '#5DB88E', '#7A4FC4'][i]]; }), fmt(rd['포장률'], 1) + '%', '포장률')]),
       el('div', { style: 'flex:1;min-height:0;display:flex;flex-direction:column;margin-top:6px' }, [colChart(Object.keys(RD).map(function (n) { return [n, ((RD[n] || {})['합계'] || {})['포장률']]; }).filter(function (x) { return x[1] != null; }), regPick, SN, 1, '%')])]);
+  }
+  function screenBusStat() {
+    var B = (D.life || {}).bus || {}, R = B.regions || {}, SN = R[regName()] ? regName() : D.me, isMe = SN === D.me;
+    var I0 = ind('bus_stops'), I = indFor(I0, SN), m = R[SN] || {}, me = R[D.me] || {}, top = (me.top || [])[0];
+    var ymd = B.ymd || '';
+    lifeTitle(fullName(SN) + ' 시내버스 정류장', (ymd ? ymd.slice(0, 4) + '.' + ymd.slice(4, 6) + '.' + ymd.slice(6) + ' 기준 ' : '') + '국토교통부 정류장별 정차 노선수' + selHint());
+    cardsRow([
+      { l: '버스정류장', ic: 'pin', v: fmt(m.stops, 0), u: '곳', chips: [rankChip(I), I && I.me ? ['1만명당 ' + fmt(I.me.value, 1) + '곳', 'violet'] : null] },
+      { l: '정류장당 노선', sub: '평균', ic: 'cycle', col: '#1F6FD1', bg: '#E4EEFB', v: fmt(m.avg_routes, 1), u: '개', chips: [meChip(me.avg_routes, '개', 1), ['최다 ' + fmt(m.max_routes, 0) + '개', 'navy']] },
+      { l: '노선이 가장 많은 곳', sub: isMe && top ? top[1] : '', ic: 'trend', col: '#C0602B', bg: '#FDEBDD', v: isMe && top ? top[0] : '–', u: '', small: true, chips: [isMe && top ? [top[2] + '개 노선 정차', 'violet'] : null] },
+      { l: '정류장 많은 동', ic: 'house', col: '#2E8B57', bg: '#E2F3E9', v: (function () { var e = me.emd || {}, k = Object.keys(e).sort(function (a, b) { return e[b][0] - e[a][0]; })[0]; return k || '–'; })(), u: '', chips: [(function () { var e = me.emd || {}, k = Object.keys(e).sort(function (a, b) { return e[b][0] - e[a][0]; })[0]; return k ? [e[k][0] + '곳', 'navy'] : null; })()] },
+      { l: '실시간 운행', ic: 'car', col: '#7A4FC4', bg: '#EFE9FB', v: '라이브', u: '', small: true, chips: [['「라이브 버스」 탭에서 확인', '']] }
+    ]);
+    Array.prototype.forEach.call(view.querySelectorAll('.pr1 .pv'), function (pv) { if (pv.textContent.length > 7) pv.style.fontSize = '28px'; });
+    panel('인구 1만명당 버스정류장', '강원 18개 시·군 · 곳 · 누르면 그 지역', I ? rankList(I, regPick, regSel) : el('div', { class: 'empty', text: '자료 없음' }));
+    if (isMe && me.emd) {
+      var E = me.emd;
+      panel('동별 정류장 · ' + D.me + '시', '곳 · 정류장 수(막대) · 법정동 기준', colChart(Object.keys(E).map(function (k) { return [k.replace(/동$/, ''), E[k][0]]; }), null, null, 0, '', false, { plain: true, avgLabel: '동 평균' }));
+      var tb = el('tbody');
+      (me.top || []).forEach(function (x, i) { tb.appendChild(el('tr', {}, [el('td', { text: String(i + 1) }), el('td', { html: '<b>' + x[0] + '</b>' }), el('td', { text: x[1] || '' }), el('td', { class: 'r', html: '<b style="color:#1F6FD1">' + x[2] + '</b>개' })])); });
+      panel('노선이 많이 서는 정류장', '정차 노선 수 상위 12곳', el('table', { class: 'dt big' }, [el('thead', {}, [el('tr', {}, ['', '정류장', '동', '노선'].map(function (h, j) { return el('th', { class: j === 3 ? 'r' : '', text: h }); }))]), tb]));
+    } else {
+      var who = [SN, D.me, '강원 평균'];
+      panel('정류장 비교', who.map(fullName).join(' · '), groupCols(['1만명당 정류장', '정류장당 노선'], cmpSeries(who, function (n) {
+        var per = function (k) { var p = popOf(k); return p && R[k] ? R[k].stops / p * 10000 : null; };
+        return [n === '강원 평균' ? avgOf(R, function (o, k) { return per(k); }) : per(n), n === '강원 평균' ? avgOf(R, function (o) { return o.avg_routes; }) : (R[n] || {}).avg_routes]; }), null, true));
+      panel('버스정류장 수 · 강원 18개 시·군', '곳 · 누르면 그 지역', colChart(Object.keys(R).map(function (n) { return [n, R[n].stops]; }), regPick, SN, 0));
+    }
   }
   function screenTaxi() {
     var X = (D.life || {}).taxi || {}, R = X.regions || {}, SN = R[regName()] ? regName() : D.me, isMe = SN === D.me;
