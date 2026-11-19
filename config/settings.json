@@ -264,7 +264,8 @@
         "region_code_prefix": [
           "51",
           "32"
-        ]
+        ],
+        "meta_url": "https://kosis.kr/openapi/statisticsData.do"
       },
       "mois": {
         "_설명": "행안부 지역별(법정동) 성별 연령별 주민등록 인구수(1세 단위, 공공데이터포털 파일데이터→자동변환 API). 요청 주소는 활용신청 후 채움",

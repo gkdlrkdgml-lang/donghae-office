@@ -154,9 +154,59 @@ def _ratios(groups):
     return total, working / total * 100, elderly / total * 100
 
 
+def kosis_meta(src):
+    """통계표의 분류·항목 코드 목록(getMeta type=ITM)."""
+    key = os.environ.get(src['key_env'], '')
+    if not key:
+        raise RuntimeError('%s 키가 없습니다(GitHub Secrets에 넣어 주세요)' % src['key_env'])
+    p = src['params']
+    text = http_get(src['meta_url'], {'method': 'getMeta', 'type': 'ITM', 'orgId': p['orgId'], 'tblId': p['tblId'],
+                                      'format': 'json', 'jsonVD': 'Y', 'apiKey': key})
+    obj = parse_body(text)
+    if isinstance(obj, dict) and obj.get('err'):
+        raise RuntimeError('KOSIS 메타 오류 %s %s' % (obj.get('err'), obj.get('errMsg', '')))
+    return obj if isinstance(obj, list) else find_items(obj)
+
+
+def kosis_region_codes(meta, C, prefixes):
+    """메타에서 강원 18개 시·군의 분류 코드와 그 분류의 objL 번호를 찾습니다."""
+    by_obj = {}
+    for m in meta:
+        by_obj.setdefault(m.get('OBJ_ID'), []).append(m)
+    for obj_id, items in by_obj.items():
+        codes = {}
+        for m in items:
+            nm = str(m.get('ITM_NM', '')).strip()
+            code = str(m.get('ITM_ID', ''))
+            for r in C['regions']:
+                if nm == r['full'] and (not prefixes or code.startswith(prefixes)):
+                    codes[r['name']] = code
+        if len(codes) >= 15:
+            return obj_id, codes
+    return None, {}
+
+
 def age_kosis(S, C):
     src = S['sources']['age']['kosis']
-    rows = _call(src, {}, 'age_kosis')
+    meta = kosis_meta(src)
+    obj_id, codes = kosis_region_codes(meta, C, tuple(src.get('region_code_prefix', [])))
+    if not codes:
+        raise RuntimeError('KOSIS 메타에서 강원 시·군 코드를 찾지 못함')
+    # 분류 순서(objL1, objL2 …)는 메타에 나온 OBJ_ID 순서를 따릅니다.
+    order = []
+    for m in meta:
+        oid = m.get('OBJ_ID')
+        if oid and oid != 'ITEM' and oid not in order:
+            order.append(oid)
+    extra = {}
+    for i, oid in enumerate(order[:8]):
+        extra['objL%d' % (i + 1)] = '+'.join(codes.values()) + '+' if oid == obj_id else 'ALL'
+    # 항목은 '총인구' 하나만
+    itm = [m for m in meta if m.get('OBJ_ID') == 'ITEM']
+    tot = [m for m in itm if '총' in str(m.get('ITM_NM', '')) or str(m.get('ITM_NM', '')).strip() in ('계', '인구수')]
+    if tot:
+        extra['itmId'] = str(tot[0].get('ITM_ID')) + '+'
+    rows = _call(src, extra, 'age_kosis')
     prefixes = tuple(src.get('region_code_prefix', []))
     # 총인구 항목만 씁니다(남·여 항목 제외).
     items = {}

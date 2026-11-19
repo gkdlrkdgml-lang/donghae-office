@@ -68,7 +68,24 @@ def main():
     say('점검 시각 %s · 기준월 %s' % (now().strftime('%Y-%m-%d %H:%M'), ym))
     probe('population', S['sources']['population'], {'stdgCd': C['sido']['stdg'], 'srchFrYm': ym, 'srchToYm': ym})
     probe('dong_population', S['sources']['dong_population'], {'stdgCd': me['stdg'], 'srchFrYm': ym, 'srchToYm': ym})
-    probe('age_kosis', S['sources']['age']['kosis'], {})
+    say('=' * 70)
+    say('[age_kosis 메타]')
+    try:
+        import sources
+        src = S['sources']['age']['kosis']
+        meta = sources.kosis_meta(src)
+        objs = {}
+        for m in meta:
+            objs.setdefault((m.get('OBJ_ID'), m.get('OBJ_NM')), []).append(m)
+        for (oid, onm), ms in objs.items():
+            say('  분류 %s %s · %d개 · 예: %s' % (oid, onm, len(ms), ', '.join('%s=%s' % (x.get('ITM_ID'), x.get('ITM_NM')) for x in ms[:6])))
+        say('  첫 메타 줄: ' + json.dumps(meta[0], ensure_ascii=False)[:400] if meta else '  메타 없음')
+        oid, codes = sources.kosis_region_codes(meta, C, tuple(src.get('region_code_prefix', [])))
+        say('  강원 시·군 코드(%s): %s' % (oid, codes))
+        ages, basis = sources.age_kosis(S, C)
+        say('  연령 자료: %d개 시·군, 기준 %s, 동해 칸: %s' % (len(ages), basis, sorted(ages.get('동해', []))[:30]))
+    except Exception as e:  # noqa: BLE001
+        say('  → 실패: %s' % e)
     probe('age_mois', S['sources']['age']['mois'], {})
     probe('finance', S['sources']['finance'], {})
     probe('finance_final', S['sources']['finance_final'], {})

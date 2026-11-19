@@ -7,6 +7,7 @@ import datetime as dt
 import json
 import os
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
@@ -85,6 +86,14 @@ def http_get(url, params, tries=3, timeout=30):
                 except UnicodeDecodeError:
                     pass
             return body.decode('utf-8', 'replace')
+        except urllib.error.HTTPError as e:
+            try:
+                body = e.read()[:300].decode('utf-8', 'replace').replace('\n', ' ')
+            except Exception:  # noqa: BLE001
+                body = ''
+            last = '%s %s' % (e, body)
+            if e.code in (401, 403, 404):
+                break  # 권한·주소 문제는 다시 해도 같음
         except Exception as e:  # noqa: BLE001 - 어떤 오류든 다시 시도
             last = e
             time.sleep([5, 15, 30][min(i, 2)])
