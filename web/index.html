@@ -38,10 +38,18 @@
   .sh { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
   .sh small { font-size: 13px; color: var(--sub); }
   .kpis { grid-column: 1 / -1; display: grid; gap: 12px; }
-  .kpi { background: var(--panel); border: 1px solid var(--line); box-shadow: 0 1px 2px rgba(20,30,50,.05); border-radius: 12px; padding: 14px 18px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-  .kpi .l { font-size: 14px; color: var(--sub); }
+.kpi { background: var(--panel); border: 1px solid var(--line); box-shadow: 0 2px 6px rgba(20,30,50,.06); border-radius: 12px; padding: 14px 18px 14px 22px; display: flex; flex-direction: column; gap: 6px; min-width: 0; position: relative; overflow: hidden; }
+  .kpi::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; background: var(--blue); }
+  .kpi.t-good::before { background: #2E9C6A; } .kpi.t-bad::before { background: #D9822B; } .kpi.t-mute::before { background: #B3BDCB; }
+  .kpi .l { font-size: 16px; font-weight: 700; color: var(--ink); }
+  .kpi .l small { font-size: 13px; font-weight: 500; color: var(--sub); margin-left: 6px; }
   .kpi .v { font-size: 34px; font-weight: 700; color: var(--navy); }
-  .kpi .v small { font-size: 16px; color: var(--sub); font-weight: 400; margin-left: 4px; }
+  .kpis.big .kpi .v { font-size: 44px; line-height: 1.05; letter-spacing: -0.5px; }
+  .kpi.t-bad .v.tint { color: #B4531B; } .kpi.t-good .v.tint { color: #1B7A4B; }
+  .kpi .v small { font-size: 18px; color: var(--sub); font-weight: 500; margin-left: 4px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { font-size: 13.5px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #EEF2F7; color: #3D4B5E; white-space: nowrap; }
+  .chip.bad { background: #FDEBDD; color: #A4470F; } .chip.good { background: #E2F3E9; color: #1B7A4B; } .chip.navy { background: #E4EEFB; color: #1B3A6B; }
   .kpi .n { font-size: 13.5px; color: var(--sub); }
   .rows { display: flex; flex-direction: column; justify-content: space-between; flex: 1 1 auto; min-height: 0; }
   .row { display: grid; grid-template-columns: 28px 56px minmax(0, 1fr) 72px; gap: 10px; align-items: center; font-size: 16px; padding: 2px 6px; border-radius: 6px; cursor: pointer; }
@@ -250,13 +258,24 @@ function startApp() {
       el('span', { text: '행정안전부 주민등록 인구 · ' + ymLabel(A.ym) + ' 기준' })
     ]));
     var k = el('div', { class: 'kpis', style: 'grid-template-columns:repeat(5,minmax(0,1fr))' });
-    function kpi(l, v, u, n) { k.appendChild(el('div', { class: 'kpi' }, [el('div', { class: 'l', text: l }), el('div', { class: 'v' }, [v, el('small', { text: u })]), el('div', { class: 'n', text: n })])); }
-    kpi('총인구', fmt(me.total, 0), '명', dm != null ? '전월 대비 ' + sgn(dm) + '명 · 전년 대비 ' + sgn(diff) + '명' : (me.prev ? '전년 같은 달 ' + fmt(me.prev, 0) + '명' : ''));
-    kpi('인구 증감률', pc && pc.me ? fmt(pc.me.value, 2) : '–', '%', pc && pc.me ? '도내 ' + pc.me.rank + '위 / ' + pc.n : '');
-    kpi('세대수', fmt(me.hh, 0), '세대', me.hh ? (me.prev_m_hh ? '전월 대비 ' + sgn(me.hh - me.prev_m_hh) + '세대 · ' : '') + '세대당 ' + fmt(me.total / me.hh, 2) + '명' : '');
+    k.classList.add('big');
+    function kpi(l, sub, v, u, tone, chips, tint) {
+      var lab = el('div', { class: 'l' }, [l]); if (sub) lab.appendChild(el('small', { text: sub }));
+      k.appendChild(el('div', { class: 'kpi t-' + tone }, [lab, el('div', { class: 'v' + (tint ? ' tint' : '') }, [v, el('small', { text: u })]),
+        el('div', { class: 'chips' }, chips.filter(Boolean).map(function (c) { return el('span', { class: 'chip ' + (c[1] || ''), text: c[0] }); }))]));
+    }
+    function up(v) { return v > 0 ? 'good' : v < 0 ? 'bad' : ''; }
+    function jt(j) { return j === 'strong' ? 'good' : j === 'weak' ? 'bad' : j === 'excluded' ? 'mute' : 'navy'; }
+    function jchip(j) { return j === 'strong' ? 'good' : j === 'weak' ? 'bad' : ''; }
     var ac = A.age_counts || {};
-    kpi('생산연령인구 비율 (만 15~64세)', wa && wa.me ? fmt(wa.me.value, 1) : '–', '%', wa && wa.me ? (ac.working ? fmt(ac.working, 0) + '명 · ' : '') + '도내 ' + wa.me.rank + '위 / ' + wa.n : '연령 자료 연결 전');
-    kpi('고령인구 비율 (만 65세 이상)', el65 && el65.me ? fmt(el65.me.value, 1) : '–', '%', el65 && el65.me ? (ac.elderly ? fmt(ac.elderly, 0) + '명 · ' : '') + '도내 ' + el65.me.rank + '위 · 판정 제외' : '연령 자료 연결 전');
+    kpi('총인구', '', fmt(me.total, 0), '명', 'navy', [dm != null ? ['전월 ' + sgn(dm) + '명', up(dm)] : null, diff != null ? ['전년 ' + sgn(diff) + '명', up(diff)] : null]);
+    kpi('인구 증감률', '전년 같은 달 대비', pc && pc.me ? fmt(pc.me.value, 2) : '–', '%', pc && pc.me ? jt(pc.me.judge) : 'mute',
+      pc && pc.me ? [['도내 ' + pc.me.rank + '위 / ' + pc.n, jchip(pc.me.judge)], pc.me.judge === 'weak' ? ['하위 25%', 'bad'] : pc.me.judge === 'strong' ? ['상위 25%', 'good'] : null] : [], true);
+    kpi('세대수', '', fmt(me.hh, 0), '세대', 'navy', [me.prev_m_hh ? ['전월 ' + sgn(me.hh - me.prev_m_hh) + '세대', up(me.hh - me.prev_m_hh)] : null, me.hh ? ['세대당 ' + fmt(me.total / me.hh, 2) + '명', ''] : null]);
+    kpi('생산연령인구', '만 15~64세', wa && wa.me ? fmt(wa.me.value, 1) : '–', '%', wa && wa.me ? jt(wa.me.judge) : 'mute',
+      wa && wa.me ? [ac.working ? [fmt(ac.working, 0) + '명', 'navy'] : null, ['도내 ' + wa.me.rank + '위 / ' + wa.n, jchip(wa.me.judge)]] : [['연령 자료 연결 전', '']], true);
+    kpi('고령인구', '만 65세 이상', el65 && el65.me ? fmt(el65.me.value, 1) : '–', '%', 'mute',
+      el65 && el65.me ? [ac.elderly ? [fmt(ac.elderly, 0) + '명', 'navy'] : null, ['도내 ' + el65.me.rank + '위 · 판정 제외', '']] : [['연령 자료 연결 전', '']]);
     view.appendChild(k);
 
     var s1 = el('section', {}, [el('div', { class: 'sh' }, [el('h2', { text: '인구 증감률 · 강원 18개 시·군' }), el('small', { text: '전년 같은 달 대비 %' })])]);
