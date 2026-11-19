@@ -1000,22 +1000,29 @@ function startApp() {
   }
 
   // ---------- 보건(의료) ----------
+  var hSel = null;
   function screenWelfare() {
-    var H = (D.life || {}).hospitals || {}, R = H.regions || {}, m = R[D.me] || { kinds: {} }, I = ind('medical');
-    lifeTitle(D.me + '시 보건·의료 현황', (H.at || '') + ' 심평원 병원정보 기준');
+    var H = (D.life || {}).hospitals || {}, R = H.regions || {}, I = ind('medical');
+    hSel = hSel && R[hSel] ? hSel : D.me;
+    var SN = hSel, isMe = SN === D.me, m = R[SN] || { kinds: {} }, full = isMe ? D.me + '시' : SN;
+    var pick = function (n) { hSel = hSel === n || n === D.me ? null : n; render(); };
+    var mine = I && I.ranking.filter(function (r) { return r.name === SN; })[0];
+    if (I && mine) I = { name: I.name, n: I.n, me: mine, ranking: I.ranking, digits: I.digits };
+    lifeTitle(full + ' 보건·의료 현황', (isMe ? '왼쪽 시·군을 누르면 그 지역으로 바뀝니다 · ' : '다시 누르면 동해시로 · ') + (H.at || '') + ' 심평원 병원정보 기준');
     var k = m.kinds || {}, sum = function (keys) { return keys.reduce(function (t, x) { return t + (k[x] || 0); }, 0); };
     var big = sum(['상급종합', '종합병원', '병원', '요양병원', '정신병원']), clinic = sum(['의원']), dent = sum(['치과병원', '치과의원']), orient = sum(['한방병원', '한의원']);
     cardsRow([
       { l: '의료기관', sub: '약국 제외', ic: 'hospital', v: fmt(m.total, 0), u: '곳', chips: [rankChip(I), I && I.me ? ['1만명당 ' + fmt(I.me.value, 1) + '곳', 'violet'] : null] },
-      { l: '의사', ic: 'doctor', col: '#1F6FD1', bg: '#E4EEFB', v: fmt(m.doctors, 0), u: '명', chips: [D.admin && D.admin.regions[D.me] ? ['1만명당 ' + fmt(m.doctors / D.admin.regions[D.me].total * 10000, 1) + '명', 'navy'] : null] },
+      { l: '의사', ic: 'doctor', col: '#1F6FD1', bg: '#E4EEFB', v: fmt(m.doctors, 0), u: '명', chips: [D.admin && D.admin.regions[SN] ? ['1만명당 ' + fmt(m.doctors / D.admin.regions[SN].total * 10000, 1) + '명', 'navy'] : null] },
       { l: '병원급 이상', sub: '종합·병원·요양', ic: 'hospital', col: '#2E8B57', bg: '#E2F3E9', v: fmt(big, 0), u: '곳' },
       { l: '의원', ic: 'clinic', col: '#7A4FC4', bg: '#EFE9FB', v: fmt(clinic, 0), u: '곳' },
       { l: '치과·한방', ic: 'clinic', col: '#C0602B', bg: '#FDEBDD', v: fmt(dent + orient, 0), u: '곳', chips: [['치과 ' + dent, 'violet'], ['한방 ' + orient, 'violet']] }
     ]);
-    panel('인구 1만명당 의료기관', '강원 18개 시·군 · 곳', I ? rankList(I) : el('div', { class: 'empty', text: '자료 없음' }));
+    panel('인구 1만명당 의료기관', '강원 18개 시·군 · 곳 · 누르면 그 지역', I ? rankList(I, pick, isMe ? null : SN) : el('div', { class: 'empty', text: '자료 없음' }));
     var kinds = Object.keys(k).map(function (x) { return [x, k[x]]; }).sort(function (a, b) { return b[1] - a[1]; });
     var pal = ['#1F6FD1', '#2E8B57', '#E8A867', '#7A4FC4', '#D6457A', '#8FB2E0', '#5DB88E', '#B8C4D4', '#C0602B', '#556274'];
-    panel('종별 구성 · ' + D.me + '시', '곳', donut(kinds.map(function (x, i) { return [x[0] + ' ' + x[1], x[1], pal[i % pal.length]]; }), fmt(m.total, 0) + '곳', '의료기관'));
+    panel('종별 구성 · ' + full, '곳', donut(kinds.map(function (x, i) { return [x[0] + ' ' + x[1], x[1], pal[i % pal.length]]; }), fmt(m.total, 0) + '곳', '의료기관'));
+    if (!isMe) { panel('의료기관 수 · 강원 18개 시·군', '곳', colChart(Object.keys(R).map(function (n) { return [n, R[n].total]; }), pick, SN, 0)); return; }
     var tb = el('tbody');
     (H.mine || []).slice(0, 14).forEach(function (x) { tb.appendChild(el('tr', {}, [el('td', { text: x.name }), el('td', { text: x.kind }), el('td', { text: x.dong || '' }), el('td', { class: 'r', text: fmt(x.doctors, 0) })])); });
     panel('의사 수가 많은 기관', '동해시 · 명', el('table', { class: 'dt big' }, [el('thead', {}, [el('tr', {}, ['기관', '종별', '동', '의사'].map(function (h, j) { return el('th', { class: j === 3 ? 'r' : '', text: h }); }))]), tb]));

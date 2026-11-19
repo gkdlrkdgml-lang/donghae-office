@@ -587,7 +587,7 @@ def vehicles(S, C):
     for r in rows:
         name = match_region(str(r.get('C2_NM', '')).strip(), C['regions'])
         kind = CAR_KIND.get(str(r.get('C3_NM', '')).strip())
-        use = CAR_USE.get(str(r.get('ITM_ID', '')))
+        use = CAR_USE.get(str(r.get('ITM_ID', ''))[-2:])
         v = to_num(r.get('DT'))
         if not name or not kind or not use or v is None:
             continue
@@ -607,7 +607,7 @@ def vehicles(S, C):
            'year': {k: v.get('total', {}).get('all') for k, v in by.get(ya, {}).items()}}
     if me_code:
         try:
-            tr = _kosis_rows(CAR_TBL, {'orgId': '116', 'objL1': CAR_GW + '+', 'objL2': me_code + '+', 'objL3': 'ALL', 'itmId': 'T4+', 'newEstPrdCnt': '37'}, 'cars_trend')
+            tr = _kosis_rows(CAR_TBL, {'orgId': '116', 'objL1': CAR_GW + '+', 'objL2': me_code + '+', 'objL3': 'ALL', 'itmId': '13103873443T4+', 'newEstPrdCnt': '37'}, 'cars_trend')
             t = {}
             for r in tr:
                 kind = CAR_KIND.get(str(r.get('C3_NM', '')).strip())
