@@ -1066,7 +1066,7 @@ function startApp() {
     view.style.gridTemplateColumns = 'minmax(0, 1fr)';
     view.style.gridTemplateRows = '44px minmax(0, 1fr)';
     view.appendChild(el('div', { class: 'title' }, [el('h1', { text: D.me + '시 라이브 버스' }), el('span', { class: 'basis', text: '동해 LIVE BUS (livebus.dhits.kr) · 실시간 위치' })]));
-    var fr = el('iframe', { src: 'https://livebus.dhits.kr/', title: '동해 라이브 버스', style: 'flex:1;width:100%;border:0;border-radius:10px;background:#EEF3F8', allow: 'geolocation' });
+    var fr = el('iframe', { src: 'https://livebus.dhits.kr/', title: '동해 라이브 버스', style: 'flex:1;width:100%;border:0;border-radius:10px;background:#EEF3F8', allow: '' });
     view.appendChild(el('section', { class: 'nozoom', style: 'grid-row:2;grid-column:1;display:flex;flex-direction:column;padding:8px' }, [fr]));
   }
   function screenTSafe() {
