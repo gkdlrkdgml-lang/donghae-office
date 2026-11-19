@@ -117,15 +117,14 @@ def main():
             say('[주기] %s: %s' % (tb, t[:300]))
         except Exception as e:  # noqa: BLE001
             say('[메타] %s 실패 %s' % (tb, e))
-    for q in ():'시군구별 이동자수', '시군구 전입 전출', '시군구 월별 출생', '시군구 월별 사망', '1인 세대', '세대원수별 세대수'):
+    for q in ():
         try:
             t = http_get('https://kosis.kr/openapi/statisticsSearch.do', {'method': 'getList', 'apiKey': kk, 'searchNm': q, 'format': 'json', 'jsonVD': 'Y', 'resultCount': '15'})
             j = json.loads(t)
             say('[검색] %s → %s' % (q, ' | '.join('%s/%s %s(%s~%s %s)' % (x.get('ORG_ID'), x.get('TBL_ID'), x.get('TBL_NM'), x.get('STRT_PRD_DE'), x.get('END_PRD_DE'), x.get('PRD_SE', '')) for x in (j if isinstance(j, list) else []))[:1800] if isinstance(j, list) else str(j)[:300]))
         except Exception as e:  # noqa: BLE001
             say('[검색] %s 실패 %s' % (q, e))
-    for u in ('https://www.lofin365.go.kr/', 'https://lofin365.go.kr/lf/hub/DCFCE?Type=json&pIndex=1&pSize=1',
-              'http://www.lofin365.go.kr/lf/hub/DCFCE?Type=json&pIndex=1&pSize=1', 'https://www.google.com/'):
+    for u in ():
         try:
             with urllib.request.urlopen(u, timeout=25) as r:
                 say('  연결 %s → %s' % (u, r.status))
