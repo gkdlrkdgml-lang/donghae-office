@@ -134,6 +134,19 @@
       "show": true
     },
     {
+      "id": "cars",
+      "no": 7,
+      "field": "교통",
+      "name": "인구 1천명당 자동차",
+      "unit": "대",
+      "dir": 0,
+      "digits": 0,
+      "source": "국토교통부 자동차 등록(KOSIS)",
+      "show": true,
+      "main": false,
+      "note": "높고 낮음이 곧 좋고 나쁨이 아니어서 판정에서 제외"
+    },
+    {
       "id": "pm25",
       "no": 8,
       "field": "환경",

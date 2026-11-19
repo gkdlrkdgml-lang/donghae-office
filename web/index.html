@@ -1022,6 +1022,39 @@ function startApp() {
   }
 
   // ---------- 교통 ----------
+  var trTab = 'cars';
+  function screenTrafficTabs() {
+    var L = D.life || {}, tabs = [];
+    if (L.cars) tabs.push(['cars', '자동차 등록']);
+    if (L.ev) tabs.push(['ev', '전기차 충전']);
+    if (!tabs.some(function (t) { return t[0] === trTab; })) trTab = tabs[0] ? tabs[0][0] : 'ev';
+    (trTab === 'cars' ? screenCars : screenTraffic)();
+    var title = view.querySelector('.title');
+    if (title && tabs.length > 1) title.insertBefore(tabsBar(tabs, trTab, function (k) { trTab = k; }), title.children[1] || null);
+  }
+  function screenCars() {
+    var V = (D.life || {}).cars || {}, R = V.regions || {}, m = R[D.me] || {}, I = ind('cars');
+    function g(k, u) { return ((m[k] || {})[u || 'all']) || 0; }
+    var tot = g('total'), pm = V.prev[D.me], py = V.year[D.me];
+    function dchip(v, lab) { if (v == null) return null; var d = tot - v; return [lab + ' ' + (d >= 0 ? '+' : '') + fmt(d, 0) + '대', d >= 0 ? 'good' : 'bad']; }
+    lifeTitle(D.me + '시 자동차 등록', ymLabel(V.ym) + ' 국토교통부 자동차 등록 현황(KOSIS)');
+    cardsRow([
+      { l: '자동차 등록', ic: 'car', v: fmt(tot, 0), u: '대', chips: [dchip(pm, '지난달'), dchip(py, '1년 새')] },
+      { l: '승용차', ic: 'car', col: '#1F6FD1', bg: '#E4EEFB', v: fmt(g('passenger'), 0), u: '대', chips: [['전체의 ' + fmt(g('passenger') / tot * 100, 1) + '%', 'navy']] },
+      { l: '화물차', ic: 'suitcase', col: '#C0602B', bg: '#FDEBDD', v: fmt(g('truck'), 0), u: '대', chips: [['전체의 ' + fmt(g('truck') / tot * 100, 1) + '%', 'violet']] },
+      { l: '승합·특수', ic: 'car', col: '#2E8B57', bg: '#E2F3E9', v: fmt(g('van') + g('special'), 0), u: '대', chips: [['승합 ' + fmt(g('van'), 0), ''], ['특수 ' + fmt(g('special'), 0), '']] },
+      { l: '인구 1천명당', ic: 'people', col: '#7A4FC4', bg: '#EFE9FB', v: I && I.me ? fmt(I.me.value, 0) : '–', u: '대', chips: [rankChip(I)] }
+    ]);
+    panel('인구 1천명당 자동차', '강원 18개 시·군 · 대', I ? rankList(I) : el('div', { class: 'empty', text: '자료 없음' }));
+    var T = V.trend || [];
+    if (T.length > 1) {
+      panel('자동차 등록 추이 · ' + D.me + '시', T[0][0].slice(0, 4) + '년 ' + Number(T[0][0].slice(4)) + '월 ~ ' + ymLabel(T[T.length - 1][0]) + ' · 대',
+        lineChart(T.map(function (x) { return x[0].slice(2, 4) + '.' + x[0].slice(4); }), [
+          { name: '', color: '#1F6FD1', values: T.map(function (x) { return x[1].total; }), area: true, width: 3 }], { fit: true, step: 6 }));
+    } else panel('도내 등록대수', '대', colChart(Object.keys(R).map(function (n) { return [n, (R[n].total || {}).all || 0]; }), null, null, 0));
+    panel('차종·용도 구성 · ' + D.me + '시', '대', [donut([['승용 ' + fmt(g('passenger'), 0), g('passenger'), '#1F6FD1'], ['화물 ' + fmt(g('truck'), 0), g('truck'), '#E8873F'], ['승합 ' + fmt(g('van'), 0), g('van'), '#5DB88E'], ['특수 ' + fmt(g('special'), 0), g('special'), '#7A4FC4']], fmt(tot, 0) + '대', '자동차'),
+      el('div', { class: 'chips', style: 'justify-content:center;margin-top:8px' }, [el('span', { class: 'chip navy', text: '자가용 ' + fmt(g('total', 'own'), 0) }), el('span', { class: 'chip violet', text: '영업용 ' + fmt(g('total', 'biz'), 0) }), el('span', { class: 'chip', text: '관용 ' + fmt(g('total', 'gov'), 0) })])]);
+  }
   function screenTraffic() {
     var E = (D.life || {}).ev || {}, R = E.regions || {}, m = R[D.me] || {}, I = ind('ev');
     lifeTitle(D.me + '시 전기차 충전 인프라', (E.at || '') + ' 환경공단 충전소 정보 기준');
@@ -1120,11 +1153,11 @@ function startApp() {
     function draw() {
       var W = box.clientWidth, H = box.clientHeight; if (!W || !H) return;
       box.textContent = '';
-      var pL = 58, pR = 12, pT = 26, pB = 26, n = labels.length, all = [];
+      var pL = 62, pR = 26, pT = 26, pB = 26, n = labels.length, all = [];
       lines.forEach(function (l) { l.values.forEach(function (v) { if (v != null) all.push(v); }); });
-      var lo = opts.fit ? Math.floor(Math.min.apply(null, all) / 2) * 2 - 2 : 0;
+      var mn0 = Math.min.apply(null, all), mx0 = Math.max.apply(null, all), pad = Math.max(2, (mx0 - mn0) * 0.15), lo = opts.fit ? Math.floor(mn0 - pad) : 0;
       var mx = Math.max.apply(null, all.concat([lo + 1])), span = mx - lo, mag = Math.pow(10, Math.floor(Math.log10(span))), top = lo + Math.ceil(span / mag * 2) / 2 * mag;
-      if (opts.fit) top = lo + Math.ceil((mx + 2 - lo) / 4) * 4;
+      if (opts.fit) top = lo + Math.ceil((mx0 + pad - lo) / 4) * 4;
       function X(i) { return pL + (n <= 1 ? 0 : i / (n - 1)) * (W - pL - pR); }
       function Y(v) { return pT + (1 - (v - lo) / (top - lo)) * (H - pT - pB); }
       var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
@@ -1385,7 +1418,7 @@ function startApp() {
   }
 
   // ---------- 그리기 ----------
-  var SCREENS = { main: screenMain, admin: screenAdminTabs, welfare: screenWelfare, traffic: screenTraffic, env: screenEnv, tour: screenTourTabs, finance: screenFinance, frame: screenFrame };
+  var SCREENS = { main: screenMain, admin: screenAdminTabs, welfare: screenWelfare, traffic: screenTrafficTabs, env: screenEnv, tour: screenTourTabs, finance: screenFinance, frame: screenFrame };
   function render() {
     view.textContent = '';
     view.className = '';

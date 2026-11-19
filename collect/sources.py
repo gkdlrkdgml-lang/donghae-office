@@ -563,3 +563,48 @@ def finance(S, C):
             log('재정 API 대신 수기 입력값을 씁니다(%s)' % e)
             return {'values': manual, 'basis': basis or '수기 입력', 'from': 'manual', 'by_year': {}}
         raise
+
+
+# ---------------------------------------------------------------- 자동차 등록(국토교통부, KOSIS 116/DT_MLTM_5498, 월)
+CAR_TBL, CAR_GW = 'DT_MLTM_5498', '13102873443A.0011'
+CAR_KIND = {'승용': 'passenger', '승합': 'van', '화물': 'truck', '특수': 'special', '총계': 'total'}
+CAR_USE = {'T1': 'gov', 'T2': 'own', 'T3': 'biz', 'T4': 'all'}
+
+
+def vehicles(S, C):
+    """강원 시·군 자동차 등록대수: 최근 13개월(차종×용도) + 동해 37개월 총계 추이."""
+    rows = _kosis_rows(CAR_TBL, {'orgId': '116', 'objL1': CAR_GW + '+', 'objL2': 'ALL', 'objL3': 'ALL', 'itmId': 'ALL', 'newEstPrdCnt': '13'}, 'cars')
+    by = {}
+    me_code = None
+    for r in rows:
+        name = match_region(str(r.get('C2_NM', '')).strip(), C['regions'])
+        kind = CAR_KIND.get(str(r.get('C3_NM', '')).strip())
+        use = CAR_USE.get(str(r.get('ITM_ID', '')))
+        v = to_num(r.get('DT'))
+        if not name or not kind or not use or v is None:
+            continue
+        if name == C['me']:
+            me_code = r.get('C2')
+        ym = str(r.get('PRD_DE'))
+        by.setdefault(ym, {}).setdefault(name, {}).setdefault(kind, {})[use] = v
+    if not by:
+        raise RuntimeError('자동차 등록 응답에서 강원 시·군을 찾지 못함')
+    yms = sorted(by)
+    ym = yms[-1]
+    if len(by[ym]) < 15:
+        raise RuntimeError('자동차 등록 %s: 시·군 %d곳만 있음' % (ym, len(by[ym])))
+    res = {'ym': ym, 'prev_ym': yms[-2] if len(yms) > 1 else None, 'year_ym': yms[0] if len(yms) >= 13 else None,
+           'regions': by[ym], 'prev': {k: v.get('total', {}).get('all') for k, v in by.get(yms[-2], {}).items()} if len(yms) > 1 else {},
+           'year': {k: v.get('total', {}).get('all') for k, v in by.get(yms[0], {}).items()} if len(yms) >= 13 else {}}
+    if me_code:
+        try:
+            tr = _kosis_rows(CAR_TBL, {'orgId': '116', 'objL1': CAR_GW + '+', 'objL2': me_code + '+', 'objL3': 'ALL', 'itmId': 'T4+', 'newEstPrdCnt': '37'}, 'cars_trend')
+            t = {}
+            for r in tr:
+                kind = CAR_KIND.get(str(r.get('C3_NM', '')).strip())
+                if kind:
+                    t.setdefault(str(r.get('PRD_DE')), {})[kind] = to_num(r.get('DT'))
+            res['trend'] = [[k, t[k]] for k in sorted(t)]
+        except Exception as e:  # noqa: BLE001
+            log('자동차 추이 실패: %s' % e)
+    return res

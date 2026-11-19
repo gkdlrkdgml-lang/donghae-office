@@ -167,6 +167,14 @@ def collect(state, S, C):
         ok(state, 'visitors', '%s까지' % last)
     except Exception as e:  # noqa: BLE001
         fail(state, 'visitors', e)
+    try:
+        L['cars'] = sources.vehicles(S, C)
+        ok(state, 'cars', L['cars']['ym'])
+    except Exception as e:  # noqa: BLE001
+        fail(state, 'cars', e)
+    if L.get('cars'):
+        set_ind(state, 'cars', per({k: v.get('total', {}).get('all') for k, v in L['cars']['regions'].items() if v.get('total', {}).get('all')}, 1000),
+                '%s년 %d월 자동차 등록대수' % (L['cars']['ym'][:4], int(L['cars']['ym'][4:])))
     # 관광지 집중률·단기예보(매번), 관광지·축제 목록(주 1회)
     for key, fn in (('cnctr', tour.concentration), ('weather', tour.weather)):
         try:
@@ -289,7 +297,7 @@ def build(state, S, C):
     # 분야 화면이 비면 메뉴에서 숨김
     has_fin = any(i['id'] == 'fin_indep' for i in out['indicators'])
     L = out.get('life') or {}
-    need = {'welfare': L.get('hospitals'), 'traffic': L.get('ev'), 'env': L.get('air'), 'tour': L.get('visit_months')}
+    need = {'welfare': L.get('hospitals'), 'traffic': L.get('ev') or L.get('cars'), 'env': L.get('air'), 'tour': L.get('visit_months')}
     out['menu'] = [m for m in out['menu'] if not (m['id'] == 'finance' and not has_fin) and not (m['id'] in ('admin', 'compare') and not out['admin'])
                    and not (m['id'] in need and not need[m['id']])]
     return out
