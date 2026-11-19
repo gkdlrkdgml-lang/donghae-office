@@ -102,7 +102,22 @@ def main():
     probe('age_mois', S['sources']['age']['mois'], {})
     import urllib.request
     kk = os.environ.get('KOSIS_KEY', '')
-    for q in ('시군구별 이동자수', '시군구 전입 전출', '시군구 월별 출생', '시군구 월별 사망', '1인 세대', '세대원수별 세대수'):
+    import sources as _s
+    for tb in ('DT_1B26003_A02', 'DT_1B26001_A01'):
+        try:
+            src = {'key_env': 'KOSIS_KEY', 'meta_url': 'https://kosis.kr/openapi/statisticsData.do', 'params': {'orgId': '101', 'tblId': tb}}
+            meta = _s.kosis_meta(src)
+            objs = {}
+            for m in meta:
+                objs.setdefault(m.get('OBJ_ID'), []).append(m)
+            say('[메타] %s: %s' % (tb, ' / '.join('%s(%s개, %s): %s' % (k, len(v), v[0].get('OBJ_NM'), ', '.join('%s=%s' % (x.get('ITM_ID'), x.get('ITM_NM')) for x in v[:6])) for k, v in objs.items())))
+            dh = [x for x in meta if '동해' in str(x.get('ITM_NM'))]
+            say('[메타] %s 동해 코드: %s' % (tb, ', '.join('%s:%s=%s' % (x.get('OBJ_ID'), x.get('ITM_ID'), x.get('ITM_NM')) for x in dh)))
+            t = http_get('https://kosis.kr/openapi/statisticsData.do', {'method': 'getMeta', 'type': 'PRD', 'orgId': '101', 'tblId': tb, 'format': 'json', 'jsonVD': 'Y', 'apiKey': kk})
+            say('[주기] %s: %s' % (tb, t[:300]))
+        except Exception as e:  # noqa: BLE001
+            say('[메타] %s 실패 %s' % (tb, e))
+    for q in ():'시군구별 이동자수', '시군구 전입 전출', '시군구 월별 출생', '시군구 월별 사망', '1인 세대', '세대원수별 세대수'):
         try:
             t = http_get('https://kosis.kr/openapi/statisticsSearch.do', {'method': 'getList', 'apiKey': kk, 'searchNm': q, 'format': 'json', 'jsonVD': 'Y', 'resultCount': '15'})
             j = json.loads(t)
