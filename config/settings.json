@@ -290,9 +290,13 @@
       }
     },
     "finance": {
-      "key_env": "DATA_GO_KR_KEY",
-      "url": "",
-      "params": {},
+      "key_env": "LOFIN_KEY",
+      "url": "https://www.lofin365.go.kr/lf/hub/DCFCE",
+      "params": {
+        "Type": "json",
+        "pIndex": "1",
+        "pSize": "1000"
+      },
       "fields": {
         "region_name": [
           "wdr_sfrnd_nm",
@@ -311,13 +315,17 @@
           "재정자립도"
         ]
       },
-      "_메모": "지방재정365 재정자립도 API 주소·파라미터는 키 발급 후 채움. 안 되면 manual/fin_indep.csv에 18개 값을 넣으면 그 값을 씁니다.",
-      "_설명": "지방재정365 재정자립도(당초) — 순위는 이 값으로 매깁니다. 요청 주소는 활용신청 후 상세 페이지에서 채움"
+      "_설명": "지방재정365 재정자립도(당초) — 순위는 이 값으로 매깁니다. 요청 주소는 활용신청 후 상세 페이지에서 채움",
+      "key_param": "Key"
     },
     "finance_final": {
-      "key_env": "DATA_GO_KR_KEY",
-      "url": "",
-      "params": {},
+      "key_env": "LOFIN_KEY_FINAL",
+      "url": "https://www.lofin365.go.kr/lf/hub/JFIED",
+      "params": {
+        "Type": "json",
+        "pIndex": "1",
+        "pSize": "1000"
+      },
       "fields": {
         "region_name": [
           "wdr_sfrnd_nm",
@@ -336,7 +344,8 @@
           "재정자립도"
         ]
       },
-      "_설명": "지방재정365 재정자립도(최종) — 순위에는 쓰지 않고, 같은 해 당초와 비교만 합니다(연말 추경 반영 후). 요청 주소는 활용신청 후 채움"
+      "_설명": "지방재정365 재정자립도(최종) — 순위에는 쓰지 않고, 같은 해 당초와 비교만 합니다(연말 추경 반영 후). 요청 주소는 활용신청 후 채움",
+      "key_param": "Key"
     }
   }
 }

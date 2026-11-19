@@ -42,12 +42,14 @@ def probe(name, src, extra):
     params[src.get('key_param', 'serviceKey')] = key
     if 'numOfRows' in params:
         params['numOfRows'] = '5'
+    if 'pSize' in params:
+        params['pSize'] = '5'
     try:
         text = http_get(src['url'], params, tries=1)
     except Exception as e:  # noqa: BLE001
         say('  → 호출 실패: %s' % e)
         return
-    say('  응답 앞부분: ' + text[:300].replace(key, '***').replace('\n', ' '))
+    say('  응답 앞부분: ' + text[:1500].replace(key, '***').replace('\n', ' '))
     try:
         obj = parse_body(text)
     except Exception as e:  # noqa: BLE001

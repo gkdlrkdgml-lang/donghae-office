@@ -16,6 +16,7 @@ jobs:
           TZ: Asia/Seoul
           DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
           LOFIN_KEY: ${{ secrets.LOFIN_KEY }}
+          LOFIN_KEY_FINAL: ${{ secrets.LOFIN_KEY_FINAL }}
           KOSIS_KEY: ${{ secrets.KOSIS_KEY }}
           SAFETY_DATA_KEY: ${{ secrets.SAFETY_DATA_KEY }}
         run: python collect/probe.py
