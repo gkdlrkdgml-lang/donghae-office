@@ -100,6 +100,14 @@ def main():
                                'params': {'type': 'JSON', 'numOfRows': '100', 'pageNo': '1', 'lv': '3', 'regSeCd': '1'}},
           {'admmCd': me['stdg'], 'srchFrYm': ym, 'srchToYm': ym})
     probe('age_mois', S['sources']['age']['mois'], {})
+    import urllib.request
+    for u in ('https://www.lofin365.go.kr/', 'https://lofin365.go.kr/lf/hub/DCFCE?Type=json&pIndex=1&pSize=1',
+              'http://www.lofin365.go.kr/lf/hub/DCFCE?Type=json&pIndex=1&pSize=1', 'https://www.google.com/'):
+        try:
+            with urllib.request.urlopen(u, timeout=25) as r:
+                say('  연결 %s → %s' % (u, r.status))
+        except Exception as e:  # noqa: BLE001
+            say('  연결 %s → 실패 %s' % (u, e))
     probe('finance', S['sources']['finance'], {})
     probe('finance_final', S['sources']['finance_final'], {})
     path = os.path.join(ROOT, 'probe_결과.txt')
