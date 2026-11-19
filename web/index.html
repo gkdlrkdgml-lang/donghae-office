@@ -222,8 +222,9 @@
   .lleg i { display: inline-block; width: 18px; height: 4px; border-radius: 2px; vertical-align: middle; margin-right: 5px; }
   .gcols { flex: 1; min-height: 0; display: flex; align-items: stretch; gap: 10px; padding-top: 26px; position: relative; }
   .gcols .g { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-  .gcols .bars { flex: 1; display: flex; align-items: flex-end; gap: 2px; border-bottom: 1.5px solid var(--line); }
+  .gcols .bars { flex: 1; display: flex; align-items: flex-end; gap: 4px; padding: 0 6px; border-bottom: 1.5px solid var(--line); }
   .gcols .bars i { flex: 1; display: block; border-radius: 4px 4px 0 0; min-height: 2px; position: relative; }
+  .gcols .bars i b { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); font-size: 13px; font-weight: 800; white-space: nowrap; padding-bottom: 2px; }
   .gcols .g > span { text-align: center; font-size: 14px; color: var(--sub); padding-top: 4px; }
   .gcols .g.pk > span { color: var(--navy); font-weight: 800; }
   .cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
@@ -315,7 +316,7 @@ function startApp() {
   D.menu.forEach(function (m, i) {
     nav.appendChild(el('button', { type: 'button', 'data-id': m.id, text: (i + 1) + ' ' + m.label, onclick: function () { go(m.id); } }));
   });
-  function go(id) { current = id; zoomIdx = null; finDetail = null; admDetail = null; if (location.hash !== '#' + id) location.hash = id; render(); }
+  function go(id) { current = id; zoomIdx = null; finDetail = null; admDetail = null; regSel = null; if (location.hash !== '#' + id) location.hash = id; render(); }
   window.addEventListener('hashchange', function () {
     var h = location.hash.slice(1);
     if (h !== current && order.indexOf(h) >= 0) { current = h; render(); }
@@ -324,15 +325,16 @@ function startApp() {
   // ---------- 순위 막대 목록 ----------
   function rankList(i, onPick, selected) {
     var max = Math.max.apply(null, i.ranking.map(function (r) { return Math.abs(r.value); })) || 1;
-    var rows = el('div', { class: 'rows' });
-    i.ranking.forEach(function (r) {
+    var rows = el('div', { class: 'rows' }), N = i.ranking.length;
+    var EXC = ['#7B61D9', '#5B7BE0', '#3C97D6', '#2AAFB8', '#43BF8E', '#8CCB63'];
+    i.ranking.forEach(function (r, ri) {
       var me = r.name === D.me;
       var w = Math.abs(r.value) / max * 100;
       var row = el('div', { class: 'row' + (me ? ' me' : '') + (selected === r.name ? ' sel' : ''), role: onPick ? 'button' : null, tabindex: onPick ? '0' : null,
         onclick: onPick ? function () { onPick(r.name); } : null }, [
         el('span', { class: 'rk', text: String(r.rank) }),
         el('span', { text: r.name }),
-        el('div', { class: 'bar' }, [el('div', { style: 'width:' + w.toFixed(1) + '%;background:' + (me ? '#1F6FD1' : (r.judge === 'weak' ? '#E8A867' : r.judge === 'strong' ? '#5DB88E' : r.judge === 'excluded' ? '#B8C4D4' : '#8FB2E0')) })]),
+        el('div', { class: 'bar' }, [el('div', { style: 'width:' + w.toFixed(1) + '%;background:' + (me ? '#1F6FD1' : selected === r.name ? '#F0A04B' : (r.judge === 'weak' ? '#E8A867' : r.judge === 'strong' ? '#5DB88E' : r.judge === 'excluded' ? EXC[Math.min(EXC.length - 1, Math.floor(ri / N * EXC.length))] : '#8FB2E0')) })]),
         el('span', { class: 'v', text: fmt(r.value, i.digits) })
       ]);
       if (!onPick) { row.removeAttribute('role'); row.removeAttribute('tabindex'); row.style.cursor = 'default'; }
@@ -344,6 +346,7 @@ function startApp() {
   // 세로 막대(누르면 선택). series: [[이름, 값]], 큰 순으로 그립니다.
   function colChart(series, onPick, selected, digits, unit, keepOrder, opts) {
     opts = opts || {};
+    var big = series.some(function (c) { return Math.abs(c[1]) >= 10000; });
     series = keepOrder ? series.slice() : series.slice().sort(function (a, b) { return b[1] - a[1]; });
     var mx = Math.max.apply(null, series.map(function (c) { return Math.abs(c[1]); })) || 1;
     var cols = el('div', { class: 'cols tight', style: 'gap:5px' });
@@ -360,7 +363,7 @@ function startApp() {
       var good = opts.lower ? i >= series.length - cut : i < cut, bad = opts.lower ? i < cut : i >= series.length - cut;
       var base = opts.plain ? (i === series.length - 1 ? '#1F6FD1' : '#8FB2E0') : good ? '#5DB88E' : bad ? '#E8A867' : '#8FB2E0';
       cols.appendChild(el('div', { class: 'col', style: onPick ? 'cursor:pointer' : '', onclick: onPick ? function () { onPick(c[0]); } : null }, [
-        el('b', { text: fmt(c[1], digits || 0), style: 'font-size:11.5px' + (m ? ';color:#1F6FD1' : p ? ';color:#1B3A6B' : '') }),
+        el('b', { text: big ? fmtK(c[1]) : fmt(c[1], digits || 0), style: 'font-size:11.5px' + (m ? ';color:#1F6FD1' : p ? ';color:#1B3A6B' : '') }),
         el('div', { class: 'c', style: 'height:' + (Math.abs(c[1]) / mx * 82).toFixed(1) + '%;background:' + (m ? '#1F6FD1' : p ? '#1B3A6B' : base) }),
         el('span', { text: c[0], style: 'font-size:12px;' + (m ? 'color:#1F6FD1;font-weight:700' : p ? 'color:#1B3A6B;font-weight:800;text-decoration:underline' : '') })]));
     });
@@ -1029,59 +1032,96 @@ function startApp() {
   }
 
   // ---------- 교통 ----------
+  // ---------- 지역 비교 공통 ----------
+  var regSel = null;
+  function regPick(n) { regSel = regSel === n || n === D.me ? null : n; render(); }
+  function regName() { return regSel || D.me; }
+  function indFor(I, n) { if (!I) return I; var r = I.ranking.filter(function (x) { return x.name === n; })[0]; return r ? { id: I.id, name: I.name, n: I.n, me: r, ranking: I.ranking, digits: I.digits, unit: I.unit } : I; }
+  function popOf(n) { var r = ((D.admin || {}).regions || {})[n]; return r ? r.total : null; }
+  function avgOf(R, f) { var t = 0, c = 0; Object.keys(R).forEach(function (k) { var v = f(R[k], k); if (v != null && isFinite(v)) { t += v; c++; } }); return c ? t / c : null; }
+  function fullName(n) { return n === D.me ? D.me + '시' : n; }
+  function selHint() { return regSel ? ' · 다시 누르면 ' + D.me + '시로' : ' · 왼쪽 시·군을 누르면 그 지역으로'; }
+  function meChip(v, unit, d) { return regSel && v != null ? [D.me + ' ' + fmt(v, d || 0) + (unit || ''), ''] : null; }
+  function cmpColor(n) { return n === D.me ? '#1F6FD1' : n === '강원 평균' ? '#5DB88E' : '#F0A04B'; }
+  function cmpSeries(names, fn) { return names.map(function (n) { return { name: n === '강원 평균' ? n : fullName(n), color: cmpColor(n), values: fn(n) }; }); }
+
   var trTab = 'cars';
   function screenTrafficTabs() {
     var L = D.life || {}, tabs = [];
     if (L.cars) tabs.push(['cars', '자동차 등록']);
     if (L.ev) tabs.push(['ev', '전기차 충전']);
-    if (!tabs.some(function (t) { return t[0] === trTab; })) trTab = tabs[0] ? tabs[0][0] : 'ev';
-    (trTab === 'cars' ? screenCars : screenTraffic)();
+    tabs.push(['bus', '라이브 버스']);
+    if (!tabs.some(function (t) { return t[0] === trTab; })) trTab = tabs[0][0];
+    ({ cars: screenCars, ev: screenTraffic, bus: screenBus })[trTab]();
     var title = view.querySelector('.title');
     if (title && tabs.length > 1) title.insertBefore(tabsBar(tabs, trTab, function (k) { trTab = k; }), title.children[1] || null);
   }
+  function screenBus() {
+    view.style.gridTemplateColumns = 'minmax(0, 1fr)';
+    view.style.gridTemplateRows = '44px minmax(0, 1fr)';
+    view.appendChild(el('div', { class: 'title' }, [el('h1', { text: D.me + '시 라이브 버스' }), el('span', { class: 'basis', text: '동해 LIVE BUS (livebus.dhits.kr) · 실시간 위치' })]));
+    var fr = el('iframe', { src: 'https://livebus.dhits.kr/', title: '동해 라이브 버스', style: 'flex:1;width:100%;border:0;border-radius:10px;background:#EEF3F8', allow: 'geolocation' });
+    view.appendChild(el('section', { class: 'detail', style: 'grid-row:2;display:flex;flex-direction:column;padding:8px' }, [fr]));
+  }
   function screenCars() {
-    var V = (D.life || {}).cars || {}, R = V.regions || {}, m = R[D.me] || {}, I = ind('cars');
-    function g(k, u) { return ((m[k] || {})[u || 'all']) || 0; }
-    var tot = g('total'), pm = V.prev[D.me], py = V.year[D.me];
+    var V = (D.life || {}).cars || {}, R = V.regions || {}, SN = R[regName()] ? regName() : D.me, isMe = SN === D.me;
+    var I0 = ind('cars'), I = indFor(I0, SN), m = R[SN] || {}, me = R[D.me] || {};
+    function g(o, k, u) { return ((o[k] || {})[u || 'all']) || 0; }
+    var tot = g(m, 'total'), pm = V.prev[SN], py = V.year[SN];
     function dchip(v, lab) { if (v == null) return null; var d = tot - v; return [lab + ' ' + (d >= 0 ? '+' : '') + fmt(d, 0) + '대', d >= 0 ? 'good' : 'bad']; }
-    lifeTitle(D.me + '시 자동차 등록', ymLabel(V.ym) + ' 국토교통부 자동차 등록 현황(KOSIS)');
+    lifeTitle(fullName(SN) + ' 자동차 등록', ymLabel(V.ym) + ' 국토교통부(KOSIS)' + selHint());
     cardsRow([
       { l: '자동차 등록', ic: 'car', v: fmt(tot, 0), u: '대', chips: [dchip(pm, '지난달'), dchip(py, '1년 새')] },
-      { l: '승용차', ic: 'car', col: '#1F6FD1', bg: '#E4EEFB', v: fmt(g('passenger'), 0), u: '대', chips: [['전체의 ' + fmt(g('passenger') / tot * 100, 1) + '%', 'navy']] },
-      { l: '화물차', ic: 'suitcase', col: '#C0602B', bg: '#FDEBDD', v: fmt(g('truck'), 0), u: '대', chips: [['전체의 ' + fmt(g('truck') / tot * 100, 1) + '%', 'violet']] },
-      { l: '승합·특수', ic: 'car', col: '#2E8B57', bg: '#E2F3E9', v: fmt(g('van') + g('special'), 0), u: '대', chips: [['승합 ' + fmt(g('van'), 0), ''], ['특수 ' + fmt(g('special'), 0), '']] },
-      { l: '인구 1천명당', ic: 'people', col: '#7A4FC4', bg: '#EFE9FB', v: I && I.me ? fmt(I.me.value, 0) : '–', u: '대', chips: [rankChip(I)] }
+      { l: '승용차', ic: 'car', col: '#1F6FD1', bg: '#E4EEFB', v: fmt(g(m, 'passenger'), 0), u: '대', chips: [['전체의 ' + fmt(g(m, 'passenger') / tot * 100, 1) + '%', 'navy'], meChip(g(me, 'passenger'), '대')] },
+      { l: '화물차', ic: 'suitcase', col: '#C0602B', bg: '#FDEBDD', v: fmt(g(m, 'truck'), 0), u: '대', chips: [['전체의 ' + fmt(g(m, 'truck') / tot * 100, 1) + '%', 'violet'], meChip(g(me, 'truck'), '대')] },
+      { l: '승합·특수', ic: 'car', col: '#2E8B57', bg: '#E2F3E9', v: fmt(g(m, 'van') + g(m, 'special'), 0), u: '대', chips: [['승합 ' + fmt(g(m, 'van'), 0), ''], ['특수 ' + fmt(g(m, 'special'), 0), '']] },
+      { l: '인구 1천명당', ic: 'people', col: '#7A4FC4', bg: '#EFE9FB', v: I && I.me ? fmt(I.me.value, 0) : '–', u: '대', chips: [rankChip(I), regSel && I0 && I0.me ? meChip(I0.me.value, '대') : null] }
     ]);
-    panel('인구 1천명당 자동차', '강원 18개 시·군 · 대', I ? rankList(I) : el('div', { class: 'empty', text: '자료 없음' }));
+    panel('인구 1천명당 자동차', '강원 18개 시·군 · 대 · 누르면 그 지역', I ? rankList(I, regPick, regSel) : el('div', { class: 'empty', text: '자료 없음' }));
+    var kinds = [['승용', 'passenger'], ['화물', 'truck'], ['승합', 'van'], ['특수', 'special']];
+    var who = isMe ? [D.me, '강원 평균'] : [SN, D.me, '강원 평균'];
+    var share = function (o, k) { var t = g(o, 'total'); return t ? g(o, k) / t * 100 : null; };
+    var gcol = groupCols(kinds.map(function (k) { return k[0]; }), cmpSeries(who, function (n) {
+      return kinds.map(function (k) { return n === '강원 평균' ? avgOf(R, function (o) { return share(o, k[1]); }) : share(R[n], k[1]); }); }));
+    var per = function (n) { var p = popOf(n); return p ? g(R[n], 'total') / p * 1000 : null; };
+    panel('차종 구성 비교', '전체 중 비중(%) · ' + who.map(fullName).join(' · '), [gcol,
+      el('div', { class: 'chips', style: 'justify-content:center;margin-top:8px;flex-wrap:wrap' }, who.map(function (n, i) {
+        var v = n === '강원 평균' ? avgOf(R, function (o, k) { return per(k); }) : per(n);
+        return el('span', { class: 'chip', style: 'background:' + cmpColor(n) + '22;color:' + (n === '강원 평균' ? '#1B5E3A' : cmpColor(n)) + ';font-weight:800', text: fullName(n) + ' 1천명당 ' + fmt(v, 0) + '대' }); }))]);
     var T = V.trend || [];
-    if (T.length > 1) {
+    if (isMe && T.length > 1) {
       panel('자동차 등록 추이 · ' + D.me + '시', T[0][0].slice(0, 4) + '년 ' + Number(T[0][0].slice(4)) + '월 ~ ' + ymLabel(T[T.length - 1][0]) + ' · 대',
-        lineChart(T.map(function (x) { return x[0].slice(2, 4) + '.' + x[0].slice(4); }), [
-          { name: '', color: '#1F6FD1', values: T.map(function (x) { return x[1].total; }), area: true, width: 3 }], { fit: true, step: 6 }));
-    } else panel('도내 등록대수', '대', colChart(Object.keys(R).map(function (n) { return [n, (R[n].total || {}).all || 0]; }), null, null, 0));
-    panel('차종·용도 구성 · ' + D.me + '시', '대', [donut([['승용 ' + fmt(g('passenger'), 0), g('passenger'), '#1F6FD1'], ['화물 ' + fmt(g('truck'), 0), g('truck'), '#E8873F'], ['승합 ' + fmt(g('van'), 0), g('van'), '#5DB88E'], ['특수 ' + fmt(g('special'), 0), g('special'), '#7A4FC4']], fmt(tot, 0) + '대', '자동차'),
-      el('div', { class: 'chips', style: 'justify-content:center;margin-top:8px' }, [el('span', { class: 'chip navy', text: '자가용 ' + fmt(g('total', 'own'), 0) }), el('span', { class: 'chip violet', text: '영업용 ' + fmt(g('total', 'biz'), 0) }), el('span', { class: 'chip', text: '관용 ' + fmt(g('total', 'gov'), 0) })])]);
+        [lineChart(T.map(function (x) { return x[0].slice(2, 4) + '.' + x[0].slice(4); }), [{ name: '', color: '#1F6FD1', values: T.map(function (x) { return x[1].total; }), area: true, width: 3 }], { fit: true, step: 6 }),
+          el('div', { class: 'chips', style: 'justify-content:center;margin-top:6px' }, [el('span', { class: 'chip navy', text: '자가용 ' + fmt(g(m, 'total', 'own'), 0) }), el('span', { class: 'chip violet', text: '영업용 ' + fmt(g(m, 'total', 'biz'), 0) }), el('span', { class: 'chip', text: '관용 ' + fmt(g(m, 'total', 'gov'), 0) })])]);
+    } else {
+      panel('등록대수 · 강원 18개 시·군', '대 · 누르면 그 지역', colChart(Object.keys(R).map(function (n) { return [n, g(R[n], 'total')]; }), regPick, SN, 0));
+    }
   }
   function screenTraffic() {
-    var E = (D.life || {}).ev || {}, R = E.regions || {}, m = R[D.me] || {}, I = ind('ev');
-    lifeTitle(D.me + '시 전기차 충전 인프라', (E.at || '') + ' 환경공단 충전소 정보 기준');
+    var E = (D.life || {}).ev || {}, R = E.regions || {}, SN = R[regName()] ? regName() : D.me, isMe = SN === D.me;
+    var I0 = ind('ev'), I = indFor(I0, SN), m = R[SN] || {}, me = R[D.me] || {};
+    lifeTitle(fullName(SN) + ' 전기차 충전 인프라', (E.at || '') + ' 환경공단 충전소 정보' + selHint());
     cardsRow([
       { l: '충전기', ic: 'plug', v: fmt(m.total, 0), u: '기', chips: [rankChip(I), I && I.me ? ['1만명당 ' + fmt(I.me.value, 1) + '기', 'violet'] : null] },
-      { l: '급속', ic: 'bolt', col: '#C0602B', bg: '#FDEBDD', v: fmt(m.fast, 0), u: '기', chips: [m.total ? ['전체의 ' + fmt(m.fast / m.total * 100, 1) + '%', 'violet'] : null] },
-      { l: '완속', ic: 'plug', col: '#2E8B57', bg: '#E2F3E9', v: fmt(m.slow, 0), u: '기' },
-      { l: '충전소', ic: 'pin', col: '#1F6FD1', bg: '#E4EEFB', v: fmt(m.stations, 0), u: '곳' },
-      { l: '지금 충전 중', ic: 'car', col: '#7A4FC4', bg: '#EFE9FB', v: fmt(m.busy, 0), u: '기', chips: [['수집 시각 기준', '']] }
+      { l: '급속', ic: 'bolt', col: '#C0602B', bg: '#FDEBDD', v: fmt(m.fast, 0), u: '기', chips: [m.total ? ['전체의 ' + fmt(m.fast / m.total * 100, 1) + '%', 'violet'] : null, meChip(me.fast, '기')] },
+      { l: '완속', ic: 'plug', col: '#2E8B57', bg: '#E2F3E9', v: fmt(m.slow, 0), u: '기', chips: [meChip(me.slow, '기')] },
+      { l: '충전소', ic: 'pin', col: '#1F6FD1', bg: '#E4EEFB', v: fmt(m.stations, 0), u: '곳', chips: [meChip(me.stations, '곳')] },
+      { l: '지금 충전 중', ic: 'car', col: '#7A4FC4', bg: '#EFE9FB', v: fmt(m.busy, 0), u: '기', chips: [m.total ? ['이용률 ' + fmt(m.busy / m.total * 100, 1) + '%', 'navy'] : null, meChip(me.busy, '기')] }
     ]);
-    panel('인구 1만명당 충전기', '강원 18개 시·군 · 기', I ? rankList(I) : el('div', { class: 'empty', text: '자료 없음' }));
-    panel('충전기 수', '강원 18개 시·군 · 기', colChart(Object.keys(R).map(function (n) { return [n, R[n].total]; }), null, null, 0));
-    panel('급속·완속 구성 · ' + D.me + '시', '기', donut([['급속 ' + fmt(m.fast, 0), m.fast || 0, '#E8A867'], ['완속 ' + fmt(m.slow, 0), m.slow || 0, '#5DB88E']], fmt(m.total, 0) + '기', '충전기'));
+    panel('인구 1만명당 충전기', '강원 18개 시·군 · 기 · 누르면 그 지역', I ? rankList(I, regPick, regSel) : el('div', { class: 'empty', text: '자료 없음' }));
+    var who = isMe ? [D.me, '강원 평균'] : [SN, D.me, '강원 평균'];
+    var items = [['충전기', 'total'], ['급속', 'fast'], ['완속', 'slow'], ['충전소', 'stations']];
+    var per = function (o, n, k) { var p = popOf(n); return p && o ? o[k] / p * 10000 : null; };
+    panel('인구 1만명당 비교', who.map(fullName).join(' · '), groupCols(items.map(function (x) { return x[0]; }), cmpSeries(who, function (n) {
+      return items.map(function (x) { return n === '강원 평균' ? avgOf(R, function (o, k) { return per(o, k, x[1]); }) : per(R[n], n, x[1]); }); })));
+    panel('충전기 수 · 강원 18개 시·군', '기 · 누르면 그 지역', colChart(Object.keys(R).map(function (n) { return [n, R[n].total]; }), regPick, SN, 0));
   }
 
   // ---------- 환경 ----------
   var envDetail = null;
   function skyText(sl) { var p = +sl.PTY || 0, k = +sl.SKY || 1; return p === 1 ? '비' : p === 2 ? '비·눈' : p === 3 ? '눈' : p === 4 ? '소나기' : k === 4 ? '흐림' : k === 3 ? '구름많음' : '맑음'; }
   function screenEnv() {
-    var A = (D.life || {}).air || {}, R = A.regions || {}, m = R[D.me] || {}, W = (D.life || {}).weather;
+    var A = (D.life || {}).air || {}, R = A.regions || {}, SN = R[regName()] ? regName() : D.me, m = R[SN] || {}, me0 = R[D.me] || {}, W = (D.life || {}).weather;
     var vals = Object.keys(R).filter(function (n) { return R[n].pm25 != null; });
     function g25(v) { return v == null ? ['–', ''] : v <= 15 ? ['좋음', 'good'] : v <= 35 ? ['보통', 'navy'] : v <= 75 ? ['나쁨', 'bad'] : ['매우 나쁨', 'bad']; }
     function g10(v) { return v == null ? ['–', ''] : v <= 30 ? ['좋음', 'good'] : v <= 80 ? ['보통', 'navy'] : v <= 150 ? ['나쁨', 'bad'] : ['매우 나쁨', 'bad']; }
@@ -1091,9 +1131,9 @@ function startApp() {
     var curK = keys.filter(function (k) { return k >= nowK; })[0] || keys[keys.length - 1], cur = curK ? W.slots[curK] : null;
     var days = {};
     keys.forEach(function (k) { var d = k.slice(0, 8), sl = W.slots[k], o = days[d] || (days[d] = { mx: -99, mn: 99, pop: 0, sky: {}, tmx: null, tmn: null });
-      var t = +sl.TMP; if (t > o.mx) o.mx = t; if (t < o.mn) o.mn = t; o.pop = Math.max(o.pop, +sl.POP || 0); var h = +k.slice(8, 10); if (h >= 9 && h <= 18) { var tx = skyText(sl); o.sky[tx] = (o.sky[tx] || 0) + 1; } });
+      var t = +sl.TMP; if (t > o.mx) o.mx = t; if (t < o.mn) o.mn = t; o.pop = Math.max(o.pop, +sl.POP || 0); o.last = sl; var h = +k.slice(8, 10); if (h >= 9 && h <= 18) { var tx = skyText(sl); o.sky[tx] = (o.sky[tx] || 0) + 1; } });
     Object.keys(W ? W.slots : {}).forEach(function (k) { var d = days[k.slice(0, 8)]; if (!d) return; if (W.slots[k].TMX != null) d.tmx = +W.slots[k].TMX; if (W.slots[k].TMN != null) d.tmn = +W.slots[k].TMN; });
-    function dsky(o) { var b = null; Object.keys(o.sky).forEach(function (x) { if (!b || o.sky[x] > o.sky[b]) b = x; }); return b || '–'; }
+    function dsky(o) { var b = null; Object.keys(o.sky).forEach(function (x) { if (!b || o.sky[x] > o.sky[b]) b = x; }); return b || (o.last ? skyText(o.last) : '–'); }
     var t0 = days[today] || {};
     var hi = t0.tmx != null ? t0.tmx : t0.mx, loT = t0.tmn != null ? t0.tmn : t0.mn;
     lifeTitle(D.me + '시 날씨·대기질', (W ? '기상청 단기예보 ' + W.base.slice(4, 6) + '/' + W.base.slice(6, 8) + ' ' + W.base.slice(8, 10) + '시 발표 · ' : '') + (A.time || '') + ' 에어코리아');
@@ -1101,8 +1141,8 @@ function startApp() {
       { l: '지금 날씨', sub: '천곡동', ic: 'sun', v: cur ? cur.TMP : '–', u: '°C', chips: [cur ? [wxIcon(cur) + ' ' + skyText(cur), 'navy'] : null, cur ? ['바람 ' + cur.WSD + 'm/s · 습도 ' + cur.REH + '%', ''] : null] },
       { l: '오늘 최고·최저', ic: 'trend', col: '#C0602B', bg: '#FDEBDD', v: hi != null && hi > -99 ? Math.round(hi) + '° / ' + Math.round(loT) + '°' : '–', u: '', chips: [t0.sky ? [dsky(t0), 'violet'] : null] },
       { l: '비 올 확률', sub: '오늘 최대', ic: 'cloud', col: '#1F6FD1', bg: '#E4EEFB', v: t0.pop != null ? fmt(t0.pop, 0) : '–', u: '%', chips: [cur && cur.PCP && cur.PCP !== '강수없음' ? ['강수 ' + cur.PCP, 'bad'] : ['강수 없음', 'good']] },
-      { l: '초미세먼지', sub: 'PM2.5', ic: 'cloud', col: '#7A4FC4', bg: '#EFE9FB', v: fmt(m.pm25, 0), u: '㎍/㎥', chips: [g25(m.pm25)] },
-      { l: '미세먼지', sub: 'PM10', ic: 'leaf', col: '#2E8B57', bg: '#E2F3E9', v: fmt(m.pm10, 0), u: '㎍/㎥', chips: [g10(m.pm10), best.khai != null ? ['통합지수 ' + fmt(best.khai, 0), ''] : null] }
+      { l: '초미세먼지', sub: 'PM2.5 · ' + fullName(SN), ic: 'cloud', col: '#7A4FC4', bg: '#EFE9FB', v: fmt(m.pm25, 0), u: '㎍/㎥', chips: [g25(m.pm25), meChip(me0.pm25, '')] },
+      { l: '미세먼지', sub: 'PM10 · ' + fullName(SN), ic: 'leaf', col: '#2E8B57', bg: '#E2F3E9', v: fmt(m.pm10, 0), u: '㎍/㎥', chips: [g10(m.pm10), regSel ? meChip(me0.pm10, '') : best.khai != null ? ['통합지수 ' + fmt(best.khai, 0), ''] : null] }
     ]);
     if (W) {
       var fk = keys.filter(function (k) { return k >= nowK.slice(0, 10) + '00'; }).slice(0, 24);
@@ -1116,7 +1156,7 @@ function startApp() {
       if (W.dongs && W.grids) sec.querySelector('.sh small').after(el('button', { type: 'button', class: 'zbtn', style: 'margin-left:auto;margin-right:8px;background:#1F6FD1;color:#fff;border-color:#1F6FD1', text: '동별 자세히 ›', onclick: function () { envDetail = 'dong'; render(); } }));
     }
     if (envDetail === 'dong' && W && W.dongs) envDongPopup(W, nowK);
-    panel('초미세먼지 지금 · 강원 시·군', '㎍/㎥ · 낮을수록 좋음', colChart(vals.map(function (n) { return [n, R[n].pm25]; }), null, null, 0, null, false, { lower: true }));
+    panel('초미세먼지 지금 · 강원 시·군', '㎍/㎥ · 낮을수록 좋음 · 누르면 위 카드에 그 지역', colChart(vals.map(function (n) { return [n, R[n].pm25]; }), regPick, regSel, 0, null, false, { lower: true }));
     if (!W) {
       var tb = el('tbody');
       (A.mine || []).forEach(function (x) { tb.appendChild(el('tr', {}, [el('td', { text: x.station }), el('td', { class: 'r', text: fmt(x.pm25, 0) }), el('td', { class: 'r', text: fmt(x.pm10, 0) })])); });
@@ -1146,23 +1186,27 @@ function startApp() {
 
   // ---------- 관광 ----------
   function screenTour() {
-    var L = D.life || {}, VM = L.visit_months || {}, ms = Object.keys(VM).sort(), last = ms[ms.length - 1], I = ind('visitors');
-    var cur = (VM[last] || {})[D.me] || {}, prevY = ms.length >= 13 ? (VM[ms[ms.length - 13]] || {})[D.me] : null;
+    var L = D.life || {}, VM = L.visit_months || {}, ms = Object.keys(VM).sort(), last = ms[ms.length - 1], I0 = ind('visitors');
+    var SN = (VM[last] || {})[regName()] ? regName() : D.me, I = indFor(I0, SN);
+    var cur = (VM[last] || {})[SN] || {}, prevY = ms.length >= 13 ? (VM[ms[ms.length - 13]] || {})[SN] : null, meCur = (VM[last] || {})[D.me] || {};
     var vis = function (d) { return d ? (d.outside || 0) + (d.foreign || 0) : null; };
     var yoy = prevY && vis(prevY) ? (vis(cur) - vis(prevY)) / vis(prevY) * 100 : null;
     var ml = function (ym) { return ym ? ym.slice(0, 4) + '년 ' + Number(ym.slice(4)) + '월' : ''; };
-    lifeTitle(D.me + '시 관광 방문자', ml(last) + ' 한국관광공사 데이터랩(이동통신)');
-    var y12 = ms.slice(-12).reduce(function (t, ym) { return t + (vis((VM[ym] || {})[D.me]) || 0); }, 0);
+    lifeTitle(fullName(SN) + ' 관광 방문자', ml(last) + ' 한국관광공사 데이터랩' + selHint());
+    var y12 = ms.slice(-12).reduce(function (t, ym) { return t + (vis((VM[ym] || {})[SN]) || 0); }, 0);
     cardsRow([
-      { l: '방문자', sub: ml(last) + ' · 외지인+외국인', ic: 'camera', v: fmt(vis(cur), 0), u: '명', chips: [yoy != null ? ['전년 같은 달 ' + (yoy >= 0 ? '+' : '') + fmt(yoy, 1) + '%', yoy >= 0 ? 'good' : 'bad'] : null] },
+      { l: '방문자', sub: ml(last) + ' · 외지인+외국인', ic: 'camera', v: fmt(vis(cur), 0), u: '명', chips: [yoy != null ? ['전년 같은 달 ' + (yoy >= 0 ? '+' : '') + fmt(yoy, 1) + '%', yoy >= 0 ? 'good' : 'bad'] : null, meChip(vis(meCur), '명')] },
       { l: '외지인', ic: 'suitcase', col: '#1F6FD1', bg: '#E4EEFB', v: fmt(cur.outside, 0), u: '명' },
       { l: '외국인', ic: 'globe', col: '#7A4FC4', bg: '#EFE9FB', v: fmt(cur.foreign, 0), u: '명' },
       { l: '최근 12개월', ic: 'camera', col: '#2E8B57', bg: '#E2F3E9', v: fmt(y12, 0), u: '명', chips: [rankChip(I), I && I.me ? ['인구 1명당 ' + fmt(I.me.value, 1) + '명', 'violet'] : null] },
-      { l: '현지인', sub: '동해 시민 이동', ic: 'people', col: '#C0602B', bg: '#FDEBDD', v: fmt(cur.local, 0), u: '명' }
+      { l: '현지인', sub: fullName(SN) + ' 주민 이동', ic: 'people', col: '#C0602B', bg: '#FDEBDD', v: fmt(cur.local, 0), u: '명' }
     ]);
-    panel('인구 1명당 연간 방문자', '강원 18개 시·군 · 명', I ? rankList(I) : el('div', { class: 'empty', text: '12개월 자료가 쌓이면 표시' }));
-    panel('월별 방문자 · ' + D.me + '시', '외지인+외국인 · 명', colChart(ms.slice(-12).map(function (ym) { return [Number(ym.slice(4)) + '월', vis((VM[ym] || {})[D.me]) || 0]; }), null, null, 0, null, true, { plain: true, avgLabel: '월 평균' }));
-    panel('방문자 구성 · ' + ml(last), '명', donut([['외지인 ' + fmt(cur.outside, 0), cur.outside || 0, '#1F6FD1'], ['외국인 ' + fmt(cur.foreign, 0), cur.foreign || 0, '#7A4FC4'], ['현지인 ' + fmt(cur.local, 0), cur.local || 0, '#E8A867']], fmt((cur.outside || 0) + (cur.foreign || 0) + (cur.local || 0), 0), '전체'));
+    panel('인구 1명당 연간 방문자', '강원 18개 시·군 · 명 · 누르면 그 지역', I ? rankList(I, regPick, regSel) : el('div', { class: 'empty', text: '12개월 자료가 쌓이면 표시' }));
+    var m12 = ms.slice(-12), mlab = m12.map(function (ym) { return Number(ym.slice(4)) + '월'; });
+    var tl = [{ name: fullName(SN), color: cmpColor(SN), values: m12.map(function (ym) { return vis((VM[ym] || {})[SN]); }), width: 3.5, area: true, labels: true }];
+    if (regSel) tl.push({ name: D.me + '시', color: cmpColor(D.me), values: m12.map(function (ym) { return vis((VM[ym] || {})[D.me]); }), width: 2.5 });
+    panel('월별 방문자 · ' + (regSel ? fullName(SN) + ' vs ' + D.me + '시' : D.me + '시'), '외지인+외국인 · 명', lineChart(mlab, tl, { step: 1 }));
+    panel('방문자 구성 · ' + fullName(SN) + ' · ' + ml(last), '명', donut([['외지인 ' + fmt(cur.outside, 0), cur.outside || 0, '#1F6FD1'], ['외국인 ' + fmt(cur.foreign, 0), cur.foreign || 0, '#7A4FC4'], ['현지인 ' + fmt(cur.local, 0), cur.local || 0, '#E8A867']], fmt((cur.outside || 0) + (cur.foreign || 0) + (cur.local || 0), 0), '전체'));
   }
 
   // ---------- 관광: 아래 탭 ----------
@@ -1191,10 +1235,10 @@ function startApp() {
       function X(i) { return pL + (n <= 1 ? 0 : i / (n - 1)) * (W - pL - pR); }
       function Y(v) { return pT + (1 - (v - lo) / (top - lo)) * (H - pT - pB); }
       var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
-      (opts.bands || []).forEach(function (b) {
+      (opts.bands || []).forEach(function (b, bi) {
         var x0 = X(b[0]) - (W - pL - pR) / (n - 1) / 2, x1 = X(b[1]) + (W - pL - pR) / (n - 1) / 2;
         svg.appendChild(svgEl('rect', { x: x0, y: pT, width: Math.max(4, x1 - x0), height: H - pT - pB, fill: b[3] || '#FFE7C2', opacity: .75, rx: 6 }));
-        svg.appendChild(svgEl('text', { x: (x0 + x1) / 2, y: pT + 16, 'text-anchor': 'middle', 'font-size': 14, 'font-weight': 800, fill: '#B4531B' }, b[2]));
+        svg.appendChild(svgEl('text', { x: (x0 + x1) / 2, y: pT + 16 + (bi % 2) * 17, 'text-anchor': 'middle', 'font-size': 13, 'font-weight': 800, fill: '#B4531B' }, b[2]));
       });
       for (var g = 0; g <= 4; g++) {
         var v = lo + (top - lo) * g / 4, y = Y(v);
@@ -1218,13 +1262,14 @@ function startApp() {
     return box;
   }
   // 묶음 세로 막대: cats=[이름], series=[{name,color,values}]
-  function groupCols(cats, series, peak) {
+  function groupCols(cats, series, peak, labels) {
+    if (labels == null) labels = series.length <= 3 && cats.length <= 6;
     var mx = 1; series.forEach(function (s) { s.values.forEach(function (v) { if (v > mx) mx = v; }); });
     var w = el('div', { class: 'gcols' });
     w.appendChild(el('div', { class: 'lleg' }, series.map(function (s) { return el('span', {}, [el('i', { style: 'background:' + s.color }), document.createTextNode(s.name)]); })));
     cats.forEach(function (c, ci) {
       var bars = el('div', { class: 'bars' });
-      series.forEach(function (s) { var v = s.values[ci]; bars.appendChild(el('i', { title: s.name + ' ' + c + ' ' + fmt(v, 0), style: 'height:' + (v == null ? 0 : v / mx * 100).toFixed(1) + '%;background:' + s.color + (v == null ? ';visibility:hidden' : '') })); });
+      series.forEach(function (s) { var v = s.values[ci]; bars.appendChild(el('i', { title: s.name + ' ' + c + ' ' + fmt(v, 0), style: 'height:' + (v == null ? 0 : v / mx * 100).toFixed(1) + '%;background:' + s.color + (v == null ? ';visibility:hidden' : '') }, labels ? [el('b', { text: v == null ? '' : v >= 1000 ? fmtK(v) : fmt(v, v < 100 ? 1 : 0), style: 'color:' + s.color })] : [])); });
       w.appendChild(el('div', { class: 'g' + (ci === peak ? ' pk' : '') }, [bars, el('span', { text: c })]));
     });
     return w;
@@ -1366,25 +1411,31 @@ function startApp() {
 
   function screenTourDemand() {
     var L = D.life || {}, DM = L.demand || {}, NM = L.demand_names || {}, yms = Object.keys(DM).sort(), last = yms[yms.length - 1];
-    var me = DM[last][D.me] || {}, gw = DM[last]['강원'] || {}, I = ind('tour_exp');
+    var SN = DM[last][regName()] ? regName() : D.me, I = indFor(ind('tour_exp'), SN), me = DM[last][SN] || {}, gw = regSel ? (DM[last][D.me] || {}) : (DM[last]['강원'] || {}), gwN = regSel ? D.me + '시' : '강원';
     function v(ym, who, c) { var o = (DM[ym] || {})[who]; return o && o[c] != null ? o[c] : null; }
-    var prevY = v(ym12(last), D.me, '22');
+    var prevY = v(ym12(last), SN, '22');
     function ym12(x) { return (+x.slice(0, 4) - 1) + x.slice(4); }
-    lifeTitle(D.me + '시 관광 소비·체류 강도', ymLabel(last) + ' 한국관광공사 관광수요지수 · 0~100점, 높을수록 활발');
+    lifeTitle(fullName(SN) + ' 관광 소비·체류 강도', ymLabel(last) + ' 관광수요지수(0~100점)' + selHint());
     cardsRow([
       { l: '관광 소비 강도', sub: '카드 소비 기반', ic: 'coin', v: fmt(me['22'], 1), u: '점', chips: [rankChip(I), prevY != null ? ['1년 전 ' + fmt(prevY, 1), 'navy'] : null] },
-      { l: '강원 평균', ic: 'bank', col: '#7A4FC4', bg: '#EFE9FB', v: fmt(gw['22'], 1), u: '점', chips: [[(me['22'] >= gw['22'] ? '동해가 ' : '동해가 ') + fmt(Math.abs(me['22'] - gw['22']), 1) + '점 ' + (me['22'] >= gw['22'] ? '높음' : '낮음'), me['22'] >= gw['22'] ? 'good' : 'bad']] },
-      { l: '관광 체류 강도', sub: '숙박·외지인', ic: 'house', col: '#2E8B57', bg: '#E2F3E9', v: fmt(me['21'], 1), u: '점', chips: [gw['21'] != null ? ['강원 ' + fmt(gw['21'], 1), ''] : null] },
-      { l: NM['2201'] || '외지인 소비', ic: 'wonPerson', col: '#C0602B', bg: '#FDEBDD', v: fmt(me['2201'], 1), u: '점', chips: [gw['2201'] != null ? ['강원 ' + fmt(gw['2201'], 1), ''] : null] },
-      { l: NM['2102'] || '숙박 방문 비율', ic: 'suitcase', col: '#1F6FD1', bg: '#E4EEFB', v: fmt(me['2102'], 1), u: '점', chips: [gw['2102'] != null ? ['강원 ' + fmt(gw['2102'], 1), ''] : null] }
+      { l: gwN + (regSel ? '' : ' 평균'), ic: 'bank', col: '#7A4FC4', bg: '#EFE9FB', v: fmt(gw['22'], 1), u: '점', chips: [[fullName(SN) + '이 ' + fmt(Math.abs(me['22'] - gw['22']), 1) + '점 ' + (me['22'] >= gw['22'] ? '높음' : '낮음'), me['22'] >= gw['22'] ? 'good' : 'bad']] },
+      { l: '관광 체류 강도', sub: '숙박·외지인', ic: 'house', col: '#2E8B57', bg: '#E2F3E9', v: fmt(me['21'], 1), u: '점', chips: [gw['21'] != null ? [gwN + ' ' + fmt(gw['21'], 1), ''] : null] },
+      { l: NM['2201'] || '외지인 소비', ic: 'wonPerson', col: '#C0602B', bg: '#FDEBDD', v: fmt(me['2201'], 1), u: '점', chips: [gw['2201'] != null ? [gwN + ' ' + fmt(gw['2201'], 1), ''] : null] },
+      { l: NM['2102'] || '숙박 방문 비율', ic: 'suitcase', col: '#1F6FD1', bg: '#E4EEFB', v: fmt(me['2102'], 1), u: '점', chips: [gw['2102'] != null ? [gwN + ' ' + fmt(gw['2102'], 1), ''] : null] }
     ]);
-    panel('관광 소비 강도 · 강원 18개 시·군', ymLabel(last) + ' · 점', I ? rankList(I) : el('div', { class: 'empty', text: '자료 없음' }));
+    panel('관광 소비 강도 · 강원 18개 시·군', ymLabel(last) + ' · 점 · 누르면 그 지역', I ? rankList(I, regPick, regSel) : el('div', { class: 'empty', text: '자료 없음' }));
     var F = ((L.festivals || {}).items || []), bands = [];
-    yms.forEach(function (ym, i) { F.forEach(function (f) { if (f.start && f.start.slice(0, 6) === ym) bands.push([i, i, f.title.replace(/^제\d+회\s*|^\d{4}\s*/, '').slice(0, 6), '#FFE7C2']); }); });
-    panel('월별 추이 · ' + D.me + '시', '주황 띠 = 축제가 있던 달 · 점', lineChart(yms.map(function (x) { return x.slice(2, 4) + '.' + x.slice(4); }), [
+    var FB = {};
+    F.filter(function (f) { return f.start && (!f.kind || f.kind === '축제'); }).forEach(function (f) { var k = f.start.slice(0, 6); if (!FB[k]) FB[k] = f.title.replace(/^제\d+회\s*|^\d{4}\s*|^동해\s*/, '').replace(/축제$/, '').slice(0, 5); });
+    yms.forEach(function (ym, i) { if (FB[ym]) bands.push([i, i, FB[ym], '#FFE7C2']); });
+    var dl = regSel ? [
+      { name: fullName(SN) + ' 소비', color: '#F0A04B', values: yms.map(function (x) { return v(x, SN, '22'); }), width: 3.5 },
+      { name: D.me + '시 소비', color: '#1F6FD1', values: yms.map(function (x) { return v(x, D.me, '22'); }), width: 3 },
+      { name: '강원 소비 평균', color: '#9AA8BA', values: yms.map(function (x) { return v(x, '강원', '22'); }), dash: '6 4' }] : [
       { name: '소비 강도', color: '#1F6FD1', values: yms.map(function (x) { return v(x, D.me, '22'); }), width: 3.5 },
       { name: '체류 강도', color: '#2E8B57', values: yms.map(function (x) { return v(x, D.me, '21'); }), width: 2.5 },
-      { name: '강원 소비 평균', color: '#9AA8BA', values: yms.map(function (x) { return v(x, '강원', '22'); }), dash: '6 4' }], { fit: true, step: 3, bands: bands }));
+      { name: '강원 소비 평균', color: '#9AA8BA', values: yms.map(function (x) { return v(x, '강원', '22'); }), dash: '6 4' }];
+    panel('월별 추이 · ' + (regSel ? fullName(SN) + ' vs ' + D.me + '시' : D.me + '시'), '주황 띠 = 동해 축제가 있던 달 · 점', lineChart(yms.map(function (x) { return x.slice(2, 4) + '.' + x.slice(4); }), dl, { fit: true, step: 3, bands: bands }));
     var codes = ['2201', '2202', '2203', '2101', '2102', '2103', '2104', '2105'].filter(function (c) { return me[c] != null; });
     var tb = el('tbody');
     codes.forEach(function (c) {
@@ -1392,7 +1443,7 @@ function startApp() {
       tb.appendChild(el('tr', {}, [el('td', { text: NM[c] || c }), el('td', {}, [el('div', { class: 'm3cell' }, [el('i', { style: 'width:' + Math.max(2, a * 1.3) + 'px;background:' + (c[2] === '0' && c[1] === '2' ? '#1F6FD1' : '#2E8B57') }), el('b', { text: fmt(a, 1) })])]),
         el('td', { class: 'r', text: b != null ? fmt(b, 1) : '–' }), el('td', { class: 'r', html: b != null ? '<b style="color:' + (hi ? '#1B7A4B' : '#C0392B') + '">' + (hi ? '+' : '') + fmt(a - b, 1) + '</b>' : '' })]));
     });
-    panel('세부 지표 · 동해 vs 강원', ymLabel(last) + ' · 점', el('table', { class: 'dt big' }, [el('thead', {}, [el('tr', {}, ['지표', D.me, '강원', '차이'].map(function (h, j) { return el('th', { class: j > 1 ? 'r' : '', text: h }); }))]), tb]));
+    panel('세부 지표 · ' + fullName(SN) + ' vs ' + gwN, ymLabel(last) + ' · 점', el('table', { class: 'dt big' }, [el('thead', {}, [el('tr', {}, ['지표', SN, gwN.replace(/시$/, ''), '차이'].map(function (h, j) { return el('th', { class: j > 1 ? 'r' : '', text: h }); }))]), tb]));
   }
   function festKey(t) { return String(t || '').replace(/\s|동해시|동해|제\d+회|\d{4}년?|축제$/g, ''); }
   function festStats(f, VD, eds) {

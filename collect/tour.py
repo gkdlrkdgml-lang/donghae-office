@@ -298,11 +298,13 @@ def events():
                         'src': '한국문화정보원'})
     except Exception as e:  # noqa: BLE001
         log('문화정보원 공연·전시 실패: %s' % e)
+    import html as _html
     seen, out = set(), []
     for x in res:
         if not x['title'] or not x['start']:
             continue
-        k = (_re.sub(r'\s', '', x['title']), x['start'])
+        x['title'] = _html.unescape(_re.sub(r'^\s*\[[^\]]*\]\s*', '', str(x['title'])))
+        k = (_re.sub(r'[\s&·,]|\d{4}', '', x['title'])[:10], x['start'])
         if k in seen:
             continue
         seen.add(k)
