@@ -488,7 +488,7 @@ function startApp() {
   // ---------- 2. 행정: 아래 탭(인구 현황 / 인구 비교) ----------
   var admTab = 'now', admDetail = null;
   function subTabs() {
-    return tabsBar([['now', '인구 현황'], ['map', '행정동 3D 지도'], ['compare', '인구 비교 · 18개 시·군']], admTab, function (k) { admTab = k; admDetail = null; });
+    return tabsBar([['now', '인구 현황'], ['compare', '인구 비교 · 18개 시·군'], ['map', '행정동 3D 지도']], admTab, function (k) { admTab = k; admDetail = null; });
   }
   function tabsBar(list, cur, set) {
     var t = el('div', { class: 'subtabs' });
