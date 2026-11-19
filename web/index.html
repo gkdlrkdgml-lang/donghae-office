@@ -1110,7 +1110,7 @@ function startApp() {
       { l: '실시간 운행', ic: 'car', col: '#7A4FC4', bg: '#EFE9FB', v: '라이브', u: '', small: true, chips: [['「라이브 버스」 탭에서 확인', '']] }
     ]);
     Array.prototype.forEach.call(view.querySelectorAll('.pr1 .pv'), function (pv) { if (pv.textContent.length > 7) pv.style.fontSize = '28px'; });
-    panel('인구 1만명당 버스정류장', '강원 18개 시·군 · 곳 · 누르면 그 지역', I ? rankList(I, regPick, regSel) : el('div', { class: 'empty', text: '자료 없음' }));
+    panel('인구 1만명당 버스정류장', '강원 ' + Object.keys(R).length + '개 시·군 · 곳 · 누르면 그 지역', I ? rankList(I, regPick, regSel) : el('div', { class: 'empty', text: '자료 없음' }));
     if (isMe && me.emd) {
       var E = me.emd;
       panel('동별 정류장 · ' + D.me + '시', '곳 · 정류장 수(막대) · 법정동 기준', colChart(Object.keys(E).map(function (k) { return [k.replace(/동$/, ''), E[k][0]]; }), null, null, 0, '', false, { plain: true, avgLabel: '동 평균' }));
@@ -1136,10 +1136,10 @@ function startApp() {
       { l: '택시 승차대', ic: 'pin', col: '#2E8B57', bg: '#E2F3E9', v: fmt(m.stands, 0), u: '곳', chips: [['정차면 ' + fmt(m.stand_sp, 0), 'navy'], meChip(me.stands, '곳')] },
       { l: '인구 1천명당', ic: 'trend', col: '#7A4FC4', bg: '#EFE9FB', v: I && I.me ? fmt(I.me.value, 1) : '–', u: '대', chips: [regSel && I0 && I0.me ? meChip(I0.me.value, '대', 1) : ['강원 평균 ' + fmt(avgOf(R, function (o, k) { var p = popOf(k); return p ? o.total / p * 1000 : null; }), 1), '']] }
     ]);
-    panel('인구 1천명당 택시', '강원 18개 시·군 · 대 · 누르면 그 지역', I ? rankList(I, regPick, regSel) : el('div', { class: 'empty', text: '자료 없음' }));
+    panel('인구 1천명당 택시', '자료를 올린 ' + Object.keys(R).length + '개 시·군 · 일부는 개인택시 미포함이라 참고용', I ? rankList(I, regPick, regSel) : el('div', { class: 'empty', text: '자료 없음' }));
     var who = isMe ? [D.me, '강원 평균'] : [SN, D.me, '강원 평균'];
     var per = function (o, k, f) { var p = popOf(k); return p && o ? o[f] / p * 1000 : null; };
-    panel('인구 1천명당 비교', who.map(fullName).join(' · ') + ' · 대/곳', groupCols(['전체 택시', '개인택시', '법인택시', '승차대 정차면'], cmpSeries(who, function (n) {
+    panel('인구 1천명당 비교', who.map(fullName).join(' · ') + ' · 대/곳 · 강원 평균은 자료 올린 시·군만(참고용)', groupCols(['전체 택시', '개인택시', '법인택시', '승차대 정차면'], cmpSeries(who, function (n) {
       var f = ['total', 'personal', 'corp', 'stand_sp'];
       return f.map(function (ff) { return n === '강원 평균' ? avgOf(R, function (o, k) { return per(o, k, ff); }) : per(R[n], n, ff); }); }), null, true));
     if (isMe) {
