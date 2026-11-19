@@ -128,8 +128,7 @@ def main():
             say('[신규 %s] 안 됨: %s' % (nm, str(e)[-300:]))
     kk0 = os.environ.get('KOSIS_KEY', '')
     import sources as _s0
-    for org, tb in (('211', 'DT_211002_P029'), ('211', 'DT_211002_I011'), ('211', 'DT_211002_J008'), ('116', 'DT_MLTM_6685'), ('110', 'DT_11006_A018'),
-                    ('116', 'DT_MLTM_5507'), ('110', 'DT_11001N_2013_A049')):
+    for org, tb in (('116', 'DT_MLTM_6040'), ('110', 'DT_110001_A046'), ('101', 'DT_1YL5902'), ('110', 'DT_156006_001')):
         try:
             meta = _s0.kosis_meta({'key_env': 'KOSIS_KEY', 'meta_url': 'https://kosis.kr/openapi/statisticsData.do', 'params': {'orgId': org, 'tblId': tb}})
             objs = {}
@@ -140,11 +139,11 @@ def main():
             say('[주기] %s: %s' % (tb, t[-250:]))
         except Exception as e:  # noqa: BLE001
             say('[메타] %s 실패 %s' % (tb, e))
-    for q in ('택시 운행', '운수업체', '자동차단속 및 처리', '주차장 현황', '교통사고 발생 현황', '교통안전시설물', '버스 노선', '자동차 운수사업', '주차장(', '교통 시군'):
+    for q in ('택시', '운수', '여객', '운송사업', '교통사고', '자동차', '주차', '버스', '신호', '횡단보도', '과태료', '세외수입'):
         try:
-            t = http_get('https://kosis.kr/openapi/statisticsSearch.do', {'method': 'getList', 'apiKey': kk0, 'searchNm': q, 'format': 'json', 'jsonVD': 'Y', 'resultCount': '40'})
+            t = http_get('https://kosis.kr/openapi/statisticsSearch.do', {'method': 'getList', 'apiKey': kk0, 'searchNm': q, 'format': 'json', 'jsonVD': 'Y', 'resultCount': '400'})
             j = json.loads(t)
-            j = [x for x in j if str(x.get('ORG_ID')) in ('211', '116', '110', '101', '220')] if isinstance(j, list) else j
+            j = [x for x in j if str(x.get('ORG_ID')) == '211' or '동해' in str(x.get('TBL_NM'))] if isinstance(j, list) else j
             say('[검색] %s → %s' % (q, ' | '.join('%s/%s %s(%s~%s)' % (x.get('ORG_ID'), x.get('TBL_ID'), x.get('TBL_NM'), x.get('STRT_PRD_DE'), x.get('END_PRD_DE')) for x in j) if isinstance(j, list) else str(j)[:200]))
         except Exception as e:  # noqa: BLE001
             say('[검색] %s 실패 %s' % (q, e))
