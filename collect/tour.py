@@ -175,8 +175,8 @@ def weather():
 
 # ---------------------------------------------------------------- 지역별 관광 수요 강도(월, 지수 0~100)
 DEM = 'https://apis.data.go.kr/B551011/AreaTarDemDsService/'
-DEM_OPS = (('areaTarExpDsList', 'exp', 'tarExpDsIxCd', 'tarExpDsIxNm', 'tarExpDsIxVal'),
-           ('areaTarSjrnDsList', 'stay', 'tarSjrnDsIxCd', 'tarSjrnDsIxNm', 'tarSjrnDsIxVal'))
+DEM_OPS = (('areaTarExpDsList', 'exp', 'tarExpDsIxCd', 'tarExpDsIxNm', 'tarExpDsIxVal', ('22', '2201', '2202', '2203')),
+           ('areaTarSjrnDsList', 'stay', 'tarSjrnDsIxCd', 'tarSjrnDsIxNm', 'tarSjrnDsIxVal', ('21', '2101', '2102', '2103', '2104', '2105')))
 
 
 def demand(C, cache=None, n_months=25):
@@ -196,13 +196,17 @@ def demand(C, cache=None, n_months=25):
         if ym in cache and i > 1:  # 최근 2달은 매번 다시
             continue
         got = {}
-        for op, kind, ck, nk, vk in DEM_OPS:
-            try:
-                rows = _call(_src(DEM + op, dict(APP, baseYm=ym, areaCd='51', numOfRows='1000', pageNo='1')), {}, 'dem_' + kind)
-            except Exception as e:  # noqa: BLE001
-                log('관광 수요 강도 %s %s 실패: %s' % (ym, kind, e))
-                continue
-            for r in rows:
+        rows_all = []
+        for op, kind, ck, nk, vk, codes in DEM_OPS:
+            for code in (codes if i < 13 else codes[:1]):
+                try:
+                    rows = _call(_src(DEM + op, dict(APP, **{'baseYm': ym, 'areaCd': '51', 'numOfRows': '100', 'pageNo': '1', ck: code})), {}, 'dem_' + kind)
+                except Exception as e:  # noqa: BLE001
+                    log('관광 수요 강도 %s %s %s 실패: %s' % (ym, kind, code, e))
+                    continue
+                rows_all.extend((r, ck, nk, vk) for r in rows)
+        for r, ck, nk, vk in rows_all:
+            if True:
                 nm = r.get('signguNm')
                 name = '강원' if str(r.get('signguCd')) == '0' else match_region(str(nm or ''), C['regions'])
                 v = to_num(r.get(vk))
