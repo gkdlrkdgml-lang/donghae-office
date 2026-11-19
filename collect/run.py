@@ -121,6 +121,17 @@ def collect(state, S, C):
         fail(state, 'finance_final', e)
     if sources.AMOUNTS:
         state.setdefault('finance', {})['amounts'] = {'initial': sources.AMOUNTS.get('finance', {}), 'final': sources.AMOUNTS.get('finance_final', {})}
+    # 회계별 세입예산(통합회계): 국내 PC에서 받은 파일 manual/budget_accounts_<연도>.json
+    mdir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'manual')
+    acc = {}
+    for fn in sorted(os.listdir(mdir)) if os.path.isdir(mdir) else []:
+        if fn.startswith('budget_accounts_') and fn.endswith('.json'):
+            with open(os.path.join(mdir, fn), encoding='utf-8') as fp:
+                j = json.load(fp)
+            acc[str(j['year'])] = j['regions']
+    if acc:
+        state.setdefault('finance', {})['accounts'] = acc
+    if sources.AMOUNTS:
         ai = sources.AMOUNTS.get('finance', {})
         if ai:
             yy = max(ai)

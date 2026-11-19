@@ -59,6 +59,17 @@
   .legend { display: flex; flex-direction: column; gap: 10px; font-size: 15px; }
   .legend div { display: grid; grid-template-columns: 14px 1fr auto; gap: 8px; align-items: center; }
   .legend i { width: 14px; height: 14px; border-radius: 3px; display: inline-block; }
+  .kpi.click { cursor: pointer; transition: box-shadow .15s, transform .15s; }
+  .kpi.click:hover { box-shadow: 0 6px 18px rgba(31,111,209,.18); transform: translateY(-1px); }
+  .kpi .more { margin-left: auto; float: right; font-size: 13px; font-weight: 700; color: var(--blue); background: #EEF4FC; border-radius: 999px; padding: 2px 10px; }
+  #detailBack { position: fixed; inset: 0; background: rgba(23,32,44,.45); z-index: 50; }
+  section.detail { position: fixed; left: 80px; right: 80px; top: 100px; bottom: 60px; z-index: 60; box-shadow: 0 20px 60px rgba(15,30,60,.35); display: grid; grid-template-rows: auto minmax(0, 1fr); }
+  .detailBody { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.4fr); gap: 28px; min-height: 0; align-items: start; }
+  .detailBody .donut { grid-template-columns: 1fr; }
+  .detailBody .donut svg { max-height: 360px !important; }
+  table.dt.big td, table.dt.big th { font-size: 16px; padding: 7px 8px; }
+  table.dt tr.me td { background: #E4EEFB; color: #1B3A6B; font-weight: 700; }
+  table.dt tr.pk td { background: #FFF1E2; font-weight: 700; }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; }
   .chip { font-size: 13.5px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #EEF2F7; color: #3D4B5E; white-space: nowrap; }
   .chip.bad { background: #FDEBDD; color: #A4470F; } .chip.good { background: #E2F3E9; color: #1B7A4B; } .chip.navy { background: #E4EEFB; color: #1B3A6B; }
@@ -183,7 +194,7 @@ function startApp() {
   D.menu.forEach(function (m, i) {
     nav.appendChild(el('button', { type: 'button', 'data-id': m.id, text: (i + 1) + ' ' + m.label, onclick: function () { go(m.id); } }));
   });
-  function go(id) { current = id; zoomIdx = null; if (location.hash !== '#' + id) location.hash = id; render(); }
+  function go(id) { current = id; zoomIdx = null; finDetail = null; if (location.hash !== '#' + id) location.hash = id; render(); }
   window.addEventListener('hashchange', function () {
     var h = location.hash.slice(1);
     if (h !== current && order.indexOf(h) >= 0) { current = h; render(); }
@@ -376,7 +387,7 @@ function startApp() {
   }
 
   // ---------- 3. 재정 ----------
-  var finSel = null;
+  var finSel = null, finDetail = null;
   function screenFinance() {
     var F = D.finance || {}, AM = F.amounts || {}, amI = AM.initial || {}, amF = AM.final || {};
     var ly = Object.keys(amI).sort().pop(), am = ly ? amI[ly] : {};
@@ -405,16 +416,21 @@ function startApp() {
       el('span', { text: (isMe ? '아래 목록에서 시·군을 누르면 위 값이 그 지역으로 바뀝니다 · ' : '다시 누르면 동해시로 돌아옵니다 · ') + '지방재정365 · ' + ly + '년 당초예산(일반회계)' })
     ]));
     var k = el('div', { class: 'kpis big', style: 'grid-template-columns:repeat(5,minmax(0,1fr))' });
-    function kpi(l, sub, v, u, tone, chips) {
+    function kpi(l, sub, v, u, tone, chips, onOpen) {
       var lab = el('div', { class: 'l' }, [l]); if (sub) lab.appendChild(el('small', { text: sub }));
-      k.appendChild(el('div', { class: 'kpi t-' + tone }, [lab, el('div', { class: 'v' }, [v, el('small', { text: u })]),
+      if (onOpen) lab.appendChild(el('span', { class: 'more', text: '세부 ›' }));
+      k.appendChild(el('div', { class: 'kpi t-' + tone + (onOpen ? ' click' : ''), onclick: onOpen || null, role: onOpen ? 'button' : null, tabindex: onOpen ? '0' : null },
+        [lab, el('div', { class: 'v' }, [v, el('small', { text: u })]),
         el('div', { class: 'chips' }, chips.filter(Boolean).map(function (c) { return el('span', { class: 'chip ' + (c[1] || ''), text: c[0] }); }))]));
     }
+    var ACC = (F.accounts || {}), ay = Object.keys(ACC).sort().pop(), acc = ay ? ACC[ay] : {};
     var dep = sel.budget - (sel.own || 0), f1 = fiv(SN), pop = ((D.admin || {}).regions || {})[SN];
     var pm = pop && pop.total ? sel.budget / pop.total : null, pmMe = ((D.admin || {}).regions || {})[D.me] ? me.budget / D.admin.regions[D.me].total : null;
     var pmAll = names.map(function (n) { var r = ((D.admin || {}).regions || {})[n]; return r && r.total ? am[n].budget / r.total : null; }).filter(function (x) { return x != null; }).sort(function (x, y) { return y - x; });
-    kpi('예산 규모', ly + ' 당초', eok(sel.budget), '억 원', 'navy', [['도내 ' + rk(rb, SN) + '위 / ' + rb.n, 'navy'],
-      diffMe != null ? ['동해보다 ' + (diffMe >= 0 ? '+' : '') + eok(diffMe) + '억', diffMe >= 0 ? 'good' : 'bad'] : null]);
+    kpi('예산 규모', ly + ' 당초 · 일반회계', eok(sel.budget), '억 원', 'navy', [['도내 ' + rk(rb, SN) + '위 / ' + rb.n, 'navy'],
+      acc[SN] ? ['전체 ' + fmt(acc[SN].total / 100, 0) + '억', ''] : null,
+      diffMe != null ? ['동해보다 ' + (diffMe >= 0 ? '+' : '') + eok(diffMe) + '억', diffMe >= 0 ? 'good' : 'bad'] : null],
+      acc[SN] ? function () { finDetail = 'accounts'; render(); } : null);
     kpi('자체수입', '지방세 + 세외수입', eok(sel.own), '억 원', 'good', [['도내 ' + rk(ro, SN) + '위', ''], ['예산의 ' + fmt(sel.own / sel.budget * 100, 1) + '%', '']]);
     kpi('의존재원 등', '교부세·보조금 등', eok(dep), '억 원', 'mute', [['예산의 ' + fmt(dep / sel.budget * 100, 1) + '%', '']]);
     kpi('재정자립도', '', f1 ? fmt(f1.value, 1) : '–', '%', f1 ? (f1.judge === 'strong' ? 'good' : f1.judge === 'weak' ? 'bad' : 'navy') : 'mute',
@@ -441,6 +457,30 @@ function startApp() {
     if (fi) s3.appendChild(colChart(fi.ranking.map(function (r) { return [r.name, r.value]; }), pick, hl, 1));
     else s3.appendChild(el('div', { class: 'empty', text: '자료 없음' }));
     view.appendChild(s3);
+
+    // 세부 보기(팝업): 회계별 예산
+    if (finDetail === 'accounts' && acc[SN]) {
+      var A2 = acc[SN];
+      function close() { finDetail = null; render(); }
+      view.appendChild(el('div', { id: 'detailBack', onclick: close }));
+      var tb = el('tbody');
+      Object.keys(acc).map(function (n) { return [n, acc[n]]; }).sort(function (x, y) { return y[1].total - x[1].total; }).forEach(function (r, i) {
+        var m = r[0] === D.me, p = r[0] === SN && !m;
+        tb.appendChild(el('tr', { class: m ? 'me' : p ? 'pk' : '', style: 'cursor:pointer', onclick: function () { finSel = r[0]; render(); } },
+          [String(i + 1), r[0], r[1].total, r[1].general, r[1].enterprise, r[1].other, r[1].fund].map(function (v, j) {
+            return el('td', { class: j > 1 ? 'r' : '', text: j > 1 ? fmt(v / 100, 0) : v });
+          })));
+      });
+      var tbl = el('table', { class: 'dt big' }, [el('thead', {}, [el('tr', {}, ['순위', '시·군', '전체(통합)', '일반회계', '공기업특별', '기타특별', '기금'].map(function (h, j) { return el('th', { class: j > 1 ? 'r' : '', text: h }); }))]), tb]);
+      view.appendChild(el('section', { class: 'detail' }, [
+        el('div', { class: 'sh' }, [el('h2', { text: ay + ' 당초예산 회계별 구성 · ' + full + ' 전체 ' + fmt(A2.total / 100, 0) + '억 원' }), el('small', { text: '통합회계 총계 · 억 원 · 표의 시·군을 누르면 바뀝니다' }),
+          el('button', { class: 'zbtn', type: 'button', text: '✕ 닫기', onclick: close })]),
+        el('div', { class: 'detailBody' }, [
+          donut([['일반회계 ' + fmt(A2.general / 100, 0) + '억', A2.general, '#1F6FD1'], ['공기업특별회계 ' + fmt(A2.enterprise / 100, 0) + '억', A2.enterprise, '#2E9C6A'],
+                 ['기타특별회계 ' + fmt(A2.other / 100, 0) + '억', A2.other, '#E8A867'], ['기금 ' + fmt(A2.fund / 100, 0) + '억', A2.fund, '#8FB2E0']], fmt(A2.total / 100, 0) + '억', '전체 예산'),
+          el('div', { style: 'min-height:0;overflow:auto' }, [tbl])])
+      ]));
+    }
   }
 
   // ---------- 4. 액자 ----------
@@ -496,7 +536,7 @@ function startApp() {
   var zoomIdx = null;
   function addZoom() {
     var old = document.getElementById('zoomBack'); if (old) old.remove();
-    var secs = view.querySelectorAll('section');
+    var secs = view.querySelectorAll('section:not(.detail)');
     Array.prototype.forEach.call(secs, function (sec, idx) {
       var sh = sec.querySelector('.sh'); if (!sh) return;
       var on = zoomIdx === idx;
@@ -513,7 +553,7 @@ function startApp() {
 
   // ---------- 리모컨(무선 키보드) ----------
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && zoomIdx != null) { zoomIdx = null; render(); return; }
+    if (e.key === 'Escape' && (zoomIdx != null || finDetail)) { zoomIdx = null; finDetail = null; render(); return; }
     var i = order.indexOf(current);
     if (e.key === 'ArrowRight') go(order[(i + 1) % order.length]);
     else if (e.key === 'ArrowLeft') go(order[(i - 1 + order.length) % order.length]);
