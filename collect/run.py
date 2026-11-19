@@ -12,6 +12,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from common import (settings, codes, load_env, save_json, load_json, log, now, read_manual, WEB_DATA, ym_shift)  # noqa: E402
 import sources  # noqa: E402
+import life  # noqa: E402
 from rank import rank  # noqa: E402
 
 STATE = os.path.join(WEB_DATA, 'state.json')
@@ -130,6 +131,50 @@ def collect(state, S, C):
         except Exception as e:  # noqa: BLE001
             fail(state, 'migration', e)
 
+    # 5) 2단계 생활 분야: 의료기관·충전기(주 1회), 대기질(매번), 방문자(새 달만)
+    L = state.setdefault('life', {})
+    pops = {k: v.get('total') for k, v in ((state.get('admin') or {}).get('regions') or {}).items()}
+
+    def stale(key, days):
+        at = (L.get(key) or {}).get('at')
+        try:
+            return (now().date() - __import__('datetime').date.fromisoformat(at)).days >= days
+        except Exception:  # noqa: BLE001
+            return True
+
+    def per(vals, mult):
+        return {k: v / pops[k] * mult for k, v in vals.items() if pops.get(k)}
+    for key, fn, days in (('hospitals', life.hospitals, 6), ('ev', life.ev_chargers, 6)):
+        if stale(key, days) or '--force-life' in sys.argv:
+            try:
+                L[key] = fn(C)
+                ok(state, key, '%d개 시·군' % len(L[key]['regions']))
+            except Exception as e:  # noqa: BLE001
+                fail(state, key, e)
+    if L.get('hospitals'):
+        set_ind(state, 'medical', per({k: v['total'] for k, v in L['hospitals']['regions'].items()}, 10000), L['hospitals']['at'] + ' 기준 요양기관(약국 제외)')
+    if L.get('ev'):
+        set_ind(state, 'ev', per({k: v['total'] for k, v in L['ev']['regions'].items()}, 10000), L['ev']['at'] + ' 기준 충전기')
+    try:
+        L['air'] = life.air(C)
+        ok(state, 'air', L['air']['time'])
+    except Exception as e:  # noqa: BLE001
+        fail(state, 'air', e)
+    try:
+        months, last = life.visitors(C, L.get('visit_months'))
+        L['visit_months'], L['visit_last'] = months, last
+        ok(state, 'visitors', '%s까지' % last)
+    except Exception as e:  # noqa: BLE001
+        fail(state, 'visitors', e)
+    vm = L.get('visit_months') or {}
+    if len(vm) >= 12:
+        last12 = sorted(vm)[-12:]
+        tot = {}
+        for ym in last12:
+            for k, d in vm[ym].items():
+                tot[k] = tot.get(k, 0) + d.get('outside', 0) + d.get('foreign', 0)
+        set_ind(state, 'visitors', per(tot, 1), '%s~%s 외지인·외국인 방문(연인원)' % (last12[0], last12[-1]))
+
     # 4) 재정자립도 → 11번 (순위는 당초, 최종은 같은 해 비교용)
     try:
         fin = sources.finance(S, C)
@@ -211,6 +256,7 @@ def build(state, S, C):
         'regions': [r['name'] for r in C['regions']],
         'indicators': [], 'admin': state.get('admin'), 'status': state['status'],
         'finance': state.get('finance') or {},
+        'life': {k: v for k, v in (state.get('life') or {}).items()},
     }
     for ind in S['indicators']:
         d = state['indicators'].get(ind['id'])

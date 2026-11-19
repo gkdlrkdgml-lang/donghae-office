@@ -78,7 +78,7 @@
       "dir": 1,
       "digits": 1,
       "source": "심평원 병원정보",
-      "show": false
+      "show": true
     },
     {
       "id": "traffic_death",
@@ -111,7 +111,7 @@
       "dir": 1,
       "digits": 1,
       "source": "환경공단 충전소",
-      "show": false
+      "show": true
     },
     {
       "id": "pm25",
@@ -133,7 +133,7 @@
       "dir": 1,
       "digits": 1,
       "source": "한국관광공사",
-      "show": false
+      "show": true
     },
     {
       "id": "workers",
