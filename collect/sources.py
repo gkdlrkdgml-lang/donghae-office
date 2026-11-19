@@ -2,6 +2,7 @@
 
 결과는 언제나 18개 시·군 이름({'동해': 값, ...})을 기준으로 맞춰 돌려줍니다.
 """
+import json
 import os
 import urllib.parse
 
@@ -349,10 +350,24 @@ def finance_years(S, C, key='finance'):
     src = S['sources'][key]
     if not src.get('url'):
         raise RuntimeError('%s 요청 주소가 settings.json에 아직 없습니다' % key)
-    rows = _call(src, {}, key)
+    code = src['url'].rstrip('/').rsplit('/', 1)[-1]
+    path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'manual', 'lofin_%s.json' % code)
+    rows = None
+    try:
+        rows = _call(src, {}, key)
+    except Exception as e:  # noqa: BLE001
+        if not os.path.exists(path):
+            raise
+        log('%s API 접속 불가(%s) → 저장 파일 %s 사용' % (key, e, os.path.basename(path)))
+    if not rows and os.path.exists(path):
+        with open(path, encoding='utf-8') as fp:
+            rows = find_items(json.load(fp))
     f = src['fields']
     by = {}
-    for r in rows:
+    for r in rows or []:
+        sido = pick(r, f.get('sido_name', []))
+        if sido and '강원' not in str(sido):
+            continue
         name = match_region(pick(r, f['region_name']), C['regions'])
         v = to_num(pick(r, f['fin_indep']))
         y = pick(r, f['year'])
