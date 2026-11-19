@@ -74,7 +74,7 @@
   table.dt tr.pk td { background: #FFF1E2; font-weight: 700; }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; }
   .chip { font-size: 13.5px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #EEF2F7; color: #3D4B5E; white-space: nowrap; }
-  .chip.bad { background: #FDEBDD; color: #A4470F; } .chip.good { background: #E2F3E9; color: #1B7A4B; } .chip.navy { background: #E4EEFB; color: #1B3A6B; }
+  .chip.bad { background: #FDEBDD; color: #A4470F; } .chip.good { background: #E2F3E9; color: #1B7A4B; } .chip.navy { background: #E4EEFB; color: #1B3A6B; } .chip.violet { background: #EFE9FB; color: #5B3FA0; }
   .kpi .n { font-size: 13.5px; color: var(--sub); }
   .rows { display: flex; flex-direction: column; justify-content: space-between; flex: 1 1 auto; min-height: 0; }
   .row { display: grid; grid-template-columns: 28px 56px minmax(0, 1fr) 72px; gap: 10px; align-items: center; font-size: 16px; padding: 2px 6px; border-radius: 6px; cursor: pointer; }
@@ -429,16 +429,18 @@ function startApp() {
     var dep = sel.budget - (sel.own || 0), f1 = fiv(SN), pop = ((D.admin || {}).regions || {})[SN];
     var pm = pop && pop.total ? sel.budget / pop.total : null, pmMe = ((D.admin || {}).regions || {})[D.me] ? me.budget / D.admin.regions[D.me].total : null;
     var pmAll = names.map(function (n) { var r = ((D.admin || {}).regions || {})[n]; return r && r.total ? am[n].budget / r.total : null; }).filter(function (x) { return x != null; }).sort(function (x, y) { return y - x; });
-    kpi('예산 규모', ly + ' 당초 · 일반회계', eok(sel.budget), '억 원', 'navy', [['도내 ' + rk(rb, SN) + '위 / ' + rb.n, 'navy'],
-      acc[SN] ? ['전체 ' + fmt(acc[SN].total / 100, 0) + '억', ''] : null,
+    function rt(r, n) { var c = Math.ceil(n * (D.judge.strong_pct || 25) / 100); return r <= c ? 'good' : r > n - c ? 'bad' : 'navy'; }
+    var rB = rk(rb, SN), rO = rk(ro, SN), rP = pm ? pmAll.indexOf(pm) + 1 : null;
+    kpi('예산 규모', ly + ' 당초 · 일반회계', eok(sel.budget), '억 원', 'navy', [['도내 ' + rB + '위 / ' + rb.n, rt(rB, rb.n)],
+      acc[SN] ? ['전체 ' + fmt(acc[SN].total / 100, 0) + '억', 'violet'] : null,
       diffMe != null ? ['동해보다 ' + (diffMe >= 0 ? '+' : '') + eok(diffMe) + '억', diffMe >= 0 ? 'good' : 'bad'] : null],
       acc[SN] ? function () { finDetail = 'accounts'; render(); } : null);
-    kpi('자체수입', '지방세 + 세외수입', eok(sel.own), '억 원', 'good', [['도내 ' + rk(ro, SN) + '위', ''], ['예산의 ' + fmt(sel.own / sel.budget * 100, 1) + '%', '']]);
-    kpi('의존재원 등', '교부세·보조금 등', eok(dep), '억 원', 'mute', [['예산의 ' + fmt(dep / sel.budget * 100, 1) + '%', '']]);
+    kpi('자체수입', '지방세 + 세외수입', eok(sel.own), '억 원', 'good', [['도내 ' + rO + '위', rt(rO, ro.n)], ['예산의 ' + fmt(sel.own / sel.budget * 100, 1) + '%', 'violet']]);
+    kpi('의존재원 등', '교부세·보조금 등', eok(dep), '억 원', 'mute', [['예산의 ' + fmt(dep / sel.budget * 100, 1) + '%', 'violet']]);
     kpi('재정자립도', '', f1 ? fmt(f1.value, 1) : '–', '%', f1 ? (f1.judge === 'strong' ? 'good' : f1.judge === 'weak' ? 'bad' : 'navy') : 'mute',
-      [f1 ? ['도내 ' + f1.rank + '위 / ' + fi.n, f1.judge === 'strong' ? 'good' : f1.judge === 'weak' ? 'bad' : ''] : null]);
-    kpi('주민 1인당 예산', '', pm ? fmt(pm / 1e4, 0) : '–', '만 원', 'navy', [pm ? ['도내 ' + (pmAll.indexOf(pm) + 1) + '위', ''] : null,
-      pm && !isMe && pmMe ? ['동해 ' + fmt(pmMe / 1e4, 0) + '만 원', ''] : null]);
+      [f1 ? ['도내 ' + f1.rank + '위 / ' + fi.n, rt(f1.rank, fi.n)] : null]);
+    kpi('주민 1인당 예산', '', pm ? fmt(pm / 1e4, 0) : '–', '만 원', 'navy', [rP ? ['도내 ' + rP + '위', rt(rP, pmAll.length)] : null,
+      pm && !isMe && pmMe ? ['동해 ' + fmt(pmMe / 1e4, 0) + '만 원', 'violet'] : null]);
     view.appendChild(k);
 
     function pick(n) { finSel = (n === finSel ? D.me : n); render(); }
