@@ -331,6 +331,8 @@ def parking(C):
         addr = ' '.join(str(r.get(k) or '') for k in ('rdnmadr', 'lnmadr', 'insttNm', 'institutionNm'))
         if '강원' not in addr:
             continue
+        if str(r.get('prkplceSe')) != '공영':  # 공영주차장만
+            continue
         nm = str(r.get('insttNm') or '').replace('강원특별자치도', '').replace('강원도', '').strip()
         name = match_region(nm, C['regions'])
         if not name:

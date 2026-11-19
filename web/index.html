@@ -1055,7 +1055,7 @@ function startApp() {
     if (L.cars) tabs.push(['cars', '자동차 등록']);
     if (L.ev) tabs.push(['ev', '전기차 충전']);
     if (L.tsafe) tabs.push(['safe', '교통안전·도로']);
-    if (L.parking) tabs.push(['park', '주차장']);
+    if (L.parking) tabs.push(['park', '공영주차장']);
     tabs.push(['bus', '라이브 버스']);
     if (!tabs.some(function (t) { return t[0] === trTab; })) trTab = tabs[0][0];
     ({ cars: screenCars, ev: screenTraffic, safe: screenTSafe, park: screenPark, bus: screenBus })[trTab]();
@@ -1098,34 +1098,34 @@ function startApp() {
   function screenPark() {
     var P = (D.life || {}).parking || {}, R = P.regions || {}, SN = R[regName()] ? regName() : D.me, isMe = SN === D.me;
     var I0 = ind('parking'), I = indFor(I0, SN), m = R[SN] || {}, me = R[D.me] || {};
-    lifeTitle(fullName(SN) + ' 주차장', (P.at || '') + ' 전국주차장정보표준데이터(지자체 등록분)' + selHint());
+    lifeTitle(fullName(SN) + ' 공영주차장', (P.at || '') + ' 전국주차장정보표준데이터(공영)' + selHint());
     cardsRow([
-      { l: '주차장', ic: 'car', v: fmt(m.lots, 0), u: '곳', chips: [meChip(me.lots, '곳')] },
-      { l: '주차면', ic: 'pin', col: '#1F6FD1', bg: '#E4EEFB', v: fmt(m.spaces, 0), u: '면', chips: [rankChip(I), I && I.me ? ['1천명당 ' + fmt(I.me.value, 0) + '면', 'violet'] : null] },
-      { l: '공영', ic: 'bank', col: '#2E8B57', bg: '#E2F3E9', v: fmt(m.public, 0), u: '곳', chips: [['주차면 ' + fmt(m.public_sp, 0), 'navy'], meChip(me.public, '곳')] },
-      { l: '무료', ic: 'coin', col: '#C0602B', bg: '#FDEBDD', v: fmt(m.free, 0), u: '곳', chips: [m.lots ? ['전체의 ' + fmt(m.free / m.lots * 100, 1) + '%', 'violet'] : null] },
-      { l: '노상·노외·부설', ic: 'gauge', col: '#7A4FC4', bg: '#EFE9FB', v: fmt(m['노외'], 0), u: '곳', sub: '노외', chips: [['노상 ' + fmt(m['노상'], 0), ''], ['부설 ' + fmt(m['부설'], 0), '']] }
+      { l: '공영주차장', ic: 'car', v: fmt(m.lots, 0), u: '곳', chips: [meChip(me.lots, '곳')] },
+      { l: '주차면', ic: 'pin', col: '#1F6FD1', bg: '#E4EEFB', v: fmt(m.spaces, 0), u: '면', chips: [rankChip(I), I && I.me ? ['1천명당 ' + fmt(I.me.value, 1) + '면', 'violet'] : null] },
+      { l: '노외', sub: '별도 부지', ic: 'bank', col: '#2E8B57', bg: '#E2F3E9', v: fmt(m['노외'], 0), u: '곳', chips: [meChip(me['노외'], '곳')] },
+      { l: '노상', sub: '도로 위', ic: 'gauge', col: '#7A4FC4', bg: '#EFE9FB', v: fmt(m['노상'], 0), u: '곳', chips: [meChip(me['노상'], '곳')] },
+      { l: '유료', ic: 'coin', col: '#C0602B', bg: '#FDEBDD', v: fmt(m.paid, 0), u: '곳', chips: [['무료 ' + fmt(m.free, 0) + '곳', 'good']] }
     ]);
-    panel('인구 1천명당 주차면', '강원 18개 시·군 · 면 · 누르면 그 지역', I ? rankList(I, regPick, regSel) : el('div', { class: 'empty', text: '자료 없음' }));
+    panel('인구 1천명당 공영주차면', '강원 18개 시·군 · 면 · 누르면 그 지역', I ? rankList(I, regPick, regSel) : el('div', { class: 'empty', text: '자료 없음' }));
     var who = isMe ? [D.me, '강원 평균'] : [SN, D.me, '강원 평균'];
     var share = function (o, k) { return o && o.lots ? o[k] / o.lots * 100 : null; };
-    var cats = [['공영', 'public'], ['무료', 'free'], ['노상', '노상'], ['노외', '노외'], ['부설', '부설']];
-    panel('주차장 구성 비교', '전체 주차장 중 비중(%) · ' + who.map(fullName).join(' · '), groupCols(cats.map(function (c) { return c[0]; }), cmpSeries(who, function (n) {
+    var cats = [['무료', 'free'], ['유료', 'paid'], ['노상', '노상'], ['노외', '노외']];
+    panel('공영주차장 구성 비교', '공영주차장 중 비중(%) · ' + who.map(fullName).join(' · '), groupCols(cats.map(function (c) { return c[0]; }), cmpSeries(who, function (n) {
       return cats.map(function (c) { return n === '강원 평균' ? avgOf(R, function (o) { return share(o, c[1]); }) : share(R[n], c[1]); }); }), null, true));
     var items = (me.items || []).filter(function (x) { return x.lat; });
     if (isMe && items.length) {
       var mb = el('div', { class: 'tmap' });
-      panel(D.me + '시 주차장 지도', '원 크기 = 주차면 · 초록 공영 / 주황 민영 · ' + items.length + '곳', [mb]);
+      panel(D.me + '시 공영주차장 지도', '원 크기 = 주차면 · 초록 노외 / 보라 노상 · ' + items.length + '곳', [mb]);
       setTimeout(function () {
         if (!window.L || !window.L.map) { mb.appendChild(el('div', { class: 'empty', text: '지도를 불러오지 못했습니다' })); return; }
         var map = window.L.map(mb, { zoomControl: false }).setView([37.52, 129.11], 12);
         window.L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { attribution: '© OpenStreetMap · © CARTO', maxZoom: 18 }).addTo(map);
         var pts = [];
-        items.forEach(function (x) { pts.push([x.lat, x.lng]); window.L.circleMarker([x.lat, x.lng], { radius: 4 + Math.sqrt(x.sp || 1) / 1.6, color: '#fff', weight: 1.5, fillColor: x.se === '공영' ? '#2E8B57' : '#F0A04B', fillOpacity: .85 }).addTo(map).bindTooltip(x.name + ' · ' + fmt(x.sp, 0) + '면 · ' + (x.fee || ''), { direction: 'top' }); });
+        items.forEach(function (x) { pts.push([x.lat, x.lng]); window.L.circleMarker([x.lat, x.lng], { radius: 4 + Math.sqrt(x.sp || 1) / 1.6, color: '#fff', weight: 1.5, fillColor: x.type === '노외' ? '#2E8B57' : '#7A4FC4', fillOpacity: .85 }).addTo(map).bindTooltip(x.name + ' · ' + fmt(x.sp, 0) + '면 · ' + (x.fee || ''), { direction: 'top' }); });
         if (pts.length > 1) map.fitBounds(pts, { padding: [20, 20] });
       }, 0);
     } else {
-      panel('주차면 수 · 강원 18개 시·군', '면 · 누르면 그 지역', colChart(Object.keys(R).map(function (n) { return [n, R[n].spaces]; }), regPick, SN, 0));
+      panel('공영주차면 수 · 강원 18개 시·군', '면 · 누르면 그 지역', colChart(Object.keys(R).map(function (n) { return [n, R[n].spaces]; }), regPick, SN, 0));
     }
   }
   function screenCars() {

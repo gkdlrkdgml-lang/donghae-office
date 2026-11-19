@@ -162,11 +162,11 @@
       "id": "parking",
       "no": 7,
       "field": "교통",
-      "name": "인구 1천명당 주차면",
+      "name": "인구 1천명당 공영주차면",
       "unit": "면",
       "dir": 1,
       "digits": 0,
-      "source": "전국주차장정보표준데이터",
+      "source": "전국주차장정보표준데이터(공영)",
       "show": true,
       "main": false
     },

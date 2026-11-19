@@ -181,14 +181,14 @@ def collect(state, S, C):
             ok(state, 'tsafe', ', '.join(k for k in L['tsafe'] if k != 'at'))
         except Exception as e:  # noqa: BLE001
             fail(state, 'tsafe', e)
-    if stale('parking', 6) or not L.get('parking') or '--force-life' in sys.argv:
+    if stale('parking', 6) or not L.get('parking') or any(v.get('private') for v in (L.get('parking') or {}).get('regions', {}).values()) or '--force-life' in sys.argv:
         try:
             L['parking'] = {'at': now().strftime('%Y-%m-%d'), 'regions': tour.parking(C)}
             ok(state, 'parking', '%d개 시·군' % len(L['parking']['regions']))
         except Exception as e:  # noqa: BLE001
             fail(state, 'parking', e)
     if L.get('parking'):
-        set_ind(state, 'parking', per({k: v['spaces'] for k, v in L['parking']['regions'].items() if v.get('spaces')}, 1000), '%s 기준 주차장 표준데이터' % L['parking']['at'])
+        set_ind(state, 'parking', per({k: v['spaces'] for k, v in L['parking']['regions'].items() if v.get('spaces')}, 1000), '%s 기준 공영주차장(표준데이터)' % L['parking']['at'])
     T = L.get('tsafe') or {}
     if T.get('acc'):
         set_ind(state, 'accidents', {k: v.get('A1') / pops[k] * 100000 for k, v in T['acc']['regions'].items() if v.get('A1') is not None and pops.get(k)},
