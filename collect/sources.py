@@ -668,7 +668,7 @@ def traffic_safety(S, C):
         log('교통단속 실패: %s' % e)
     # 3) 도로(강원 시군, 연): 도로종류 × 시군 × 항목
     try:
-        rows = _kosis_rows('DT_211002_I011', {'orgId': '211', 'objL1': 'ALL', 'objL2': 'ALL', 'itmId': 'ALL', 'newEstPrdCnt': '1'}, 'road')
+        rows = _kosis_rows('DT_211002_I011', {'orgId': '211', 'objL1': 'ALL', 'objL2': 'ALL', 'objL3': 'ALL', 'itmId': 'T001', 'newEstPrdCnt': '1'}, 'road')
         road = {}
         for r in rows:
             a, b = str(r.get('C1_NM', '')).strip(), str(r.get('C2_NM', '')).strip()
@@ -678,7 +678,7 @@ def traffic_safety(S, C):
                 continue
             v = to_num(r.get('DT'))
             if v is not None:
-                road.setdefault(name, {}).setdefault(kind, {})[str(r.get('ITM_NM', '')).strip()] = v
+                road.setdefault(name, {}).setdefault(kind, {})[str(r.get('C3_NM') or r.get('ITM_NM', '')).strip()] = v
         if road:
             res['road'] = {'year': str(rows[0].get('PRD_DE')), 'regions': road}
     except Exception as e:  # noqa: BLE001

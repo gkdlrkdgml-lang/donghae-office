@@ -175,7 +175,7 @@ def collect(state, S, C):
     if L.get('cars'):
         set_ind(state, 'cars', per({k: v.get('total', {}).get('all') for k, v in L['cars']['regions'].items() if v.get('total', {}).get('all')}, 1000),
                 '%s년 %d월 자동차 등록대수' % (L['cars']['ym'][:4], int(L['cars']['ym'][4:])))
-    if stale('tsafe', 6) or '--force-life' in sys.argv:
+    if stale('tsafe', 6) or not (L.get('tsafe') or {}).get('road') or '--force-life' in sys.argv:
         try:
             L['tsafe'] = dict(sources.traffic_safety(S, C), at=now().strftime('%Y-%m-%d'))
             ok(state, 'tsafe', ', '.join(k for k in L['tsafe'] if k != 'at'))
