@@ -126,18 +126,19 @@ def main():
             say('[신규 %s] 됨: %s' % (nm, t[:1500].replace('\n', ' ')))
         except Exception as e:  # noqa: BLE001
             say('[신규 %s] 안 됨: %s' % (nm, str(e)[-300:]))
-    from urllib.parse import unquote as _uq3
-    kk = _uq3(os.environ.get('DATA_GO_KR_KEY', '').strip())
-    for nm, url, q in (('축제표준', 'https://api.data.go.kr/openapi/tn_pubr_public_cltur_fstvl_api', {'type': 'json', 'numOfRows': '100', 'pageNo': '1', 'rdnmadr': '동해시'}),
-                       ('축제표준2', 'https://api.data.go.kr/openapi/tn_pubr_public_cltur_fstvl_api', {'type': 'json', 'numOfRows': '5', 'pageNo': '1'}),
-                       ('공연행사표준', 'https://api.data.go.kr/openapi/tn_pubr_public_pblprfr_event_info_api', {'type': 'json', 'numOfRows': '5', 'pageNo': '1'}),
-                       ('문화정보원', 'https://apis.data.go.kr/B553457/cultureinfo/area2', {'numOfrows': '20', 'PageNo': '1', 'sido': '강원', 'gugun': '동해시', 'from': '20260101', 'to': '20261231'}),
-                       ('지역축제', 'https://apis.data.go.kr/B553457/cultureinfo/period2', {'numOfrows': '5', 'PageNo': '1', 'from': '20261101', 'to': '20261231'})):
+    import urllib.request as _ur
+    for u in ('https://livebus.dhits.kr/',):
         try:
-            t = http_get(url, dict(q, serviceKey=kk), tries=1)
-            say('[행사 %s] %s' % (nm, t[:1500].replace('\n', ' ')))
+            rq = _ur.Request(u, headers={'User-Agent': 'Mozilla/5.0'})
+            with _ur.urlopen(rq, timeout=20) as r:
+                say('[버스] %s %s' % (r.status, ' | '.join('%s: %s' % (k, v) for k, v in r.headers.items())))
+                body = r.read().decode('utf-8', 'replace')
+                import re as _re4
+                say('[버스 본문] ' + body[:1500].replace('\n', ' '))
+                say('[버스 스크립트] ' + ' '.join(_re4.findall(r'(?:src|href)="([^"]+)"', body)[:30]))
+                say('[버스 주소들] ' + ' '.join(sorted(set(_re4.findall(r'(?:https?:)?//[\w.-]+(?:/[\w./?=&-]*)?|/api/[\w./?=&-]*', body)))[:40]))
         except Exception as e:  # noqa: BLE001
-            say('[행사 %s] 안 됨 %s' % (nm, str(e)[-250:]))
+            say('[버스] 실패 %s' % e)
     if os.environ.get('PROBE_FULL') != '1':
         return
     probe('admm_population', {'url': 'https://apis.data.go.kr/1741000/admmPpltnHhStus/selectAdmmPpltnHhStus', 'key_env': 'DATA_GO_KR_KEY',
