@@ -87,6 +87,14 @@ def collect(state, S, C):
                                                 'working': round(mine['total'] * mine['working_age'] / 100),
                                                 'elderly': round(mine['total'] * mine['elderly'] / 100)}
         ok(state, 'age', '%s · %d개 시·군' % (mode, len(ages)))
+        if mode == 'kosis' and state.get('admin'):
+            try:
+                admm, aym = sources.admm_kosis(S, C)
+                state['admin']['admm'] = admm
+                state['admin']['admm_ym'] = aym
+            except Exception as e2:  # noqa: BLE001
+                state['admin'].pop('admm', None)
+                print('행정동 인구 실패:', e2)
     except Exception as e:  # noqa: BLE001
         fail(state, 'age', e)
         for iid in ('working_age', 'elderly'):
@@ -144,7 +152,8 @@ def demo(state, S, C):
     state['admin'] = {'ym': now().strftime('%Y%m'), 'prev_ym': '', 'regions': regions,
                       'dongs': {k: {'total': v[0], 'hh': v[1]} for k, v in dongs.items()},
                       'age_bands': {'0': 5300, '10': 6900, '20': 8700, '30': 8600, '40': 12100, '50': 15300, '60': 15100, '70': 9300, '80': 5300, '90': 900, '100': 30},
-                      'age_counts': {'total': 88030, 'working': 54740, 'elderly': 25430}}
+                      'age_counts': {'total': 88030, 'working': 54740, 'elderly': 25430},
+                      'admm': {k: {'total': v[0], 'elderly': v[1]} for k, v in {'천곡동': [21300, 22.1], '송정동': [9000, 26.0], '북삼동': [16800, 19.5], '부곡동': [5100, 30.2], '동호동': [4600, 33.1], '발한동': [6900, 31.4], '묵호동': [3900, 41.2], '북평동': [6100, 32.5], '망상동': [3300, 38.9], '삼화동': [6400, 27.3]}.items()}}
     for s in ('population', 'dong_population', 'age', 'finance', 'finance_final'):
         ok(state, s, '시연용 가짜 값')
 

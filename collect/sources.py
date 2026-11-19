@@ -113,7 +113,7 @@ def dong_population(S, C, ym):
 import re as _re
 
 _RANGE = _re.compile(r'(\d+)\s*[-~]\s*(\d+)\s*세')
-_OVER = _re.compile(r'(\d+)\s*세\s*이상')
+_OVER = _re.compile(r'(\d+)\s*(?:세\s*이상|세?\s*\+)')
 _ONE = _re.compile(r'^(\d+)세(남자|여자)?$')
 
 
@@ -244,6 +244,48 @@ def age_kosis(S, C):
         ym = r.get('PRD_DE') or ym
         by.setdefault(name, []).append((rng[0], rng[1], v))
     return by, ym
+
+
+def admm_kosis(S, C):
+    """우리 시 행정동별 인구와 고령인구 비율(KOSIS 같은 통계표, 5세 단위로 정확히 셈)."""
+    src = S['sources']['age']['kosis']
+    meta = kosis_meta(src)
+    obj_id, rcodes = kosis_region_codes(meta, C, tuple(src.get('region_code_prefix', [])))
+    mine = rcodes.get(C['me'])
+    if not mine:
+        raise RuntimeError('KOSIS 메타에서 우리 시 코드를 찾지 못함')
+    kids = {str(m.get('ITM_ID')): str(m.get('ITM_NM', '')).strip() for m in meta
+            if m.get('OBJ_ID') == obj_id and str(m.get('UP_ITM_ID', '')) == mine}
+    if not kids:
+        raise RuntimeError('KOSIS 메타에 행정동 코드가 없음')
+    order = []
+    for m in meta:
+        oid = m.get('OBJ_ID')
+        if oid and oid != 'ITEM' and oid not in order:
+            order.append(oid)
+    extra = {}
+    for i, oid in enumerate(order[:8]):
+        extra['objL%d' % (i + 1)] = '+'.join(kids) + '+' if oid == obj_id else 'ALL'
+    itm = [m for m in meta if m.get('OBJ_ID') == 'ITEM' and ('총' in str(m.get('ITM_NM', '')) or str(m.get('ITM_NM', '')).strip() in ('계', '인구수'))]
+    if itm:
+        extra['itmId'] = str(itm[0].get('ITM_ID')) + '+'
+    rows = _call(src, extra, 'admm_kosis')
+    groups, ym = {}, None
+    for r in rows:
+        if itm and r.get('ITM_ID') != str(itm[0].get('ITM_ID')):
+            continue
+        name = kids.get(str(r.get('C1', '')))
+        rng = _age_lower(r.get('C2_NM', ''))
+        v = to_num(r.get('DT'))
+        if not name or rng is None or v is None:
+            continue
+        ym = r.get('PRD_DE') or ym
+        groups.setdefault(name, []).append((rng[0], rng[1], v))
+    out = {}
+    for name, g in groups.items():
+        total, w, e = _ratios(g)
+        out[name] = {'total': round(total), 'working_age': w, 'elderly': e}
+    return out, ym
 
 
 def age_mois(S, C):

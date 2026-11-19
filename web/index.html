@@ -57,6 +57,9 @@
   .item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; background: #F6F8FB; border: 1px solid #E6EBF1; border-radius: 8px; padding: 12px 14px; font-size: 16px; }
   .item b { font-size: 18px; }
   .empty { color: var(--mute); font-size: 15px; padding: 8px 2px; }
+  .two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; min-height: 0; }
+  .two .cap { font-size: 14px; font-weight: 700; color: var(--navy); margin: 2px 0 6px; }
+  table.dt td, table.dt th { font-size: 14.5px; padding: 6px 4px; }
   .note { background: #FFF8EC; border: 1px solid #F1D9AE; border-radius: 8px; padding: 10px 12px; font-size: 14px; line-height: 1.55; color: #3C4656; }
   .note b { color: var(--warn); }
   table { width: 100%; border-collapse: collapse; font-size: 15.5px; }
@@ -272,15 +275,23 @@ function startApp() {
     } else s2.appendChild(el('div', { class: 'empty', text: '연령 자료 연결 전입니다(점검 스크립트 결과로 설정).' }));
     view.appendChild(s2);
 
-    var s3 = el('section', {}, [el('div', { class: 'sh' }, [el('h2', { text: '법정동별 인구' }), el('small', { text: '많은 순 · 주민등록 법정동 기준' })])]);
+    var s3 = el('section', {}, [el('div', { class: 'sh' }, [el('h2', { text: '동별 인구' }), el('small', { text: '많은 순 · 주민등록 기준' })])]);
+    function dongTable(head, rows, cols) {
+      var tb = el('tbody');
+      rows.forEach(function (d) { tb.appendChild(el('tr', {}, cols.map(function (c, i) { return el('td', { class: i ? 'r' : '', text: c[1](d) }); }))); });
+      return el('table', { class: 'dt' }, [el('thead', {}, [el('tr', {}, cols.map(function (c, i) { return el('th', { class: i ? 'r' : '', text: i ? c[0] : head }); }))]), tb]);
+    }
+    var two = el('div', { class: 'two' });
+    var adm = Object.keys(A.admm || {}).map(function (n) { return [n, A.admm[n]]; }).sort(function (a, c) { return c[1].total - a[1].total; });
+    var wrapA = el('div', {}, [el('div', { class: 'cap', text: '행정동 ' + adm.length + '곳' })]);
+    if (adm.length) wrapA.appendChild(dongTable('행정동', adm, [['', function (d) { return d[0]; }], ['인구', function (d) { return fmt(d[1].total, 0); }], ['고령', function (d) { return fmt(d[1].elderly, 1) + '%'; }]]));
+    else wrapA.appendChild(el('div', { class: 'empty', text: '자료 없음' }));
     var dongs = Object.keys(A.dongs || {}).map(function (n) { return [n, A.dongs[n]]; }).sort(function (a, c) { return c[1].total - a[1].total; });
-    var tot = dongs.reduce(function (s, d) { return s + d[1].total; }, 0) || 1;
-    var tb = el('tbody');
-    dongs.slice(0, 16).forEach(function (d) {
-      tb.appendChild(el('tr', {}, [el('td', { text: d[0] }), el('td', { class: 'r', text: fmt(d[1].total, 0) }), el('td', { class: 'r', text: fmt(d[1].hh, 0) }), el('td', { class: 'r', text: (d[1].total / tot * 100).toFixed(1) + '%' })]));
-    });
-    s3.appendChild(el('table', {}, [el('thead', {}, [el('tr', {}, [el('th', { text: '법정동' }), el('th', { class: 'r', text: '인구' }), el('th', { class: 'r', text: '세대' }), el('th', { class: 'r', text: '비중' })])]), tb]));
-    if (!dongs.length) s3.appendChild(el('div', { class: 'empty', text: '자료 없음' }));
+    var wrapB = el('div', {}, [el('div', { class: 'cap', text: '법정동 상위 16곳 / ' + dongs.length })]);
+    if (dongs.length) wrapB.appendChild(dongTable('법정동', dongs.slice(0, 16), [['', function (d) { return d[0]; }], ['인구', function (d) { return fmt(d[1].total, 0); }], ['세대', function (d) { return fmt(d[1].hh, 0); }]]));
+    else wrapB.appendChild(el('div', { class: 'empty', text: '자료 없음' }));
+    two.appendChild(wrapA); two.appendChild(wrapB);
+    s3.appendChild(two);
     view.appendChild(s3);
   }
 
