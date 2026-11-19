@@ -503,7 +503,7 @@ function startApp() {
     L.appendChild(r2);
     // 3줄: 월간 이동
     var r3 = el('section', { class: 'mig' });
-    r3.appendChild(el('div', { class: 'band', text: '인구 이동 현황 · ' + (MG.ym ? ymLabel(MG.ym) : '') + ' (통계청 국내인구이동, 한 달 늦게 나옵니다)' }));
+    r3.appendChild(el('div', { class: 'band', text: '인구 이동 현황 · ' + (MG.ym ? ymLabel(MG.ym) : '') }));
     if (MG.ym) {
       var mrow = el('div', { class: 'mrow' });
       function mc(lbl, sub, ic, col, bg, v, d) {
