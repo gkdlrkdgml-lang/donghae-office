@@ -110,18 +110,24 @@ def main():
                     say('   ' + json.dumps({k: v for k, v in it.items() if not _re2.match(r'^(male|feml)\d+Age', k)}, ensure_ascii=False)[:600])
             except Exception as e:  # noqa: BLE001
                 say('[%s lv%s] 실패 %s' % (nm, lv, str(e)[:400]))
-    for nm, url, pr in (('hira', 'https://apis.data.go.kr/B551182/hospInfoServicev2/getHospBasisList', {'sidoCd': '320000', 'numOfRows': '3', 'pageNo': '1', '_type': 'json'}),
-                        ('air', 'https://apis.data.go.kr/B552584/ArpltnInforInqireSvc/getCtprvnRltmMesureDnsty', {'sidoName': '강원', 'returnType': 'json', 'numOfRows': '3', 'pageNo': '1', 'ver': '1.0'}),
-                        ('station', 'https://apis.data.go.kr/B552584/MsrstnInfoInqireSvc/getMsrstnList', {'addr': '강원', 'returnType': 'json', 'numOfRows': '3', 'pageNo': '1'}),
-                        ('ev', 'https://apis.data.go.kr/B552584/EvCharger/getChargerInfo', {'zcode': '51', 'dataType': 'JSON', 'numOfRows': '3', 'pageNo': '1'}),
-                        ('visit', 'https://apis.data.go.kr/B551011/DataLabService/locgoRegnVisitrDDList', {'MobileOS': 'ETC', 'MobileApp': 'donghae', '_type': 'json', 'startYmd': '20261101', 'endYmd': '20261101', 'numOfRows': '3', 'pageNo': '1'})):
+    from datetime import timedelta as _td
+    _t = now() - _td(hours=3)
+    _bd = _t.strftime('%Y%m%d')
+    for nm, url, pr in (('cnctr', 'https://apis.data.go.kr/B551011/TatsCnctrRateService/tatsCnctrRatedList', {'areaCd': '51', 'signguCd': '51170', 'MobileOS': 'ETC', 'MobileApp': 'donghae', '_type': 'json', 'numOfRows': '5', 'pageNo': '1'}),
+                        ('festival', 'https://apis.data.go.kr/B551011/KorService2/searchFestival2', {'eventStartDate': '20240101', 'areaCode': '32', 'sigunguCode': '3', 'MobileOS': 'ETC', 'MobileApp': 'donghae', '_type': 'json', 'numOfRows': '5', 'pageNo': '1', 'arrange': 'A'}),
+                        ('festival_ld', 'https://apis.data.go.kr/B551011/KorService2/searchFestival2', {'eventStartDate': '20240101', 'lDongRegnCd': '51', 'lDongSignguCd': '170', 'MobileOS': 'ETC', 'MobileApp': 'donghae', '_type': 'json', 'numOfRows': '5', 'pageNo': '1', 'arrange': 'A'}),
+                        ('spots', 'https://apis.data.go.kr/B551011/KorService2/areaBasedList2', {'areaCode': '32', 'sigunguCode': '3', 'contentTypeId': '12', 'MobileOS': 'ETC', 'MobileApp': 'donghae', '_type': 'json', 'numOfRows': '3', 'pageNo': '1', 'arrange': 'Q'}),
+                        ('weather', 'https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst', {'dataType': 'JSON', 'base_date': _bd, 'base_time': '0500', 'nx': '97', 'ny': '127', 'numOfRows': '20', 'pageNo': '1'}),
+                        ('visit_old', 'https://apis.data.go.kr/B551011/DataLabService/locgoRegnVisitrDDList', {'MobileOS': 'ETC', 'MobileApp': 'donghae', '_type': 'json', 'startYmd': '20230801', 'endYmd': '20230801', 'numOfRows': '3', 'pageNo': '1'})):
         try:
             from urllib.parse import unquote as _uq2
             q = dict(pr); q['serviceKey'] = _uq2(os.environ.get('DATA_GO_KR_KEY', '').strip())
             t = http_get(url, q, tries=1)
-            say('[2단계 %s] 됨: %s' % (nm, t[:700].replace('\n', ' ')))
+            say('[신규 %s] 됨: %s' % (nm, t[:1500].replace('\n', ' ')))
         except Exception as e:  # noqa: BLE001
-            say('[2단계 %s] 안 됨: %s' % (nm, str(e)[-220:]))
+            say('[신규 %s] 안 됨: %s' % (nm, str(e)[-300:]))
+    if os.environ.get('PROBE_FULL') != '1':
+        return
     probe('admm_population', {'url': 'https://apis.data.go.kr/1741000/admmPpltnHhStus/selectAdmmPpltnHhStus', 'key_env': 'DATA_GO_KR_KEY',
                                'params': {'type': 'JSON', 'numOfRows': '100', 'pageNo': '1', 'lv': '3', 'regSeCd': '1'}},
           {'admmCd': me['stdg'], 'srchFrYm': ym, 'srchToYm': ym})
