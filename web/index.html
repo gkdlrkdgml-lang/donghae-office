@@ -345,7 +345,10 @@ function startApp() {
     var sorted = vals.slice().sort(function (a, b) { return a - b; });
     var median = sorted.length % 2 ? sorted[(sorted.length - 1) / 2] : (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2;
     view.appendChild(el('div', { class: 'title' }, [
-      el('h1', { text: '재정자립도 ' + fmt(me.value, 1) + '% · 도내 ' + me.rank + '위 / ' + f.n }),
+      el('h1', { text: (function () {
+        var ai = (((D.finance || {}).amounts || {}).initial) || {}, yy = Object.keys(ai).sort().pop(), mb = yy && ai[yy][D.me];
+        return (mb ? yy + ' 당초예산 ' + fmt(mb.budget / 1e8, 0) + '억 원 · ' : '') + '재정자립도 ' + fmt(me.value, 1) + '% · 도내 ' + me.rank + '위 / ' + f.n;
+      })() }),
       el('span', { text: f.source + ' · ' + f.basis + ' · 시·군을 누르면 오른쪽이 바뀝니다' })
     ]));
     var s1 = el('section', {}, [el('div', { class: 'sh' }, [el('h2', { text: '재정자립도 · 강원 18개 시·군' }), el('small', { text: '높을수록 좋음 · %' })])]);
