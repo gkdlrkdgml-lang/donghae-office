@@ -17,6 +17,7 @@
            display: grid; grid-template-rows: 64px minmax(0, 1fr); }
   header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 28px; border-bottom: 1px solid var(--line); background: #FFFFFF; }
   .brand { display: flex; align-items: center; gap: 12px; font-size: 20px; font-weight: 700; color: var(--navy); }
+  .brand .slogan { font-size: 15px; font-weight: 600; color: var(--blue); padding-left: 14px; margin-left: 2px; border-left: 2px solid var(--line); }
   .brand i { width: 38px; height: 38px; border-radius: 8px; background: var(--blue); display: inline-block; }
   nav { display: flex; gap: 4px; }
   nav button { font: inherit; font-size: 16px; color: var(--sub); background: none; border: 0; padding: 8px 16px; border-radius: 6px; cursor: pointer; min-height: 40px; }
@@ -89,7 +90,7 @@
   .fcard .k { font-size: 26px; color: var(--sub); }
   .fcard .val { font-size: 76px; font-weight: 700; color: var(--navy); margin-top: 8px; }
   .fcard .sub { font-size: 24px; color: var(--sub); margin-top: 6px; }
-  .fslogan { margin-top: 40px; font-size: 22px; color: var(--mute); }
+  .fslogan { margin-top: 40px; font-size: 30px; font-weight: 700; color: var(--navy); letter-spacing: 0.5px; }
   #stage.framemode { grid-template-rows: minmax(0, 1fr); }
   #stage.framemode header { display: none; }
   .help { position: absolute; right: 20px; bottom: 12px; font-size: 13px; color: #9AA6B6; }
@@ -98,7 +99,7 @@
 <body>
 <div id="stage">
   <header>
-    <div class="brand"><i aria-hidden="true"></i><span id="appTitle">동해시 AI 시장실</span></div>
+    <div class="brand"><i aria-hidden="true"></i><span id="appTitle">동해시 AI 시장실</span><span id="appSlogan" class="slogan"></span></div>
     <nav id="nav" aria-label="화면 메뉴"></nav>
     <div class="hright"><span id="badges"></span><span id="updated"></span><span id="clock"></span></div>
   </header>
@@ -144,6 +145,7 @@ function startApp() {
   }
 
   document.getElementById('appTitle').textContent = D.title;
+  document.getElementById('appSlogan').textContent = D.slogan || '';
   var badges = document.getElementById('badges');
   if (D.demo) badges.appendChild(el('span', { class: 'badge demo', text: '시연용 가짜 값' }));
   var gen = new Date(D.generated_at.replace(' ', 'T') + ':00+09:00');
