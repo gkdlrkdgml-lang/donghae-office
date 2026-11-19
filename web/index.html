@@ -340,8 +340,8 @@ function startApp() {
     var names = Object.keys(am);
     if (!names.length) { view.appendChild(el('div', { class: 'empty', style: 'font-size:22px;padding:60px', text: '예산 자료가 아직 없습니다.' })); return; }
     finSel = (finSel && am[finSel]) ? finSel : D.me;
-    view.style.gridTemplateColumns = 'minmax(0, 1.3fr) minmax(0, 1fr)';
-    view.style.gridTemplateRows = '44px minmax(0, 1fr)';
+    view.style.gridTemplateColumns = 'repeat(3, minmax(0, 1fr))';
+    view.style.gridTemplateRows = '44px auto minmax(0, 1fr)';
     function eok(v) { return fmt(v / 1e8, 0); }
     function mkRank(fld) {
       var arr = names.map(function (n) { return { name: n, value: (fld === 'dep' ? am[n].budget - (am[n].own || 0) : am[n][fld]) / 1e8 }; })
@@ -354,55 +354,40 @@ function startApp() {
     var fi = ind('fin_indep');
     function fiv(n) { return fi ? fi.ranking.filter(function (r) { return r.name === n; })[0] : null; }
     var me = am[D.me] || {}, sel = am[finSel], SN = finSel, isMe = SN === D.me;
+    var full = isMe ? D.me + '시' : SN;
+    var diffMe = isMe ? null : sel.budget - me.budget;
     view.appendChild(el('div', { class: 'title' }, [
-      el('h1', { text: ly + ' 당초예산 ' + (isMe ? D.me + '시 ' : SN + ' ') + eok(sel.budget) + '억 원 · 도내 ' + rk(rb, SN) + '위 / ' + rb.n }),
-      el('span', { text: '지방재정365 · ' + ly + '년 당초예산(일반회계) · 시·군을 누르면 오른쪽이 바뀝니다' })
+      el('h1', { text: ly + ' 당초예산 ' + full + ' ' + eok(sel.budget) + '억 원 · 도내 ' + rk(rb, SN) + '위 / ' + rb.n + (diffMe != null ? ' · 동해보다 ' + (diffMe >= 0 ? '+' : '') + eok(diffMe) + '억' : '') }),
+      el('span', { text: (isMe ? '아래 목록에서 시·군을 누르면 위 값이 그 지역으로 바뀝니다 · ' : '다시 누르면 동해시로 돌아옵니다 · ') + '지방재정365 · ' + ly + '년 당초예산(일반회계)' })
     ]));
-    var s1 = el('section', {}, [el('div', { class: 'sh' }, [el('h2', { text: '예산 규모 · 강원 18개 시·군' }), el('small', { text: ly + ' 당초 · 억 원' })])]);
-    s1.appendChild(rankList(rb, function (n) { finSel = (n === finSel ? D.me : n); render(); }, isMe ? null : SN));
-    view.appendChild(s1);
-
-    var right = el('div', { style: 'display:grid;grid-template-rows:auto auto 1fr;gap:16px;min-height:0' });
-    var k = el('div', { class: 'kpis big', style: 'grid-template-columns:repeat(2,minmax(0,1fr))' });
+    var k = el('div', { class: 'kpis big', style: 'grid-template-columns:repeat(5,minmax(0,1fr))' });
     function kpi(l, sub, v, u, tone, chips) {
       var lab = el('div', { class: 'l' }, [l]); if (sub) lab.appendChild(el('small', { text: sub }));
       k.appendChild(el('div', { class: 'kpi t-' + tone }, [lab, el('div', { class: 'v' }, [v, el('small', { text: u })]),
         el('div', { class: 'chips' }, chips.filter(Boolean).map(function (c) { return el('span', { class: 'chip ' + (c[1] || ''), text: c[0] }); }))]));
     }
-    var dep = sel.budget - (sel.own || 0), f1 = fiv(SN);
-    var diffMe = isMe ? null : sel.budget - me.budget;
+    var dep = sel.budget - (sel.own || 0), f1 = fiv(SN), pop = ((D.admin || {}).regions || {})[SN];
+    var pm = pop && pop.total ? sel.budget / pop.total : null, pmMe = ((D.admin || {}).regions || {})[D.me] ? me.budget / D.admin.regions[D.me].total : null;
+    var pmAll = names.map(function (n) { var r = ((D.admin || {}).regions || {})[n]; return r && r.total ? am[n].budget / r.total : null; }).filter(function (x) { return x != null; }).sort(function (x, y) { return y - x; });
     kpi('예산 규모', ly + ' 당초', eok(sel.budget), '억 원', 'navy', [['도내 ' + rk(rb, SN) + '위 / ' + rb.n, 'navy'],
       diffMe != null ? ['동해보다 ' + (diffMe >= 0 ? '+' : '') + eok(diffMe) + '억', diffMe >= 0 ? 'good' : 'bad'] : null]);
     kpi('자체수입', '지방세 + 세외수입', eok(sel.own), '억 원', 'good', [['도내 ' + rk(ro, SN) + '위', ''], ['예산의 ' + fmt(sel.own / sel.budget * 100, 1) + '%', '']]);
     kpi('의존재원 등', '교부세·보조금 등', eok(dep), '억 원', 'mute', [['예산의 ' + fmt(dep / sel.budget * 100, 1) + '%', '']]);
-    kpi('재정자립도', '참고', f1 ? fmt(f1.value, 1) : '–', '%', 'mute', [f1 ? ['도내 ' + f1.rank + '위 / ' + fi.n, ''] : null]);
-    right.appendChild(k);
-    var avgB = names.reduce(function (t, n) { return t + am[n].budget; }, 0) / names.length;
-    right.appendChild(el('section', {}, [el('div', { class: 'sh' }, [el('h2', { text: isMe ? '동해시 위치' : SN + ' vs 동해' })]),
-      el('div', { class: 'note' }, isMe
-        ? [el('b', { text: '동해시 ' + eok(me.budget) + '억 원' }), ' — 도내 평균 ' + eok(avgB) + '억 원보다 ' + eok(Math.abs(me.budget - avgB)) + '억 원 ' + (me.budget >= avgB ? '많습니다.' : '적습니다.') + ' 왼쪽에서 시·군을 누르면 동해시와 비교합니다.']
-        : [el('b', { text: SN + ' ' + eok(sel.budget) + '억 원' }), ' — 동해시(' + eok(me.budget) + '억 원)보다 ' + eok(Math.abs(diffMe)) + '억 원 ' + (diffMe >= 0 ? '많습니다' : '적습니다') + '. 자체수입은 ' + eok(Math.abs(sel.own - me.own)) + '억 원 ' + (sel.own >= me.own ? '많습니다.' : '적습니다.')])]));
+    kpi('재정자립도', '', f1 ? fmt(f1.value, 1) : '–', '%', f1 ? (f1.judge === 'strong' ? 'good' : f1.judge === 'weak' ? 'bad' : 'navy') : 'mute',
+      [f1 ? ['도내 ' + f1.rank + '위 / ' + fi.n, f1.judge === 'strong' ? 'good' : f1.judge === 'weak' ? 'bad' : ''] : null]);
+    kpi('주민 1인당 예산', '', pm ? fmt(pm / 1e4, 0) : '–', '만 원', 'navy', [pm ? ['도내 ' + (pmAll.indexOf(pm) + 1) + '위', ''] : null,
+      pm && !isMe && pmMe ? ['동해 ' + fmt(pmMe / 1e4, 0) + '만 원', ''] : null]);
+    view.appendChild(k);
 
-    // 아래: 올해 최종예산이 나오면 당초→최종 증감, 그 전에는 자체수입 비교
-    var cy = amF[ly] ? ly : null;
-    var s3 = el('section', {}, [el('div', { class: 'sh' }, [el('h2', { text: cy ? ly + ' 당초 → 최종 예산 증감' : '자체수입 · 강원 18개 시·군' }), el('small', { text: cy ? '억 원 · 추경 반영' : ly + ' 당초 · 억 원' })])]);
-    var series = cy
-      ? names.filter(function (n) { return amF[ly][n]; }).map(function (n) { return [n, (amF[ly][n].budget - am[n].budget) / 1e8]; })
-      : names.map(function (n) { return [n, (am[n].own || 0) / 1e8]; });
-    series.sort(function (x, y) { return y[1] - x[1]; });
-    var mx = Math.max.apply(null, series.map(function (c) { return Math.abs(c[1]); })) || 1;
-    var cols = el('div', { class: 'cols tight', style: 'gap:6px' });
-    series.forEach(function (c) {
-      var m = c[0] === D.me, p = c[0] === SN && !m;
-      cols.appendChild(el('div', { class: 'col' }, [el('b', { text: (cy && c[1] >= 0 ? '+' : '') + fmt(c[1], 0), style: 'font-size:11.5px' + (m ? ';color:#1F6FD1' : '') }),
-        el('div', { class: 'c', style: 'height:' + (Math.abs(c[1]) / mx * 80).toFixed(1) + '%;background:' + (m ? '#1F6FD1' : p ? '#D9822B' : '#B8C4D4') }),
-        el('span', { text: c[0], style: 'font-size:12px;' + (m ? 'color:#1F6FD1;font-weight:700' : p ? 'color:#A4470F;font-weight:700' : '') })]));
-    });
-    s3.appendChild(cols);
-    s3.appendChild(el('div', { class: 'note' }, [el('b', { text: '읽는 법 ' }), cy ? '같은 해 당초예산과 최종예산(추경 반영)의 차이입니다.'
-      : '모두 ' + ly + '년 당초예산(일반회계) 기준입니다. 올해 최종예산이 발표되면 당초→최종 증감으로 바뀝니다.']));
-    right.appendChild(s3);
-    view.appendChild(right);
+    function pick(n) { finSel = (n === finSel ? D.me : n); render(); }
+    var hl = isMe ? null : SN;
+    var s1 = el('section', {}, [el('div', { class: 'sh' }, [el('h2', { text: '예산 규모' }), el('small', { text: ly + ' 당초 · 억 원' })])]);
+    s1.appendChild(rankList(rb, pick, hl)); view.appendChild(s1);
+    var s2 = el('section', {}, [el('div', { class: 'sh' }, [el('h2', { text: '자체수입' }), el('small', { text: '지방세 + 세외수입 · 억 원' })])]);
+    s2.appendChild(rankList(ro, pick, hl)); view.appendChild(s2);
+    var s3 = el('section', {}, [el('div', { class: 'sh' }, [el('h2', { text: '재정자립도' }), el('small', { text: '높을수록 좋음 · %' })])]);
+    if (fi) s3.appendChild(rankList(fi, pick, hl)); else s3.appendChild(el('div', { class: 'empty', text: '자료 없음' }));
+    view.appendChild(s3);
   }
 
   // ---------- 4. 액자 ----------
