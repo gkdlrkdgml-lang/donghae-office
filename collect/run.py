@@ -194,6 +194,17 @@ def collect(state, S, C):
             ok(state, 'festivals', '%d건' % len(L['festivals']['items']))
         except Exception as e:  # noqa: BLE001
             fail(state, 'festivals', e)
+    try:
+        dm, dn = tour.demand(C, L.get('demand'))
+        if dm:
+            L['demand'], L['demand_names'] = dm, dict(L.get('demand_names') or {}, **dn)
+            ok(state, 'demand', max(dm))
+    except Exception as e:  # noqa: BLE001
+        fail(state, 'demand', e)
+    if L.get('demand'):
+        last = max(L['demand'])
+        set_ind(state, 'tour_exp', {k: v.get('22') for k, v in L['demand'][last].items() if k != '강원' and v.get('22') is not None},
+                '%s년 %d월 관광소비강도(한국관광공사)' % (last[:4], int(last[4:])))
     # 시가 직접 적는 행사(config/events.json)를 축제 목록에 합칩니다
     try:
         with open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config', 'events.json'), encoding='utf-8') as fp:

@@ -171,3 +171,46 @@ def weather():
             log('동별 예보 %s 실패: %s' % (dong, e))
     out['grids'][main] = {k: v for k, v in list(slots.items())[:30]}
     return out
+
+
+# ---------------------------------------------------------------- 지역별 관광 수요 강도(월, 지수 0~100)
+DEM = 'https://apis.data.go.kr/B551011/AreaTarDemDsService/'
+DEM_OPS = (('areaTarExpDsList', 'exp', 'tarExpDsIxCd', 'tarExpDsIxNm', 'tarExpDsIxVal'),
+           ('areaTarSjrnDsList', 'stay', 'tarSjrnDsIxCd', 'tarSjrnDsIxNm', 'tarSjrnDsIxVal'))
+
+
+def demand(C, cache=None, n_months=25):
+    """관광 소비 강도·체류 강도: {YYYYMM: {시군: {코드: 값}}}, 코드 이름표."""
+    from common import match_region
+    cache = dict(cache or {})
+    names = {}
+    t = now()
+    y, m = t.year, t.month
+    yms = []
+    for _ in range(n_months + 2):
+        m -= 1
+        if m == 0:
+            y, m = y - 1, 12
+        yms.append('%04d%02d' % (y, m))
+    for i, ym in enumerate(yms):
+        if ym in cache and i > 1:  # 최근 2달은 매번 다시
+            continue
+        got = {}
+        for op, kind, ck, nk, vk in DEM_OPS:
+            try:
+                rows = _call(_src(DEM + op, dict(APP, baseYm=ym, areaCd='51', numOfRows='1000', pageNo='1')), {}, 'dem_' + kind)
+            except Exception as e:  # noqa: BLE001
+                log('관광 수요 강도 %s %s 실패: %s' % (ym, kind, e))
+                continue
+            for r in rows:
+                nm = r.get('signguNm')
+                name = '강원' if str(r.get('signguCd')) == '0' else match_region(str(nm or ''), C['regions'])
+                v = to_num(r.get(vk))
+                if not name or v is None:
+                    continue
+                got.setdefault(name, {})[str(r.get(ck))] = v
+                names[str(r.get(ck))] = str(r.get(nk))
+        if len(got) >= 15:
+            cache[ym] = got
+    keep = sorted(cache)[-n_months:]
+    return {k: cache[k] for k in keep}, names
