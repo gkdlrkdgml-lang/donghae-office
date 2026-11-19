@@ -129,18 +129,14 @@ def main():
     from urllib.parse import unquote as _uq7
     kk = _uq7(os.environ.get('DATA_GO_KR_KEY', '').strip())
     tries = []
-    B = 'https://apis.data.go.kr/1613000/BusStop/getBusStop'
-    for extra in ({'dataType': 'JSON'}, {'returnType': 'json'}, {'resultType': 'json'}, {'type': 'json'}, {'_type': 'json'}, {'type': 'json', 'pageNo': '1', 'numOfRows': '3', 'sggNm': '동해시'}):
-        tries.append(('BusStop ' + ','.join(extra), B, extra))
-    N = 'https://apis.data.go.kr/1613000/NumberofRoutesServingEachStop/getNumberofRoutesServingEachStop'
-    for extra in ({'_type': 'json'}, {'dataType': 'JSON'}, {'type': 'json'}):
-        tries.append(('Routes ' + ','.join(extra), N, extra))
-    for nm in ('public_taxi_entrps', 'public_txi_entrps', 'public_taxi_cmpy', 'public_taxi_corp', 'public_taxi_operator', 'public_taxi_bsns', 'public_taxi_trnsprt', 'public_taxi_comp', 'public_taxi_bizes', 'public_taxi_trnsp'):
-        tries.append(('std ' + nm, 'https://api.data.go.kr/openapi/tn_pubr_%s_api' % nm, {'type': 'json'}))
-    tries.append(('std 승차대', 'https://api.data.go.kr/openapi/tn_pubr_public_taxi_stand_api', {'type': 'json'}))
+    for base, extra in (('BusStop/getBusStop', {}), ('NumberofRoutesServingEachStop/getNumberofRoutesServingEachStop', {}), ('NumberofRoutesServingEachStop/getNumberofRoutesServingEachStop', {'opr_ymd': '20251101'}),
+                        ('StopbyRouteTripVolume/getDailyStopbyRouteTripVolume', {'opr_ymd': '20251101'})):
+        for c, g in (('51', '51170'), ('42', '42170'), ('32', '32040')):
+            q = dict(extra, ctpv_cd=c, sgg_cd=g, dataType='JSON')
+            tries.append(('%s %s/%s' % (base.split('/')[0], c, g), 'https://apis.data.go.kr/1613000/' + base, q))
     for nm, url, extra in tries:
         try:
-            q = {'serviceKey': kk, 'numOfRows': '3', 'pageNo': '1'}
+            q = {'serviceKey': kk, 'numOfRows': '5', 'pageNo': '1'}
             q.update(extra)
             t = http_get(url, q, tries=1)
             say('[찾기 %s] 됨 %s' % (nm, t[:900].replace('\n', ' ')))
