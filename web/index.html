@@ -1055,10 +1055,11 @@ function startApp() {
     if (L.cars) tabs.push(['cars', '자동차 등록']);
     if (L.ev) tabs.push(['ev', '전기차 충전']);
     if (L.tsafe) tabs.push(['safe', '교통안전·도로']);
+    if (L.taxi) tabs.push(['taxi', '택시']);
     if (L.parking) tabs.push(['park', '공영주차장']);
     tabs.push(['bus', '라이브 버스']);
     if (!tabs.some(function (t) { return t[0] === trTab; })) trTab = tabs[0][0];
-    ({ cars: screenCars, ev: screenTraffic, safe: screenTSafe, park: screenPark, bus: screenBus })[trTab]();
+    ({ cars: screenCars, ev: screenTraffic, safe: screenTSafe, taxi: screenTaxi, park: screenPark, bus: screenBus })[trTab]();
     var title = view.querySelector('.title');
     if (title && tabs.length > 1) title.insertBefore(tabsBar(tabs, trTab, function (k) { trTab = k; }), title.children[1] || null);
   }
@@ -1094,6 +1095,35 @@ function startApp() {
     var road = RD[SN] || {};
     panel('도로 · ' + fullName(SN), '종류별 개통 길이(m) · 아래는 시·군별 포장률(%)', [el('div', { style: 'flex:0 0 44%;min-height:0;display:flex;flex-direction:column' }, [donut(kindsR.filter(function (k) { return road[k] && road[k]['개통']; }).map(function (k, i) { return [k + ' ' + fmtK(road[k]['개통']) + 'm', road[k]['개통'], ['#1F6FD1', '#F0A04B', '#5DB88E', '#7A4FC4'][i]]; }), fmt(rd['포장률'], 1) + '%', '포장률')]),
       el('div', { style: 'flex:1;min-height:0;display:flex;flex-direction:column;margin-top:6px' }, [colChart(Object.keys(RD).map(function (n) { return [n, ((RD[n] || {})['합계'] || {})['포장률']]; }).filter(function (x) { return x[1] != null; }), regPick, SN, 1, '%')])]);
+  }
+  function screenTaxi() {
+    var X = (D.life || {}).taxi || {}, R = X.regions || {}, SN = R[regName()] ? regName() : D.me, isMe = SN === D.me;
+    var I0 = ind('taxi'), I = indFor(I0, SN), m = R[SN] || {}, me = R[D.me] || {};
+    lifeTitle(fullName(SN) + ' 택시', (X.at || '') + ' 전국택시업체·택시승차대 표준데이터' + selHint());
+    cardsRow([
+      { l: '택시 면허', ic: 'car', v: fmt(m.total, 0), u: '대', chips: [rankChip(I), I && I.me ? ['1천명당 ' + fmt(I.me.value, 1) + '대', 'violet'] : null] },
+      { l: '개인택시', ic: 'people', col: '#1F6FD1', bg: '#E4EEFB', v: fmt(m.personal, 0), u: '대', chips: [m.total ? ['전체의 ' + fmt(m.personal / m.total * 100, 1) + '%', 'navy'] : null, meChip(me.personal, '대')] },
+      { l: '법인택시', ic: 'bank', col: '#C0602B', bg: '#FDEBDD', v: fmt(m.corp, 0), u: '대', chips: [['업체 ' + fmt(m.corps, 0) + '곳', 'violet'], meChip(me.corp, '대')] },
+      { l: '택시 승차대', ic: 'pin', col: '#2E8B57', bg: '#E2F3E9', v: fmt(m.stands, 0), u: '곳', chips: [['정차면 ' + fmt(m.stand_sp, 0), 'navy'], meChip(me.stands, '곳')] },
+      { l: '인구 1천명당', ic: 'trend', col: '#7A4FC4', bg: '#EFE9FB', v: I && I.me ? fmt(I.me.value, 1) : '–', u: '대', chips: [regSel && I0 && I0.me ? meChip(I0.me.value, '대', 1) : ['강원 평균 ' + fmt(avgOf(R, function (o, k) { var p = popOf(k); return p ? o.total / p * 1000 : null; }), 1), '']] }
+    ]);
+    panel('인구 1천명당 택시', '강원 18개 시·군 · 대 · 누르면 그 지역', I ? rankList(I, regPick, regSel) : el('div', { class: 'empty', text: '자료 없음' }));
+    var who = isMe ? [D.me, '강원 평균'] : [SN, D.me, '강원 평균'];
+    var per = function (o, k, f) { var p = popOf(k); return p && o ? o[f] / p * 1000 : null; };
+    panel('인구 1천명당 비교', who.map(fullName).join(' · ') + ' · 대/곳', groupCols(['전체 택시', '개인택시', '법인택시', '승차대 정차면'], cmpSeries(who, function (n) {
+      var f = ['total', 'personal', 'corp', 'stand_sp'];
+      return f.map(function (ff) { return n === '강원 평균' ? avgOf(R, function (o, k) { return per(o, k, ff); }) : per(R[n], n, ff); }); }), null, true));
+    if (isMe) {
+      var tb = el('tbody');
+      (me.list || []).forEach(function (x) { tb.appendChild(el('tr', {}, [el('td', { text: x[0] }), el('td', { class: 'r', html: '<b>' + fmt(x[1], 0) + '</b>대' })])); });
+      var tb2 = el('tbody');
+      (me.stand_list || []).forEach(function (x) { tb2.appendChild(el('tr', {}, [el('td', { text: x[0] }), el('td', { class: 'r', html: '<b>' + fmt(x[1], 0) + '</b>면' })])); });
+      panel(D.me + '시 택시업체·승차대', '면허 대수 · 승차대 정차면', el('div', { style: 'overflow:auto;flex:1;min-height:0' }, [
+        el('table', { class: 'dt' }, [el('thead', {}, [el('tr', {}, [el('th', { text: '업체' }), el('th', { class: 'r', text: '면허' })])]), tb]),
+        el('table', { class: 'dt', style: 'margin-top:10px' }, [el('thead', {}, [el('tr', {}, [el('th', { text: '승차대 위치' }), el('th', { class: 'r', text: '정차면' })])]), tb2])]));
+    } else {
+      panel('택시 면허 대수 · 강원 18개 시·군', '대 · 누르면 그 지역', colChart(Object.keys(R).map(function (n) { return [n, R[n].total]; }), regPick, SN, 0));
+    }
   }
   function screenPark() {
     var P = (D.life || {}).parking || {}, R = P.regions || {}, SN = R[regName()] ? regName() : D.me, isMe = SN === D.me;

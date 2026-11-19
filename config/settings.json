@@ -171,6 +171,19 @@
       "main": false
     },
     {
+      "id": "taxi",
+      "no": 7,
+      "field": "교통",
+      "name": "인구 1천명당 택시",
+      "unit": "대",
+      "dir": 0,
+      "digits": 1,
+      "source": "전국택시업체표준데이터",
+      "show": true,
+      "main": false,
+      "note": "많고 적음이 곧 좋고 나쁨이 아니어서 판정에서 제외"
+    },
+    {
       "id": "pm25",
       "no": 8,
       "field": "환경",

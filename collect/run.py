@@ -189,6 +189,14 @@ def collect(state, S, C):
             fail(state, 'parking', e)
     if L.get('parking'):
         set_ind(state, 'parking', per({k: v['spaces'] for k, v in L['parking']['regions'].items() if v.get('spaces')}, 1000), '%s 기준 공영주차장(표준데이터)' % L['parking']['at'])
+    if stale('taxi', 6) or not L.get('taxi') or '--force-life' in sys.argv:
+        try:
+            L['taxi'] = {'at': now().strftime('%Y-%m-%d'), 'regions': tour.taxi(C)}
+            ok(state, 'taxi', '%d개 시·군' % len(L['taxi']['regions']))
+        except Exception as e:  # noqa: BLE001
+            fail(state, 'taxi', e)
+    if L.get('taxi'):
+        set_ind(state, 'taxi', per({k: v['total'] for k, v in L['taxi']['regions'].items() if v.get('total')}, 1000), '%s 기준 택시업체 표준데이터(면허 대수)' % L['taxi']['at'])
     T = L.get('tsafe') or {}
     if T.get('acc'):
         set_ind(state, 'accidents', {k: v.get('A1') / pops[k] * 100000 for k, v in T['acc']['regions'].items() if v.get('A1') is not None and pops.get(k)},

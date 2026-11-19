@@ -362,3 +362,46 @@ def parking(C):
     if len(out) < 10:
         raise RuntimeError('주차장: 강원 시·군 %d곳만 찾음' % len(out))
     return out
+
+
+# ---------------------------------------------------------------- 택시(전국택시업체·택시승차대 표준데이터 → 강원 시·군 집계)
+def taxi(C):
+    from common import match_region
+    out = {}
+    for r in _std_scan('tn_pubr_public_taxi_corp_api', '택시업체 표준데이터', 20):
+        if '강원' not in str(r.get('ctpvNm') or '') + str(r.get('insttNm') or ''):
+            continue
+        name = match_region(str(r.get('sggNm') or ''), C['regions'])
+        if not name:
+            continue
+        o = out.setdefault(name, {'total': 0, 'personal': 0, 'corp': 0, 'corps': 0, 'stands': 0, 'stand_sp': 0, 'list': [], 'stand_list': []})
+        n = to_num(r.get('lcnsCntom')) or 0
+        nm = str(r.get('bzentyNm') or '').strip()
+        o['total'] += n
+        if '개인택시' in nm:
+            o['personal'] += n
+        else:
+            o['corp'] += n
+            o['corps'] += 1
+        if name == C['me']:
+            o['list'].append([nm, n])
+    for r in _std_scan('tn_pubr_public_taxi_stand_api', '택시승차대 표준데이터', 20):
+        if '강원' not in str(r.get('ctpvNm') or '') + str(r.get('insttNm') or ''):
+            continue
+        name = match_region(str(r.get('sggNm') or ''), C['regions'])
+        if not name:
+            continue
+        o = out.setdefault(name, {'total': 0, 'personal': 0, 'corp': 0, 'corps': 0, 'stands': 0, 'stand_sp': 0, 'list': [], 'stand_list': []})
+        n = to_num(r.get('taxExclsScplcCnt')) or 0
+        o['stands'] += 1
+        o['stand_sp'] += n
+        if name == C['me']:
+            o['stand_list'].append([str(r.get('dtlPstn') or r.get('lctnRoadNmAddr') or ''), n])
+    for k, o in out.items():
+        if k != C['me']:
+            o.pop('list'); o.pop('stand_list')
+        else:
+            o['list'].sort(key=lambda x: -x[1]); o['stand_list'].sort(key=lambda x: -x[1])
+    if len(out) < 10:
+        raise RuntimeError('택시: 강원 시·군 %d곳만 찾음' % len(out))
+    return out
