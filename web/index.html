@@ -73,6 +73,7 @@
   table.dt tr.me td { background: #E4EEFB; color: #1B3A6B; font-weight: 700; }
   table.dt tr.pk td { background: #FFF1E2; font-weight: 700; }
 
+  .hint { font-size: 14px !important; color: var(--blue) !important; font-weight: 600; margin-left: auto; margin-right: 12px; }
   .basis { background: var(--navy); color: #fff !important; border-radius: 999px; padding: 6px 16px; font-weight: 700; font-size: 15px !important; }
   .popL { display: grid; grid-template-rows: auto auto minmax(0, 1fr); gap: 14px; min-height: 0; }
   .pr1 { display: grid; grid-template-columns: 1.35fr repeat(4, minmax(0, 1fr)); gap: 12px; }
@@ -118,10 +119,10 @@
   .subtabs button { font: inherit; font-size: 16px; font-weight: 700; padding: 6px 16px; border-radius: 999px; border: 1.5px solid #C9D8EE; background: #fff; color: var(--sub); cursor: pointer; }
   .subtabs button.on { background: var(--navy); border-color: var(--navy); color: #fff; }
   .pc.click, section.click { position: relative; cursor: pointer; }
-  .pc .more { position: absolute; right: 10px; top: 10px; font-size: 12.5px; font-weight: 800; color: #fff; background: #D9822B; border-radius: 999px; padding: 3px 10px; box-shadow: 0 2px 6px rgba(217,130,43,.35); animation: pulse 2.4s ease-in-out infinite; }
-  .pr1 .pc .more { top: auto; bottom: 8px; right: 8px; }
+  .pc .more { position: absolute; right: 12px; top: 10px; font-size: 13px; font-weight: 700; color: var(--blue); }
+  .pr1 .pc .more { top: auto; bottom: 8px; right: 12px; } .pc.hero .more { color: #BFD3F2; }
   .band { position: relative; }
-  .more.inband { position: absolute; right: 12px; top: 50%; margin-top: -13px; font-size: 13px; font-weight: 800; color: #fff; background: #D9822B; border-radius: 999px; padding: 3px 12px; animation: pulse 2.4s ease-in-out infinite; }
+  .more.inband { position: absolute; right: 16px; top: 50%; margin-top: -10px; font-size: 14px; font-weight: 700; color: #BFD3F2; }
   .pc.click:hover, section.click:hover { box-shadow: 0 6px 18px rgba(31,111,209,.18); }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; }
   .chip { font-size: 13.5px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #EEF2F7; color: #3D4B5E; white-space: nowrap; }
@@ -454,7 +455,7 @@ function startApp() {
   }
   function moreBadge(node, key) {
     node.classList.add('click');
-    node.appendChild(el('span', { class: 'more', text: '👆 클릭 · 세부' }));
+    node.appendChild(el('span', { class: 'more', text: '자세히 ›' }));
     node.addEventListener('click', function () { admDetail = key; render(); });
   }
 
@@ -466,6 +467,7 @@ function startApp() {
     view.style.gridTemplateRows = '44px minmax(0, 1fr)';
     view.appendChild(el('div', { class: 'title' }, [
       el('h1', { text: D.me + '시 인구 현황' }),
+      el('span', { class: 'hint', text: '칸을 누르면 자세히 볼 수 있습니다' }),
       el('span', { class: 'basis', text: ymLabel(A.ym) + ' 주민등록 기준' })
     ]));
     var L = el('div', { class: 'popL' });
@@ -545,7 +547,7 @@ function startApp() {
     L.appendChild(r3);
     moreBadge(r1.children[0], 'pop'); moreBadge(r1.children[4], 'pop');
     moreBadge(r2.children[0], 'age'); moreBadge(r2.children[1], 'age');
-    if (MG.ym) { var bb = r3.querySelector('.band'); r3.classList.add('click'); bb.appendChild(el('span', { class: 'more inband', text: '👆 클릭 · 세부' })); r3.addEventListener('click', function () { admDetail = 'mig'; render(); }); }
+    if (MG.ym) { var bb = r3.querySelector('.band'); r3.classList.add('click'); bb.appendChild(el('span', { class: 'more inband', text: '자세히 ›' })); r3.addEventListener('click', function () { admDetail = 'mig'; render(); }); }
     view.appendChild(L);
     // 오른쪽: 동별 현황
     var R = el('section', { class: 'dongs' }, [el('div', { class: 'band', text: '동별 현황 (행정동)' })]);
@@ -557,7 +559,7 @@ function startApp() {
     });
     R.appendChild(tb);
     R.appendChild(el('div', { class: 'note', style: 'margin-top:auto' }, [el('b', { text: '기준 ' }), (A.admm_ym ? ymLabel(A.admm_ym) : '') + ' · 전월 대비 · 고령 = 65세 이상 비율']));
-    R.classList.add('click'); R.querySelector('.band').appendChild(el('span', { class: 'more inband', text: '👆 클릭 · 세부' }));
+    R.classList.add('click'); R.querySelector('.band').appendChild(el('span', { class: 'more inband', text: '자세히 ›' }));
     R.addEventListener('click', function () { admDetail = 'dong'; render(); });
     view.appendChild(R);
   }
