@@ -269,14 +269,14 @@ function startApp() {
     } else s2.appendChild(el('div', { class: 'empty', text: '연령 자료 연결 전입니다(점검 스크립트 결과로 설정).' }));
     view.appendChild(s2);
 
-    var s3 = el('section', {}, [el('div', { class: 'sh' }, [el('h2', { text: '동별 인구' }), el('small', { text: '많은 순' })])]);
+    var s3 = el('section', {}, [el('div', { class: 'sh' }, [el('h2', { text: '법정동별 인구' }), el('small', { text: '많은 순 · 주민등록 법정동 기준' })])]);
     var dongs = Object.keys(A.dongs || {}).map(function (n) { return [n, A.dongs[n]]; }).sort(function (a, c) { return c[1].total - a[1].total; });
     var tot = dongs.reduce(function (s, d) { return s + d[1].total; }, 0) || 1;
     var tb = el('tbody');
     dongs.slice(0, 16).forEach(function (d) {
       tb.appendChild(el('tr', {}, [el('td', { text: d[0] }), el('td', { class: 'r', text: fmt(d[1].total, 0) }), el('td', { class: 'r', text: fmt(d[1].hh, 0) }), el('td', { class: 'r', text: (d[1].total / tot * 100).toFixed(1) + '%' })]));
     });
-    s3.appendChild(el('table', {}, [el('thead', {}, [el('tr', {}, [el('th', { text: '동' }), el('th', { class: 'r', text: '인구' }), el('th', { class: 'r', text: '세대' }), el('th', { class: 'r', text: '비중' })])]), tb]));
+    s3.appendChild(el('table', {}, [el('thead', {}, [el('tr', {}, [el('th', { text: '법정동' }), el('th', { class: 'r', text: '인구' }), el('th', { class: 'r', text: '세대' }), el('th', { class: 'r', text: '비중' })])]), tb]));
     if (!dongs.length) s3.appendChild(el('div', { class: 'empty', text: '자료 없음' }));
     view.appendChild(s3);
   }
