@@ -80,7 +80,12 @@ def collect(state, S, C):
         set_ind(state, 'working_age', {k: v['working_age'] for k, v in ages.items()}, basis)
         set_ind(state, 'elderly', {k: v['elderly'] for k, v in ages.items()}, basis)
         if state.get('admin'):
-            state['admin']['age_bands'] = ages.get(C['me'], {}).get('bands')
+            mine = ages.get(C['me'], {})
+            state['admin']['age_bands'] = mine.get('bands')
+            if mine.get('total'):
+                state['admin']['age_counts'] = {'total': round(mine['total']),
+                                                'working': round(mine['total'] * mine['working_age'] / 100),
+                                                'elderly': round(mine['total'] * mine['elderly'] / 100)}
         ok(state, 'age', '%s · %d개 시·군' % (mode, len(ages)))
     except Exception as e:  # noqa: BLE001
         fail(state, 'age', e)
@@ -138,7 +143,8 @@ def demo(state, S, C):
              '동해시 기타': [18600, 8700]}
     state['admin'] = {'ym': now().strftime('%Y%m'), 'prev_ym': '', 'regions': regions,
                       'dongs': {k: {'total': v[0], 'hh': v[1]} for k, v in dongs.items()},
-                      'age_bands': {'0': 5300, '10': 6900, '20': 8700, '30': 8600, '40': 12100, '50': 15300, '60': 15100, '70': 9300, '80': 5300, '90': 900, '100': 30}}
+                      'age_bands': {'0': 5300, '10': 6900, '20': 8700, '30': 8600, '40': 12100, '50': 15300, '60': 15100, '70': 9300, '80': 5300, '90': 900, '100': 30},
+                      'age_counts': {'total': 88030, 'working': 54740, 'elderly': 25430}}
     for s in ('population', 'dong_population', 'age', 'finance', 'finance_final'):
         ok(state, s, '시연용 가짜 값')
 

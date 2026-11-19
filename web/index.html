@@ -247,8 +247,9 @@ function startApp() {
     kpi('총인구', fmt(me.total, 0), '명', dm != null ? '전월 대비 ' + sgn(dm) + '명 · 전년 대비 ' + sgn(diff) + '명' : (me.prev ? '전년 같은 달 ' + fmt(me.prev, 0) + '명' : ''));
     kpi('인구 증감률', pc && pc.me ? fmt(pc.me.value, 2) : '–', '%', pc && pc.me ? '도내 ' + pc.me.rank + '위 / ' + pc.n : '');
     kpi('세대수', fmt(me.hh, 0), '세대', me.hh ? (me.prev_m_hh ? '전월 대비 ' + sgn(me.hh - me.prev_m_hh) + '세대 · ' : '') + '세대당 ' + fmt(me.total / me.hh, 2) + '명' : '');
-    kpi('생산연령인구 비율', wa && wa.me ? fmt(wa.me.value, 1) : '–', '%', wa && wa.me ? '도내 ' + wa.me.rank + '위 / ' + wa.n : '연령 자료 연결 전');
-    kpi('고령인구 비율', el65 && el65.me ? fmt(el65.me.value, 1) : '–', '%', el65 && el65.me ? '도내 ' + el65.me.rank + '위 · 판정 제외' : '연령 자료 연결 전');
+    var ac = A.age_counts || {};
+    kpi('생산연령인구 비율 (만 15~64세)', wa && wa.me ? fmt(wa.me.value, 1) : '–', '%', wa && wa.me ? (ac.working ? fmt(ac.working, 0) + '명 · ' : '') + '도내 ' + wa.me.rank + '위 / ' + wa.n : '연령 자료 연결 전');
+    kpi('고령인구 비율 (만 65세 이상)', el65 && el65.me ? fmt(el65.me.value, 1) : '–', '%', el65 && el65.me ? (ac.elderly ? fmt(ac.elderly, 0) + '명 · ' : '') + '도내 ' + el65.me.rank + '위 · 판정 제외' : '연령 자료 연결 전');
     view.appendChild(k);
 
     var s1 = el('section', {}, [el('div', { class: 'sh' }, [el('h2', { text: '인구 증감률 · 강원 18개 시·군' }), el('small', { text: '전년 같은 달 대비 %' })])]);
@@ -267,7 +268,7 @@ function startApp() {
           el('span', { text: x === '100' ? '100+' : x + '대' })]));
       });
       s2.appendChild(cols);
-      s2.appendChild(el('div', { class: 'note' }, [el('b', { text: '기준 ' }), '생산연령 = 만 15~64세, 고령 = 만 65세 이상. 주민등록 연령별 인구로 정확히 셈한 값입니다.']));
+      s2.appendChild(el('div', { class: 'note' }, [el('b', { text: '기준 ' }), '생산연령 만 15~64세 · 고령 만 65세 이상 · 주민등록 연령별 인구 기준']));
     } else s2.appendChild(el('div', { class: 'empty', text: '연령 자료 연결 전입니다(점검 스크립트 결과로 설정).' }));
     view.appendChild(s2);
 
