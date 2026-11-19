@@ -20,7 +20,7 @@
     },
     {
       "id": "welfare",
-      "label": "복지",
+      "label": "보건",
       "show": true
     },
     {
@@ -92,7 +92,7 @@
     {
       "id": "medical",
       "no": 4,
-      "field": "복지",
+      "field": "보건",
       "name": "인구 1만명당 의료기관",
       "unit": "곳",
       "dir": 1,

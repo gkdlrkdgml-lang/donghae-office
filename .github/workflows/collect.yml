@@ -40,7 +40,7 @@ jobs:
           git config user.email "actions@users.noreply.github.com"
           git add web/data
           git diff --cached --quiet || git commit -m "데이터 갱신 $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M')"
-          git push
+          for i in 1 2 3; do git push && break; git pull --rebase -X theirs || true; sleep 5; done
       - uses: actions/upload-pages-artifact@v3
         with:
           path: web

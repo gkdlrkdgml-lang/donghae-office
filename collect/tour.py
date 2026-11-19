@@ -58,7 +58,7 @@ def places():
     out = []
     for t in ('12', '14', '28'):
         try:
-            rows = _call(_src(KOR + 'areaBasedList2', dict(APP, LDONG, contentTypeId=t, arrange='Q', numOfRows='300', pageNo='1')), {}, 'places_%s' % t)
+            rows = _call(_src(KOR + 'areaBasedList2', dict(APP, **LDONG, contentTypeId=t, arrange='Q', numOfRows='300', pageNo='1')), {}, 'places_%s' % t)
         except Exception as e:  # noqa: BLE001
             log('관광지 목록 %s 실패: %s' % (t, e))
             continue
@@ -73,7 +73,7 @@ def festivals():
     seen, out = set(), []
     start = '%04d0101' % (now().year - 3)
     try:
-        rows = _call(_src(KOR + 'searchFestival2', dict(APP, LDONG, eventStartDate=start, arrange='A', numOfRows='200', pageNo='1')), {}, 'festival_search')
+        rows = _call(_src(KOR + 'searchFestival2', dict(APP, **LDONG, eventStartDate=start, arrange='A', numOfRows='200', pageNo='1')), {}, 'festival_search')
     except Exception as e:  # noqa: BLE001
         log('축제 검색 실패: %s' % e)
         rows = []
@@ -83,7 +83,7 @@ def festivals():
         seen.add(it['id'])
         out.append(it)
     try:
-        rows = _call(_src(KOR + 'areaBasedList2', dict(APP, LDONG, contentTypeId='15', arrange='Q', numOfRows='200', pageNo='1')), {}, 'festival_list')
+        rows = _call(_src(KOR + 'areaBasedList2', dict(APP, **LDONG, contentTypeId='15', arrange='Q', numOfRows='200', pageNo='1')), {}, 'festival_list')
     except Exception as e:  # noqa: BLE001
         log('축제 목록 실패: %s' % e)
         rows = []

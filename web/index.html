@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <title>동해시 AI 시장실</title>
 <link rel="icon" href="img/emblem.png">
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+<script src="vendor/leaflet/leaflet.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   :root {
@@ -191,21 +193,21 @@
   .help { position: absolute; right: 20px; bottom: 12px; font-size: 13px; color: #9AA6B6; }
   /* 3D 행정동 지도 */
   .m3wrap { position: relative; flex: 1; min-height: 0; perspective: 1500px; perspective-origin: 50% 30%; overflow: hidden; border-radius: 12px; background: linear-gradient(180deg, #F4F8FE 0%, #FFFFFF 70%); }
-  .m3plane { position: absolute; left: 50%; top: 50%; width: 780px; height: 660px; margin: -330px 0 0 -390px; transform-style: preserve-3d; transition: transform .8s ease; }
-  .m3land { position: absolute; inset: 0; border-radius: 26px; background: linear-gradient(135deg, #E9F1E4, #F5F8EE); box-shadow: 0 0 0 2px #D5E2CC inset; background-image: linear-gradient(#0000 49px, #DCE7D3 50px), linear-gradient(90deg, #0000 49px, #DCE7D3 50px); background-size: 50px 50px; }
-  .m3sea { position: absolute; top: 0; bottom: 0; right: -40px; width: 200px; border-radius: 0 26px 26px 0; background: linear-gradient(90deg, #CFE3F7, #A9CBEE); clip-path: polygon(38% 0, 100% 0, 100% 100%, 22% 100%, 30% 78%, 18% 60%, 34% 44%, 26% 26%); }
-  .m3sea b { position: absolute; right: 26px; top: 46%; color: #5C88B8; font-size: 22px; letter-spacing: 6px; writing-mode: vertical-rl; }
-  .m3bar { position: absolute; width: 44px; height: 44px; transform-style: preserve-3d; cursor: pointer; }
+  .m3plane { position: absolute; left: 50%; top: 52%; transform-style: preserve-3d; }
+  .m3map { position: absolute; inset: 0; overflow: hidden; border-radius: 18px; background: #E8EEF2; box-shadow: 0 30px 60px #1B3A6B33; }
+  .m3map img { position: absolute; width: 256px; height: 256px; }
+  .m3veil { position: absolute; inset: 0; border-radius: 18px; background: #ffffff38; pointer-events: none; }
+  .m3bar { position: absolute; width: 34px; height: 34px; transform-style: preserve-3d; cursor: pointer; }
   .m3bar i { position: absolute; display: block; }
   .m3bar .tp { inset: 0; }
-  .m3bar .fr, .m3bar .bk { left: 0; width: 44px; transform-origin: top; transform: rotateX(90deg); }
-  .m3bar .fr { top: 44px; } .m3bar .bk { top: 0; }
-  .m3bar .lf, .m3bar .rt { top: 0; height: 44px; transform-origin: left; transform: rotateY(-90deg); }
-  .m3bar .lf { left: 0; } .m3bar .rt { left: 44px; }
-  .m3bar .sh { position: absolute; left: -8px; top: -8px; width: 60px; height: 60px; border-radius: 50%; background: radial-gradient(#0002, #0000 70%); }
-  .m3lb { position: absolute; left: 22px; bottom: 22px; width: 150px; margin-left: -75px; text-align: center; transform-origin: bottom center; pointer-events: none; white-space: nowrap; }
+  .m3bar .fr, .m3bar .bk { left: 0; width: 34px; transform-origin: top; transform: rotateX(90deg); }
+  .m3bar .fr { top: 34px; } .m3bar .bk { top: 0; }
+  .m3bar .lf, .m3bar .rt { top: 0; height: 34px; transform-origin: left; transform: rotateY(-90deg); }
+  .m3bar .lf { left: 0; } .m3bar .rt { left: 34px; }
+  .m3bar .sh { position: absolute; left: -10px; top: -10px; width: 54px; height: 54px; border-radius: 50%; background: radial-gradient(#0003, #0000 70%); }
+  .m3lb { position: absolute; left: 17px; bottom: 17px; width: 150px; margin-left: -75px; text-align: center; transform-origin: bottom center; pointer-events: none; white-space: nowrap; }
   .m3lb b { display: block; font-size: 22px; font-weight: 800; color: var(--navy); text-shadow: 0 0 4px #fff, 0 0 4px #fff; }
-  .m3lb span { display: inline-block; font-size: 19px; font-weight: 800; padding: 1px 9px; border-radius: 999px; color: #fff; }
+  .m3lb span { display: inline-block; font-size: 18px; font-weight: 800; padding: 1px 9px; border-radius: 999px; color: #fff; }
   .m3ctl { position: absolute; left: 14px; top: 12px; right: 14px; display: flex; gap: 6px; align-items: center; z-index: 2; }
   .m3ctl button { font: inherit; font-size: 16px; font-weight: 700; padding: 6px 14px; border-radius: 999px; border: 1.5px solid #C9D8EE; background: #fff; color: var(--sub); cursor: pointer; }
   .m3ctl button.on { color: #fff; }
@@ -213,6 +215,39 @@
   .m3note { position: absolute; left: 16px; bottom: 10px; font-size: 14px; color: var(--sub); }
   .m3row { cursor: pointer; } .m3row.on td { background: #EEF4FD; } .m3row td { padding: 7px 8px; }
   .m3cell { display: flex; align-items: center; gap: 8px; } .m3cell i { display: block; height: 14px; border-radius: 7px; }
+  /* 관광 */
+  .lchart { position: relative; flex: 1; min-height: 0; }
+  .lchart svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .lleg { position: absolute; right: 6px; top: 0; display: flex; gap: 12px; font-size: 14px; color: var(--sub); background: #ffffffd0; padding: 2px 6px; border-radius: 6px; }
+  .lleg i { display: inline-block; width: 18px; height: 4px; border-radius: 2px; vertical-align: middle; margin-right: 5px; }
+  .gcols { flex: 1; min-height: 0; display: flex; align-items: stretch; gap: 10px; padding-top: 26px; position: relative; }
+  .gcols .g { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .gcols .bars { flex: 1; display: flex; align-items: flex-end; gap: 2px; border-bottom: 1.5px solid var(--line); }
+  .gcols .bars i { flex: 1; display: block; border-radius: 4px 4px 0 0; min-height: 2px; position: relative; }
+  .gcols .g > span { text-align: center; font-size: 14px; color: var(--sub); padding-top: 4px; }
+  .gcols .g.pk > span { color: var(--navy); font-weight: 800; }
+  .cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+  .cal b { text-align: center; font-size: 14px; color: var(--sub); }
+  .cal div { border-radius: 9px; padding: 5px 0 4px; text-align: center; font-size: 13px; line-height: 1.15; cursor: default; }
+  .cal div em { display: block; font-style: normal; font-size: 16px; font-weight: 800; }
+  .cal div.today { outline: 3px solid var(--navy); }
+  .calleg { display: flex; gap: 10px; font-size: 13px; color: var(--sub); flex-wrap: wrap; }
+  .calleg i { display: inline-block; width: 14px; height: 14px; border-radius: 4px; vertical-align: -2px; margin-right: 4px; }
+  .tmap { flex: 1; min-height: 0; border-radius: 10px; overflow: hidden; background: #EEF3F8; }
+  .tmap .leaflet-tooltip { font: inherit; font-size: 13px; font-weight: 700; padding: 1px 6px; }
+  .ins { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+  .ins div { background: #F3F7FD; border-left: 4px solid var(--blue); border-radius: 8px; padding: 8px 12px; font-size: 15.5px; line-height: 1.35; }
+  .ins div b { color: var(--navy); }
+  .wx { display: flex; gap: 6px; overflow: hidden; }
+  .wx div { flex: 1; min-width: 0; text-align: center; background: #F5F8FC; border-radius: 10px; padding: 6px 2px; font-size: 13px; color: var(--sub); }
+  .wx div em { display: block; font-style: normal; font-size: 22px; line-height: 1.2; }
+  .wx div b { display: block; font-size: 18px; color: var(--ink); }
+  .rows.wide { justify-content: flex-start; gap: 4px; }
+  .rows.wide .row { grid-template-columns: 30px minmax(0, 190px) minmax(0, 1fr) 48px; white-space: nowrap; font-size: 18px; padding: 7px 8px; }
+  .rows.wide .row > span:nth-child(2) { overflow: hidden; text-overflow: ellipsis; font-weight: 700; }
+  .rows.wide .row .bar { height: 14px; }
+  .row > span { white-space: nowrap; }
+  .ftab tr { cursor: pointer; } .ftab tr.on td { background: #EEF4FD; }
 </style>
 </head>
 <body>
@@ -450,9 +485,12 @@ function startApp() {
   // ---------- 2. 행정: 아래 탭(인구 현황 / 인구 비교) ----------
   var admTab = 'now', admDetail = null;
   function subTabs() {
+    return tabsBar([['now', '인구 현황'], ['map', '행정동 3D 지도'], ['compare', '인구 비교 · 18개 시·군']], admTab, function (k) { admTab = k; admDetail = null; });
+  }
+  function tabsBar(list, cur, set) {
     var t = el('div', { class: 'subtabs' });
-    [['now', '인구 현황'], ['map', '행정동 3D 지도'], ['compare', '인구 비교 · 18개 시·군']].forEach(function (x) {
-      t.appendChild(el('button', { type: 'button', class: admTab === x[0] ? 'on' : '', text: x[1], onclick: function () { admTab = x[0]; admDetail = null; render(); } }));
+    list.forEach(function (x) {
+      t.appendChild(el('button', { type: 'button', class: cur === x[0] ? 'on' : '', text: x[1], onclick: function () { set(x[0]); zoomIdx = null; render(); } }));
     });
     return t;
   }
@@ -847,12 +885,14 @@ function startApp() {
 
 
   // ---------- 행정: 행정동 3D 지도 ----------
-  var m3Metric = 'pop', m3Ang = -24, m3Sel = null;
-  // 위치는 개략 배치(북쪽 위, 바다 오른쪽)
-  var M3POS = { '망상동': [400, 30], '묵호동': [560, 150], '발한동': [455, 225], '부곡동': [320, 235], '동호동': [585, 320], '천곡동': [330, 380], '송정동': [505, 440], '북삼동': [140, 330], '북평동': [330, 540], '삼화동': [110, 560] };
+  var m3Metric = 'pop', m3Ang = -24, m3Sel = null, m3Spin = true, m3Raf = null;
+  // 행정동 중심(근사 위경도) · 바탕은 CARTO 지도 타일(z12)
+  var M3LL = { '망상동': [37.588, 129.088], '묵호동': [37.557, 129.125], '발한동': [37.547, 129.106], '부곡동': [37.534, 129.092], '동호동': [37.531, 129.123], '천곡동': [37.522, 129.112], '송정동': [37.498, 129.124], '북삼동': [37.497, 129.083], '북평동': [37.472, 129.138], '삼화동': [37.466, 129.038] };
+  var M3Z = 13, M3BOX = [37.452, 37.600, 129.000, 129.160];
+  function m3px(lat, lng) { var n = Math.pow(2, M3Z) * 256, r = lat * Math.PI / 180; return [(lng + 180) / 360 * n, (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * n]; }
   function screenMap3D() {
     var A = D.admin || {}, M = A.admm || {}, V = A.vital || {};
-    var dongs = Object.keys(M).filter(function (d) { return M3POS[d]; });
+    var dongs = Object.keys(M).filter(function (d) { return M3LL[d]; });
     var MET = {
       pop: { t: '인구', u: '명', c: ['#8FB2E0', '#1F6FD1', '#1B3A6B'], d: 0, v: function (d) { return M[d].total; } },
       old: { t: '고령 비율', u: '%', c: ['#F6CBA5', '#E8873F', '#B4531B'], d: 1, v: function (d) { return M[d].elderly; } },
@@ -877,11 +917,20 @@ function startApp() {
     }
     function shade(hex, f) { var n = parseInt(hex.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255; function c(x) { return Math.max(0, Math.min(255, Math.round(x * f))); } return 'rgb(' + c(r) + ',' + c(g) + ',' + c(b) + ')'; }
     var wrap = el('div', { class: 'm3wrap' });
-    var plane = el('div', { class: 'm3plane', style: 'transform: scale(.8) rotateX(56deg) rotateZ(' + m3Ang + 'deg)' });
-    plane.appendChild(el('div', { class: 'm3land' }));
-    plane.appendChild(el('div', { class: 'm3sea' }, [el('b', { text: '동해' })]));
-    dongs.slice().sort(function (a, b) { return M3POS[a][1] - M3POS[b][1]; }).forEach(function (d) {
-      var p = M3POS[d], v = vals[d], h = v == null ? 4 : Math.max(6, Math.round(Math.abs(v) / (mx || 1) * 250)), col = colorOf(d), on = m3Sel === d;
+    var tl = m3px(M3BOX[1], M3BOX[2]), br = m3px(M3BOX[0], M3BOX[3]);
+    var tx0 = Math.floor(tl[0] / 256), ty0 = Math.floor(tl[1] / 256), tx1 = Math.floor(br[0] / 256), ty1 = Math.floor(br[1] / 256);
+    var ox = tl[0] - tx0 * 256, oy = tl[1] - ty0 * 256, PW = Math.round(br[0] - tl[0]), PH = Math.round(br[1] - tl[1]);
+    var plane = el('div', { class: 'm3plane', style: 'width:' + PW + 'px;height:' + PH + 'px;margin:' + (-PH / 2) + 'px 0 0 ' + (-PW / 2) + 'px' });
+    var map = el('div', { class: 'm3map' });
+    for (var tx = tx0; tx <= tx1; tx++) for (var ty = ty0; ty <= ty1; ty++) {
+      map.appendChild(el('img', { src: 'https://' + 'abcd'[(tx + ty) % 4] + '.basemaps.cartocdn.com/rastertiles/voyager/' + M3Z + '/' + tx + '/' + ty + '@2x.png', alt: '', style: 'left:' + ((tx - tx0) * 256 - ox) + 'px;top:' + ((ty - ty0) * 256 - oy) + 'px' }));
+    }
+    plane.appendChild(map);
+    plane.appendChild(el('div', { class: 'm3veil' }));
+    var labels = [];
+    dongs.slice().sort(function (a, b) { return M3LL[b][0] - M3LL[a][0]; }).forEach(function (d) {
+      var q = m3px(M3LL[d][0], M3LL[d][1]), p = [q[0] - tl[0] - 17, q[1] - tl[1] - 17];
+      var v = vals[d], h = v == null ? 4 : Math.max(6, Math.round(Math.abs(v) / (mx || 1) * 260)), col = colorOf(d), on = m3Sel === d;
       var b = el('div', { class: 'm3bar', style: 'left:' + p[0] + 'px;top:' + p[1] + 'px', onclick: function () { m3Sel = m3Sel === d ? null : d; render(); } });
       b.appendChild(el('div', { class: 'sh' }));
       [['fr', .78], ['bk', .9], ['lf', .68], ['rt', .86]].forEach(function (f) {
@@ -889,21 +938,41 @@ function startApp() {
         b.appendChild(el('i', { class: f[0], style: st }));
       });
       b.appendChild(el('i', { class: 'tp', style: 'background:' + shade(col, 1.12) + ';transform:translateZ(' + h + 'px);' + (on ? 'outline:4px solid #F2B705' : '') }));
-      b.appendChild(el('div', { class: 'm3lb', style: 'transform: translateZ(' + (h + 6) + 'px) rotateZ(' + (-m3Ang) + 'deg) rotateX(-56deg)' }, [
-        el('b', { text: d }), el('span', { style: 'background:' + col, text: v == null ? '–' : (mt.signed && v > 0 ? '+' : '') + fmt(v, mt.d) + mt.u })]));
+      var lb = el('div', { class: 'm3lb' }, [el('b', { text: d }), el('span', { style: 'background:' + col, text: v == null ? '–' : (mt.signed && v > 0 ? '+' : '') + fmt(v, mt.d) + mt.u })]);
+      lb._h = h; labels.push(lb); b.appendChild(lb);
       plane.appendChild(b);
     });
+    var scale = 1;
+    function setAng() {
+      plane.style.transform = 'scale(' + scale.toFixed(3) + ') rotateX(56deg) rotateZ(' + m3Ang.toFixed(2) + 'deg)';
+      labels.forEach(function (lb) { lb.style.transform = 'translateZ(' + (lb._h + 6) + 'px) rotateZ(' + (-m3Ang).toFixed(2) + 'deg) rotateX(-56deg)'; });
+    }
     wrap.appendChild(plane);
+    setTimeout(function () {
+      var W = wrap.clientWidth, H = wrap.clientHeight, diag = Math.sqrt(PW * PW + PH * PH);
+      scale = Math.min(W / diag, H / (diag * 0.78)) * 0.88; setAng();
+    }, 0);
+    setAng();
+    if (m3Raf) cancelAnimationFrame(m3Raf);
+    var lastT = null;
+    function tick(t) {
+      if (!plane.isConnected) { m3Raf = null; return; }
+      if (m3Spin && lastT != null) { m3Ang += (t - lastT) / 1000 * 3; if (m3Ang > 360) m3Ang -= 360; setAng(); }
+      lastT = t; m3Raf = requestAnimationFrame(tick);
+    }
+    m3Raf = requestAnimationFrame(tick);
     var ctl = el('div', { class: 'm3ctl' });
     Object.keys(MET).forEach(function (k) {
       var on = k === m3Metric;
       ctl.appendChild(el('button', { type: 'button', class: on ? 'on' : '', style: on ? 'background:' + MET[k].c[1] + ';border-color:' + MET[k].c[1] : '', text: MET[k].t, onclick: function () { m3Metric = k; render(); } }));
     });
     ctl.appendChild(el('span', { class: 'sp' }));
-    ctl.appendChild(el('button', { type: 'button', text: '⟲ 왼쪽으로', onclick: function () { m3Ang -= 30; plane.style.transform = 'scale(.8) rotateX(56deg) rotateZ(' + m3Ang + 'deg)'; setTimeout(render, 820); } }));
-    ctl.appendChild(el('button', { type: 'button', text: '오른쪽으로 ⟳', onclick: function () { m3Ang += 30; plane.style.transform = 'scale(.8) rotateX(56deg) rotateZ(' + m3Ang + 'deg)'; setTimeout(render, 820); } }));
+    ctl.appendChild(el('button', { type: 'button', text: '⟲', onclick: function () { m3Ang -= 30; setAng(); } }));
+    var spinBtn = el('button', { type: 'button', text: m3Spin ? '⏸ 회전 멈춤' : '▶ 자동 회전', onclick: function () { m3Spin = !m3Spin; spinBtn.textContent = m3Spin ? '⏸ 회전 멈춤' : '▶ 자동 회전'; } });
+    ctl.appendChild(spinBtn);
+    ctl.appendChild(el('button', { type: 'button', text: '⟳', onclick: function () { m3Ang += 30; setAng(); } }));
     wrap.appendChild(ctl);
-    wrap.appendChild(el('div', { class: 'm3note', text: '막대 높이 = ' + mt.t + ' · 진한 색 상위 3개 동 · 막대를 누르면 오른쪽에 표시 · 위치는 개략 배치' }));
+    wrap.appendChild(el('div', { class: 'm3note', text: '막대 높이 = ' + mt.t + ' · 진한 색 상위 3개 동 · 막대를 누르면 오른쪽에 표시 · 막대는 동 중심 근처 · 지도 © OpenStreetMap · © CARTO' }));
     view.appendChild(el('section', { style: 'grid-row: 2; display:flex; flex-direction:column; padding:10px' }, [wrap]));
     // 오른쪽: 순위표 + 선택 동
     var tb = el('tbody');
@@ -930,10 +999,10 @@ function startApp() {
     view.appendChild(side);
   }
 
-  // ---------- 복지 ----------
+  // ---------- 보건(의료) ----------
   function screenWelfare() {
     var H = (D.life || {}).hospitals || {}, R = H.regions || {}, m = R[D.me] || { kinds: {} }, I = ind('medical');
-    lifeTitle(D.me + '시 의료 현황', (H.at || '') + ' 심평원 병원정보 기준');
+    lifeTitle(D.me + '시 보건·의료 현황', (H.at || '') + ' 심평원 병원정보 기준');
     var k = m.kinds || {}, sum = function (keys) { return keys.reduce(function (t, x) { return t + (k[x] || 0); }, 0); };
     var big = sum(['상급종합', '종합병원', '병원', '요양병원', '정신병원']), clinic = sum(['의원']), dent = sum(['치과병원', '치과의원']), orient = sum(['한방병원', '한의원']);
     cardsRow([
@@ -969,26 +1038,47 @@ function startApp() {
   }
 
   // ---------- 환경 ----------
+  function skyText(sl) { var p = +sl.PTY || 0, k = +sl.SKY || 1; return p === 1 ? '비' : p === 2 ? '비·눈' : p === 3 ? '눈' : p === 4 ? '소나기' : k === 4 ? '흐림' : k === 3 ? '구름많음' : '맑음'; }
   function screenEnv() {
-    var A = (D.life || {}).air || {}, R = A.regions || {}, m = R[D.me] || {};
-    var vals = Object.keys(R).filter(function (n) { return R[n].pm25 != null; }), avg = vals.reduce(function (t, n) { return t + R[n].pm25; }, 0) / (vals.length || 1);
+    var A = (D.life || {}).air || {}, R = A.regions || {}, m = R[D.me] || {}, W = (D.life || {}).weather;
+    var vals = Object.keys(R).filter(function (n) { return R[n].pm25 != null; });
     function g25(v) { return v == null ? ['–', ''] : v <= 15 ? ['좋음', 'good'] : v <= 35 ? ['보통', 'navy'] : v <= 75 ? ['나쁨', 'bad'] : ['매우 나쁨', 'bad']; }
     function g10(v) { return v == null ? ['–', ''] : v <= 30 ? ['좋음', 'good'] : v <= 80 ? ['보통', 'navy'] : v <= 150 ? ['나쁨', 'bad'] : ['매우 나쁨', 'bad']; }
-    lifeTitle(D.me + '시 대기질', (A.time || '') + ' 에어코리아 실시간');
     var best = (A.mine || [])[0] || {};
+    var now = new Date(), today = dateYmd(now), nowK = today + ('0' + now.getHours()).slice(-2) + '00';
+    var keys = W ? Object.keys(W.slots).filter(function (k) { return W.slots[k].TMP != null; }) : [];
+    var curK = keys.filter(function (k) { return k >= nowK; })[0] || keys[keys.length - 1], cur = curK ? W.slots[curK] : null;
+    var days = {};
+    keys.forEach(function (k) { var d = k.slice(0, 8), sl = W.slots[k], o = days[d] || (days[d] = { mx: -99, mn: 99, pop: 0, sky: {}, tmx: null, tmn: null });
+      var t = +sl.TMP; if (t > o.mx) o.mx = t; if (t < o.mn) o.mn = t; o.pop = Math.max(o.pop, +sl.POP || 0); var h = +k.slice(8, 10); if (h >= 9 && h <= 18) { var tx = skyText(sl); o.sky[tx] = (o.sky[tx] || 0) + 1; } });
+    Object.keys(W ? W.slots : {}).forEach(function (k) { var d = days[k.slice(0, 8)]; if (!d) return; if (W.slots[k].TMX != null) d.tmx = +W.slots[k].TMX; if (W.slots[k].TMN != null) d.tmn = +W.slots[k].TMN; });
+    function dsky(o) { var b = null; Object.keys(o.sky).forEach(function (x) { if (!b || o.sky[x] > o.sky[b]) b = x; }); return b || '–'; }
+    var t0 = days[today] || {};
+    var hi = t0.tmx != null ? t0.tmx : t0.mx, loT = t0.tmn != null ? t0.tmn : t0.mn;
+    lifeTitle(D.me + '시 날씨·대기질', (W ? '기상청 단기예보 ' + W.base.slice(4, 6) + '/' + W.base.slice(6, 8) + ' ' + W.base.slice(8, 10) + '시 발표 · ' : '') + (A.time || '') + ' 에어코리아');
     cardsRow([
-      { l: '초미세먼지', sub: 'PM2.5', ic: 'cloud', v: fmt(m.pm25, 0), u: '㎍/㎥', chips: [g25(m.pm25)] },
-      { l: '미세먼지', sub: 'PM10', ic: 'cloud', col: '#1F6FD1', bg: '#E4EEFB', v: fmt(m.pm10, 0), u: '㎍/㎥', chips: [g10(m.pm10)] },
-      { l: '오존', ic: 'sun', col: '#C0602B', bg: '#FDEBDD', v: best.o3 != null ? fmt(best.o3, 3) : '–', u: 'ppm' },
-      { l: '통합대기지수', ic: 'leaf', col: '#2E8B57', bg: '#E2F3E9', v: best.khai != null ? fmt(best.khai, 0) : '–', u: '', chips: [best.grade ? [{ 1: '좋음', 2: '보통', 3: '나쁨', 4: '매우 나쁨' }[best.grade] || '', best.grade <= 1 ? 'good' : best.grade <= 2 ? 'navy' : 'bad'] : null] },
-      { l: '도내 평균', sub: 'PM2.5', ic: 'cloud', col: '#7A4FC4', bg: '#EFE9FB', v: fmt(avg, 0), u: '㎍/㎥', chips: [['측정소 있는 ' + vals.length + '개 시·군', '']] }
+      { l: '지금 날씨', sub: '천곡동', ic: 'sun', v: cur ? cur.TMP : '–', u: '°C', chips: [cur ? [wxIcon(cur) + ' ' + skyText(cur), 'navy'] : null, cur ? ['바람 ' + cur.WSD + 'm/s · 습도 ' + cur.REH + '%', ''] : null] },
+      { l: '오늘 최고·최저', ic: 'trend', col: '#C0602B', bg: '#FDEBDD', v: hi != null && hi > -99 ? Math.round(hi) + '° / ' + Math.round(loT) + '°' : '–', u: '', chips: [t0.sky ? [dsky(t0), 'violet'] : null] },
+      { l: '비 올 확률', sub: '오늘 최대', ic: 'cloud', col: '#1F6FD1', bg: '#E4EEFB', v: t0.pop != null ? fmt(t0.pop, 0) : '–', u: '%', chips: [cur && cur.PCP && cur.PCP !== '강수없음' ? ['강수 ' + cur.PCP, 'bad'] : ['강수 없음', 'good']] },
+      { l: '초미세먼지', sub: 'PM2.5', ic: 'cloud', col: '#7A4FC4', bg: '#EFE9FB', v: fmt(m.pm25, 0), u: '㎍/㎥', chips: [g25(m.pm25)] },
+      { l: '미세먼지', sub: 'PM10', ic: 'leaf', col: '#2E8B57', bg: '#E2F3E9', v: fmt(m.pm10, 0), u: '㎍/㎥', chips: [g10(m.pm10), best.khai != null ? ['통합지수 ' + fmt(best.khai, 0), ''] : null] }
     ]);
+    if (W) {
+      var fk = keys.filter(function (k) { return k >= nowK.slice(0, 10) + '00'; }).slice(0, 24);
+      var dk = Object.keys(days).filter(function (d) { return d >= today; }).slice(0, 3), nm = ['오늘', '내일', '모레'];
+      var dayRow = el('div', { class: 'wx', style: 'margin-bottom:10px' }, dk.map(function (d, i) { var o = days[d], h = o.tmx != null ? o.tmx : o.mx, l = o.tmn != null ? o.tmn : o.mn;
+        return el('div', { style: 'padding:8px 4px' }, [el('b', { text: nm[i] + ' ' + mdLabel(d), style: 'font-size:16px;color:var(--navy)' }), el('em', { text: { '맑음': '☀', '구름많음': '⛅', '흐림': '☁', '비': '🌧', '눈': '❄', '비·눈': '🌨', '소나기': '🌦' }[dsky(o)] || '☀' }),
+          el('b', { html: '<span style="color:#C0392B">' + Math.round(h) + '°</span> / <span style="color:#1F6FD1">' + Math.round(l) + '°</span>' }), document.createTextNode(dsky(o) + ' · 비 ' + o.pop + '%')]); }));
+      var sec = panel('날씨 예보', '기상청 단기예보 · 3시간 간격', [dayRow, weatherStrip(8),
+        lineChart(fk.map(function (k) { return +k.slice(8, 10) + '시'; }), [{ name: '기온', color: '#E8873F', values: fk.map(function (k) { return +W.slots[k].TMP; }), area: true }], { fit: true, unit: '°', vals: true, step: 2 })]);
+      sec.style.gridColumn = 'span 2';
+    }
     panel('초미세먼지 지금 · 강원 시·군', '㎍/㎥ · 낮을수록 좋음', colChart(vals.map(function (n) { return [n, R[n].pm25]; }), null, null, 0, null, false, { lower: true }));
-    panel('미세먼지 지금 · 강원 시·군', '㎍/㎥ · 낮을수록 좋음', colChart(Object.keys(R).filter(function (n) { return R[n].pm10 != null; }).map(function (n) { return [n, R[n].pm10]; }), null, null, 0, null, false, { lower: true }));
-    var tb = el('tbody');
-    (A.mine || []).forEach(function (x) { tb.appendChild(el('tr', {}, [el('td', { text: x.station }), el('td', { class: 'r', text: fmt(x.pm25, 0) }), el('td', { class: 'r', text: fmt(x.pm10, 0) }), el('td', { class: 'r', text: x.o3 != null ? fmt(x.o3, 3) : '–' }), el('td', { class: 'r', text: x.no2 != null ? fmt(x.no2, 3) : '–' })])); });
-    panel('동해시 측정소', A.time || '', [el('table', { class: 'dt big' }, [el('thead', {}, [el('tr', {}, ['측정소', 'PM2.5', 'PM10', '오존', 'NO₂'].map(function (h, j) { return el('th', { class: j ? 'r' : '', text: h }); }))]), tb]),
-      el('div', { class: 'note', style: 'margin-top:auto' }, [el('b', { text: '참고 ' }), '초미세먼지 12개월 평균 순위는 매일 값이 1년 쌓이면 붙입니다.'])]);
+    if (!W) {
+      var tb = el('tbody');
+      (A.mine || []).forEach(function (x) { tb.appendChild(el('tr', {}, [el('td', { text: x.station }), el('td', { class: 'r', text: fmt(x.pm25, 0) }), el('td', { class: 'r', text: fmt(x.pm10, 0) })])); });
+      panel('동해시 측정소', A.time || '', el('table', { class: 'dt big' }, [el('thead', {}, [el('tr', {}, ['측정소', 'PM2.5', 'PM10'].map(function (h, j) { return el('th', { class: j ? 'r' : '', text: h }); }))]), tb]));
+    }
   }
 
   // ---------- 관광 ----------
@@ -1010,6 +1100,253 @@ function startApp() {
     panel('인구 1명당 연간 방문자', '강원 18개 시·군 · 명', I ? rankList(I) : el('div', { class: 'empty', text: '12개월 자료가 쌓이면 표시' }));
     panel('월별 방문자 · ' + D.me + '시', '외지인+외국인 · 명', colChart(ms.slice(-12).map(function (ym) { return [Number(ym.slice(4)) + '월', vis((VM[ym] || {})[D.me]) || 0]; }), null, null, 0, null, true, { plain: true, avgLabel: '월 평균' }));
     panel('방문자 구성 · ' + ml(last), '명', donut([['외지인 ' + fmt(cur.outside, 0), cur.outside || 0, '#1F6FD1'], ['외국인 ' + fmt(cur.foreign, 0), cur.foreign || 0, '#7A4FC4'], ['현지인 ' + fmt(cur.local, 0), cur.local || 0, '#E8A867']], fmt((cur.outside || 0) + (cur.foreign || 0) + (cur.local || 0), 0), '전체'));
+  }
+
+  // ---------- 관광: 아래 탭 ----------
+  var tourTab = 'now', spotSel = null, festSel = null;
+  var WD = ['일', '월', '화', '수', '목', '금', '토'];
+  function ymdDate(s) { return new Date(+s.slice(0, 4), +s.slice(4, 6) - 1, +s.slice(6, 8)); }
+  function dateYmd(d) { return d.getFullYear() + ('0' + (d.getMonth() + 1)).slice(-2) + ('0' + d.getDate()).slice(-2); }
+  function addDays(s, n) { var d = ymdDate(s); d.setDate(d.getDate() + n); return dateYmd(d); }
+  function mdLabel(s) { return Number(s.slice(4, 6)) + '/' + Number(s.slice(6, 8)); }
+  function mdw(s) { return Number(s.slice(4, 6)) + '월 ' + Number(s.slice(6, 8)) + '일(' + WD[ymdDate(s).getDay()] + ')'; }
+  function fmtK(v) { return v == null ? '–' : Math.abs(v) >= 10000 ? fmt(v / 10000, Math.abs(v) >= 100000 ? 0 : 1) + '만' : fmt(v, 0); }
+  function vday(d) { return d ? d[1] + d[2] : null; }
+  function svgEl(tag, at, txt) { var e = document.createElementNS('http://www.w3.org/2000/svg', tag); for (var k in at) e.setAttribute(k, at[k]); if (txt != null) e.textContent = txt; return e; }
+  // 꺾은선: labels=[x 이름], lines=[{name,color,values,width,dash}], opts={bands:[[i0,i1,이름]], step}
+  function lineChart(labels, lines, opts) {
+    opts = opts || {};
+    var box = el('div', { class: 'lchart' });
+    function draw() {
+      var W = box.clientWidth, H = box.clientHeight; if (!W || !H) return;
+      box.textContent = '';
+      var pL = 58, pR = 12, pT = 26, pB = 26, n = labels.length, all = [];
+      lines.forEach(function (l) { l.values.forEach(function (v) { if (v != null) all.push(v); }); });
+      var lo = opts.fit ? Math.floor(Math.min.apply(null, all) / 2) * 2 - 2 : 0;
+      var mx = Math.max.apply(null, all.concat([lo + 1])), span = mx - lo, mag = Math.pow(10, Math.floor(Math.log10(span))), top = lo + Math.ceil(span / mag * 2) / 2 * mag;
+      if (opts.fit) top = lo + Math.ceil((mx + 2 - lo) / 4) * 4;
+      function X(i) { return pL + (n <= 1 ? 0 : i / (n - 1)) * (W - pL - pR); }
+      function Y(v) { return pT + (1 - (v - lo) / (top - lo)) * (H - pT - pB); }
+      var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
+      (opts.bands || []).forEach(function (b) {
+        var x0 = X(b[0]) - (W - pL - pR) / (n - 1) / 2, x1 = X(b[1]) + (W - pL - pR) / (n - 1) / 2;
+        svg.appendChild(svgEl('rect', { x: x0, y: pT, width: Math.max(4, x1 - x0), height: H - pT - pB, fill: b[3] || '#FFE7C2', opacity: .75, rx: 6 }));
+        svg.appendChild(svgEl('text', { x: (x0 + x1) / 2, y: pT + 16, 'text-anchor': 'middle', 'font-size': 14, 'font-weight': 800, fill: '#B4531B' }, b[2]));
+      });
+      for (var g = 0; g <= 4; g++) {
+        var v = lo + (top - lo) * g / 4, y = Y(v);
+        svg.appendChild(svgEl('line', { x1: pL, x2: W - pR, y1: y, y2: y, stroke: g ? '#E8EDF3' : '#C9D3DF', 'stroke-width': 1 }));
+        svg.appendChild(svgEl('text', { x: pL - 8, y: y + 4, 'text-anchor': 'end', 'font-size': 13, fill: '#8693A4' }, opts.fit ? fmt(v, 0) + (opts.unit || '') : fmtK(v)));
+      }
+      var step = opts.step || Math.max(1, Math.ceil(n / 12));
+      labels.forEach(function (lb, i) { if (i % step === 0 || i === n - 1 && n - 1 - (Math.floor((n - 1) / step) * step) > step / 2) svg.appendChild(svgEl('text', { x: X(i), y: H - 6, 'text-anchor': 'middle', 'font-size': 13, fill: '#556274' }, lb)); });
+      lines.forEach(function (l) {
+        var d = '', pen = false;
+        l.values.forEach(function (v, i) { if (v == null) { pen = false; return; } d += (pen ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(v).toFixed(1); pen = true; });
+        if (l.area) svg.appendChild(svgEl('path', { d: d + 'L' + X(n - 1) + ' ' + Y(lo) + 'L' + X(0) + ' ' + Y(lo) + 'Z', fill: l.color, opacity: .1 }));
+        svg.appendChild(svgEl('path', { d: d, fill: 'none', stroke: l.color, 'stroke-width': l.width || 2.5, 'stroke-dasharray': l.dash || '', 'stroke-linejoin': 'round' }));
+        if (n <= 45 && !l.dash) l.values.forEach(function (v, i) { if (v != null) { svg.appendChild(svgEl('circle', { cx: X(i), cy: Y(v), r: 3, fill: '#fff', stroke: l.color, 'stroke-width': 2 })); if (opts.vals) svg.appendChild(svgEl('text', { x: X(i), y: Y(v) - 9, 'text-anchor': 'middle', 'font-size': 14, 'font-weight': 700, fill: l.color }, fmt(v, 0) + (opts.unit || ''))); } });
+      });
+      box.appendChild(svg);
+      if (lines.length > 1 || lines[0].name) box.appendChild(el('div', { class: 'lleg' }, lines.map(function (l) { return el('span', {}, [el('i', { style: 'background:' + l.color + (l.dash ? ';opacity:.6' : '') }), document.createTextNode(l.name)]); })));
+    }
+    setTimeout(draw, 0);
+    return box;
+  }
+  // 묶음 세로 막대: cats=[이름], series=[{name,color,values}]
+  function groupCols(cats, series, peak) {
+    var mx = 1; series.forEach(function (s) { s.values.forEach(function (v) { if (v > mx) mx = v; }); });
+    var w = el('div', { class: 'gcols' });
+    w.appendChild(el('div', { class: 'lleg' }, series.map(function (s) { return el('span', {}, [el('i', { style: 'background:' + s.color }), document.createTextNode(s.name)]); })));
+    cats.forEach(function (c, ci) {
+      var bars = el('div', { class: 'bars' });
+      series.forEach(function (s) { var v = s.values[ci]; bars.appendChild(el('i', { title: s.name + ' ' + c + ' ' + fmt(v, 0), style: 'height:' + (v == null ? 0 : v / mx * 100).toFixed(1) + '%;background:' + s.color + (v == null ? ';visibility:hidden' : '') })); });
+      w.appendChild(el('div', { class: 'g' + (ci === peak ? ' pk' : '') }, [bars, el('span', { text: c })]));
+    });
+    return w;
+  }
+  var CLV = [[90, '#D9534F', '#fff', '매우 붐빔 90+'], [70, '#F0A04B', '#fff', '붐빔 70~90'], [50, '#F6D57A', '#5B4300', '보통 50~70'], [0, '#BFE3CC', '#1B5E3A', '여유 50 미만']];
+  function clv(v) { for (var i = 0; i < CLV.length; i++) if (v >= CLV[i][0]) return CLV[i]; return CLV[3]; }
+  function screenTourTabs() {
+    var L = D.life || {}, tabs = [['now', '방문 현황']];
+    if (L.cnctr) tabs.push(['spots', '관광지 혼잡 예측']);
+    if (L.visit_days && Object.keys(L.visit_days).length > 400) tabs.push(['past', '과거 3년 분석']);
+    if (L.festivals && L.festivals.items && L.festivals.items.length) tabs.push(['fest', '행사·축제']);
+    if (!tabs.some(function (t) { return t[0] === tourTab; })) tourTab = 'now';
+    ({ now: screenTour, spots: screenSpots, past: screenTourPast, fest: screenFest })[tourTab]();
+    var title = view.querySelector('.title');
+    if (title && tabs.length > 1) title.insertBefore(tabsBar(tabs, tourTab, function (k) { tourTab = k; }), title.children[1] || null);
+  }
+  function wxIcon(sl) {
+    var p = +sl.PTY || 0, k = +sl.SKY || 1;
+    return p === 1 || p === 4 ? '🌧' : p === 2 ? '🌨' : p === 3 ? '❄' : k === 4 ? '☁' : k === 3 ? '⛅' : '☀';
+  }
+  function weatherStrip(n) {
+    var W = (D.life || {}).weather; if (!W) return null;
+    var nowK = dateYmd(new Date()) + ('0' + new Date().getHours()).slice(-2) + '00';
+    var keys = Object.keys(W.slots).filter(function (k) { return k >= nowK.slice(0, 10) + '00' && W.slots[k].TMP != null; });
+    keys = keys.filter(function (k, i) { return i === 0 || +k.slice(8, 10) % 3 === 0; }).slice(0, n || 8);
+    return el('div', { class: 'wx' }, keys.map(function (k) {
+      var sl = W.slots[k], pop = +sl.POP || 0;
+      return el('div', {}, [document.createTextNode((k.slice(0, 8) === dateYmd(new Date()) ? '' : '내일 ') + +k.slice(8, 10) + '시'), el('em', { text: wxIcon(sl) }), el('b', { text: sl.TMP + '°' }),
+        document.createTextNode(pop ? '비 ' + pop + '%' : '바람 ' + sl.WSD + 'm/s')]);
+    }));
+  }
+  function screenSpots() {
+    var L = D.life || {}, CN = L.cnctr || { spots: {} }, SP = CN.spots, names = Object.keys(SP);
+    var today = dateYmd(new Date());
+    function at(n, d) { var r = (SP[n] || []).filter(function (x) { return x[0] === d; })[0]; return r ? r[1] : null; }
+    var day0 = names.length ? SP[names[0]].map(function (x) { return x[0]; }).filter(function (d) { return d >= today; })[0] || SP[names[0]][0][0] : today;
+    var ord = names.slice().sort(function (a, b) { return (at(b, day0) || 0) - (at(a, day0) || 0); });
+    if (!spotSel || !SP[spotSel]) spotSel = ord[0];
+    var hot = [];
+    names.forEach(function (n) { SP[n].forEach(function (x) { if (x[0] >= day0 && x[1] >= 90) hot.push([x[0], n, x[1]]); }); });
+    hot.sort(function (a, b) { return a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : b[2] - a[2]; });
+    var dayAvg = {};
+    names.forEach(function (n) { SP[n].forEach(function (x) { if (x[0] >= day0) { var a = dayAvg[x[0]] || (dayAvg[x[0]] = [0, 0]); a[0] += x[1]; a[1]++; } }); });
+    var peakDay = Object.keys(dayAvg).sort(function (a, b) { return dayAvg[b][0] / dayAvg[b][1] - dayAvg[a][0] / dayAvg[a][1]; })[0];
+    view.style.gridTemplateColumns = 'minmax(0, 1.25fr) minmax(0, 1fr) minmax(0, .85fr)';
+    view.style.gridTemplateRows = '44px auto minmax(0, 1fr)';
+    view.appendChild(el('div', { class: 'title' }, [el('h1', { text: D.me + '시 관광지 혼잡 예측' }), el('span', { class: 'basis', text: '한국관광공사 관광지 집중률 예측 · ' + (CN.at || '') + ' 발표 · 30일' })]));
+    var W = L.weather, sl0 = null;
+    if (W) { var wk = Object.keys(W.slots).filter(function (k) { return W.slots[k].TMP != null && k >= today + ('0' + new Date().getHours()).slice(-2) + '00'; })[0]; sl0 = wk ? W.slots[wk] : null; }
+    var tmx = null, tmn = null;
+    if (W) Object.keys(W.slots).forEach(function (k) { if (k.slice(0, 8) === today) { if (W.slots[k].TMX != null) tmx = W.slots[k].TMX; if (W.slots[k].TMN != null) tmn = W.slots[k].TMN; } });
+    var wkend = Object.keys(dayAvg).filter(function (d) { var w = ymdDate(d).getDay(); return w === 0 || w === 6; }).slice(0, 2);
+    var wkTop = null; wkend.forEach(function (d) { names.forEach(function (n) { var v = at(n, d); if (v != null && (!wkTop || v > wkTop[2])) wkTop = [d, n, v]; }); });
+    cardsRow([
+      { l: '오늘 가장 붐빌 곳', sub: mdw(day0), ic: 'pin', v: ord[0] || '–', u: '', chips: [ord[0] ? ['집중률 ' + fmt(at(ord[0], day0), 1), 'navy'] : null] },
+      { l: '혼잡 예상', sub: '집중률 90 이상 · 30일', ic: 'cloud', col: '#D9534F', bg: '#FDE7E4', v: fmt(hot.length, 0), u: '건', chips: [hot[0] ? [mdLabel(hot[0][0]) + ' ' + hot[0][1], 'bad'] : ['없음', 'good']] },
+      { l: '이번 주말 최고', sub: wkTop ? mdw(wkTop[0]) : '', ic: 'camera', col: '#C0602B', bg: '#FDEBDD', v: wkTop ? wkTop[1] : '–', u: '', chips: [wkTop ? ['집중률 ' + fmt(wkTop[2], 1), 'violet'] : null] },
+      { l: '30일 중 가장 붐빌 날', ic: 'trend', col: '#7A4FC4', bg: '#EFE9FB', v: peakDay ? mdLabel(peakDay) : '–', u: peakDay ? '(' + WD[ymdDate(peakDay).getDay()] + ')' : '', chips: [peakDay ? ['평균 집중률 ' + fmt(dayAvg[peakDay][0] / dayAvg[peakDay][1], 1), 'violet'] : null] },
+      { l: '오늘 날씨', sub: '동해 천곡동', ic: 'sun', col: '#1F6FD1', bg: '#E4EEFB', v: sl0 ? sl0.TMP : '–', u: '°C', chips: [tmx != null ? ['최고 ' + Math.round(tmx) + '° · 최저 ' + Math.round(tmn) + '°', 'navy'] : null, sl0 ? [wxIcon(sl0) + ' 비 ' + (sl0.POP || 0) + '%', ''] : null] }
+    ]);
+    // 지도
+    var places = ((L.places || {}).items || []).filter(function (p) { return p.lat; });
+    function norm(t) { return String(t).replace(/\(.*?\)|\s|동해|해수욕장|해변/g, ''); }
+    function coord(n) { var k = norm(n); var hit = places.filter(function (p) { var t = norm(p.title); return t && k && (t === k || t.indexOf(k) >= 0 || k.indexOf(t) >= 0); })[0]; return hit ? [hit.lat, hit.lng] : null; }
+    var mapBox = el('div', { class: 'tmap' });
+    panel('관광지 지도', '원 크기·색 = ' + mdLabel(day0) + ' 집중률 · 누르면 달력', [mapBox]);
+    setTimeout(function () {
+      if (!window.L || !window.L.map) { mapBox.appendChild(el('div', { class: 'empty', text: '지도를 불러오지 못했습니다' })); return; }
+      var m = window.L.map(mapBox, { zoomControl: false, attributionControl: true }).setView([37.51, 129.08], 12);
+      window.L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '© OpenStreetMap · © CARTO', maxZoom: 18 }).addTo(m);
+      var pts = [];
+      ord.forEach(function (n) {
+        var c = coord(n); if (!c) return; var v = at(n, day0) || 0, lv = clv(v);
+        pts.push(c);
+        var mk = window.L.circleMarker(c, { radius: 7 + v / 7, color: n === spotSel ? '#1B3A6B' : '#fff', weight: n === spotSel ? 4 : 2, fillColor: lv[1], fillOpacity: .85 }).addTo(m);
+        mk.bindTooltip(n + ' ' + fmt(v, 0), { permanent: v >= 70 || n === spotSel, direction: 'top', offset: [0, -6] });
+        mk.on('click', function () { spotSel = n; render(); });
+      });
+      if (pts.length > 1) m.fitBounds(pts, { padding: [30, 30] });
+    }, 0);
+    // 달력
+    var rows = SP[spotSel] || [], cal = el('div', { class: 'cal' });
+    WD.forEach(function (w) { cal.appendChild(el('b', { text: w })); });
+    if (rows.length) for (var i = 0; i < ymdDate(rows[0][0]).getDay(); i++) cal.appendChild(el('span'));
+    rows.forEach(function (x) { var lv = clv(x[1]); cal.appendChild(el('div', { class: x[0] === day0 ? 'today' : '', style: 'background:' + lv[1] + ';color:' + lv[2], title: mdw(x[0]) + ' ' + x[1] }, [document.createTextNode(mdLabel(x[0])), el('em', { text: fmt(x[1], 0) })])); });
+    var avg = rows.length ? rows.reduce(function (t, x) { return t + x[1]; }, 0) / rows.length : null;
+    panel(spotSel + ' 30일 혼잡 달력', '집중률(높을수록 붐빔) · 평균 ' + fmt(avg, 1), [cal,
+      el('div', { class: 'calleg', style: 'margin-top:8px' }, CLV.map(function (c) { return el('span', {}, [el('i', { style: 'background:' + c[1] }), document.createTextNode(c[3])]); })),
+      el('div', { style: 'margin-top:auto;padding-top:10px' }, [el('div', { style: 'font-weight:800;color:var(--navy);margin-bottom:6px', text: '3시간 날씨' }), weatherStrip(7)])]);
+    // 순위
+    var rk = el('div', { class: 'rows wide' }), mxv = Math.max.apply(null, ord.map(function (n) { return at(n, day0) || 0; }).concat([1]));
+    ord.forEach(function (n, i) {
+      var v = at(n, day0), lv = clv(v || 0);
+      rk.appendChild(el('div', { class: 'row' + (n === spotSel ? ' sel' : ''), onclick: function () { spotSel = n; render(); } }, [
+        el('span', { class: 'rk', text: String(i + 1) }), el('span', { text: n }),
+        el('div', { class: 'bar' }, [el('div', { style: 'width:' + ((v || 0) / mxv * 100).toFixed(1) + '%;background:' + lv[1] })]), el('span', { class: 'v', text: fmt(v, 0) })]));
+    });
+    panel('오늘 관광지 순위', mdw(day0) + ' · 집중률', [rk, hot.length ? el('div', { class: 'chips', style: 'margin-top:8px;flex-wrap:wrap' }, [el('span', { class: 'chip bad', text: '안전관리 확인' })].concat(hot.slice(0, 4).map(function (h) { return el('span', { class: 'chip', text: mdLabel(h[0]) + ' ' + h[1] + ' ' + fmt(h[2], 0) }); }))) : null]);
+  }
+  function screenTourPast() {
+    var L = D.life || {}, VD = L.visit_days || {}, ks = Object.keys(VD).sort(), last = ks[ks.length - 1];
+    var lastYm = last.slice(0, 6), full = Number(last.slice(6)) >= 28 ? lastYm : ym(lastYm, -1);
+    function ym(x, n) { var y = +x.slice(0, 4), m = +x.slice(4) + n; while (m < 1) { m += 12; y--; } while (m > 12) { m -= 12; y++; } return y + ('0' + m).slice(-2); }
+    function sumR(a, b, f) { var t = 0, c = 0; ks.forEach(function (k) { if (k >= a && k <= b) { t += f ? f(VD[k]) : vday(VD[k]); c++; } }); return [t, c]; }
+    var e1 = last, s1 = addDays(last, -364), e0 = addDays(last, -365), s0 = addDays(last, -729);
+    var y1 = sumR(s1, e1), y0 = sumR(s0, e0), yoy = y0[1] > 300 ? (y1[0] - y0[0]) / y0[0] * 100 : null;
+    var wk = [0, 0], we = [0, 0], dow = [[0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0]], best = null;
+    ks.forEach(function (k) { if (k < s1) return; var v = vday(VD[k]), w = ymdDate(k).getDay(); dow[w][0] += v; dow[w][1]++; if (w === 0 || w === 6) { we[0] += v; we[1]++; } else { wk[0] += v; wk[1]++; } if (!best || v > best[1]) best = [k, v]; });
+    var fr = sumR(s1, e1, function (d) { return d[2]; })[0];
+    lifeTitle(D.me + '시 관광 과거 3년 분석', '한국관광공사 데이터랩(이동통신) · ' + ks[0].slice(0, 4) + '년 ' + mdw(ks[0]).replace(/\(.*/, '') + ' ~ ' + last.slice(0, 4) + '년 ' + mdw(last).replace(/\(.*/, '') + ' 일별');
+    var title = view.querySelector('.title h1'); title.textContent = D.me + '시 관광 과거 3년 분석';
+    cardsRow([
+      { l: '최근 1년 방문자', sub: '외지인+외국인', ic: 'camera', v: fmtK(y1[0]), u: '명', chips: [yoy != null ? ['그 전 1년보다 ' + (yoy >= 0 ? '+' : '') + fmt(yoy, 1) + '%', yoy >= 0 ? 'good' : 'bad'] : null] },
+      { l: '주말 하루 평균', ic: 'trend', col: '#C0602B', bg: '#FDEBDD', v: fmtK(we[0] / we[1]), u: '명', chips: [['평일의 ' + fmt(we[0] / we[1] / (wk[0] / wk[1]), 2) + '배', 'violet']] },
+      { l: '평일 하루 평균', ic: 'people', col: '#1F6FD1', bg: '#E4EEFB', v: fmtK(wk[0] / wk[1]), u: '명' },
+      { l: '가장 많이 온 날', sub: '최근 1년', ic: 'pin', col: '#D6457A', bg: '#FCE4EE', v: mdLabel(best[0]), u: '(' + WD[ymdDate(best[0]).getDay()] + ')', chips: [[best[0].slice(0, 4) + '년 · ' + fmtK(best[1]) + '명', 'navy']] },
+      { l: '외국인', sub: '최근 1년', ic: 'globe', col: '#7A4FC4', bg: '#EFE9FB', v: fmtK(fr), u: '명', chips: [['방문자의 ' + fmt(fr / y1[0] * 100, 1) + '%', 'violet']] }
+    ]);
+    // 3개 연도 같은 달 비교
+    var yE = +full.slice(0, 4), yrs = [yE - 2, yE - 1, yE], cols = ['#8FD0AE', '#F0A04B', '#1F6FD1'];
+    var mon = {};
+    ks.forEach(function (k) { var m = k.slice(0, 6); mon[m] = (mon[m] || 0) + vday(VD[k]); });
+    var series = yrs.map(function (y, i) { return { name: y + '년', color: cols[i], values: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(function (m) { var key = y + ('0' + m).slice(-2); return key <= full && mon[key] != null && key >= ks[0].slice(0, 6) && !(key === ks[0].slice(0, 6) && ks[0].slice(6) !== '01') ? mon[key] : null; }) }; });
+    var lastYrVals = series[1].values, pk = lastYrVals.indexOf(Math.max.apply(null, lastYrVals.filter(function (v) { return v != null; })));
+    var sec = panel('연도별 같은 달 비교', '월 방문자(외지인+외국인) · 명 · 진한 글씨 = ' + (yE - 1) + '년 최다 달', groupCols(['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'], series, pk));
+    sec.style.gridColumn = 'span 2';
+    // 요일별
+    panel('요일별 하루 평균', '최근 1년 · 명', colChart([1, 2, 3, 4, 5, 6, 0].map(function (w) { return [WD[w], dow[w][1] ? dow[w][0] / dow[w][1] : 0]; }), null, null, 0, null, true, { plain: true, avgLabel: '평균' }));
+  }
+  function festStats(f, VD) {
+    if (!f.start || !f.end || !VD[f.end]) return null;
+    function avg(a, b, sh) { var t = 0, c = 0, fo = 0; for (var k = addDays(a, sh); k <= addDays(b, sh); k = addDays(k, 1)) if (VD[k]) { t += vday(VD[k]); fo += VD[k][2]; c++; } return c ? { avg: t / c, sum: t, n: c, fo: fo } : null; }
+    var r = { fest: avg(f.start, f.end, 0), base: avg(addDays(f.start, -14), addDays(f.start, -1), 0) };
+    r.up = r.fest && r.base ? (r.fest.avg / r.base.avg - 1) * 100 : null;
+    r.prev = [-364, -728].map(function (sh) { var a = avg(f.start, f.end, sh), b = avg(addDays(f.start, -14), addDays(f.start, -1), sh); return a ? { sh: sh, sum: a.sum, avg: a.avg, up: b ? (a.avg / b.avg - 1) * 100 : null } : null; });
+    return r;
+  }
+  function screenFest() {
+    var L = D.life || {}, VD = L.visit_days || {}, F = ((L.festivals || {}).items || []).filter(function (f) { return f.start; });
+    var today = dateYmd(new Date());
+    F.forEach(function (f) { f.st = festStats(f, VD); f.state = f.end < today ? '종료' : f.start <= today ? '진행 중' : '예정'; });
+    var done = F.filter(function (f) { return f.st && f.st.fest; });
+    if (!festSel || !F.some(function (f) { return f.id === festSel; })) festSel = (done[done.length - 1] || F[0] || {}).id;
+    var S = F.filter(function (f) { return f.id === festSel; })[0];
+    var next = F.filter(function (f) { return f.start > today; })[0];
+    view.style.gridTemplateColumns = 'minmax(0, .9fr) minmax(0, 1.6fr)';
+    view.style.gridTemplateRows = '44px auto minmax(0, 1fr)';
+    view.appendChild(el('div', { class: 'title' }, [el('h1', { text: D.me + '시 행사·축제 분석' }), el('span', { class: 'basis', text: '행사 일정: 한국관광공사 국문 관광정보 · 방문자: 데이터랩 일별' })]));
+    var st = S && S.st;
+    var cards = [
+      { l: '등록된 행사·축제', ic: 'camera', v: fmt(F.length, 0), u: '건', chips: [['진행 중 ' + F.filter(function (f) { return f.state === '진행 중'; }).length, 'good'], ['예정 ' + F.filter(function (f) { return f.state === '예정'; }).length, 'navy']] },
+      { l: '다가오는 행사', sub: next ? mdw(next.start) : '', ic: 'pin', col: '#C0602B', bg: '#FDEBDD', v: next ? next.title : '없음', u: '', small: true },
+      { l: '축제 기간 하루 평균', sub: S ? S.title : '', ic: 'people', col: '#1F6FD1', bg: '#E4EEFB', v: st && st.fest ? fmtK(st.fest.avg) : '–', u: '명', chips: [st && st.up != null ? ['평시(직전 2주)보다 ' + (st.up >= 0 ? '+' : '') + fmt(st.up, 1) + '%', st.up >= 0 ? 'good' : 'bad'] : null] },
+      { l: '축제 기간 방문자', sub: st && st.fest ? st.fest.n + '일 합계' : '', ic: 'trend', col: '#2E8B57', bg: '#E2F3E9', v: st && st.fest ? fmtK(st.fest.sum) : '–', u: '명', chips: [st && st.prev[0] ? ['전년 같은 기간보다 ' + ((st.fest.sum / st.prev[0].sum - 1) * 100 >= 0 ? '+' : '') + fmt((st.fest.sum / st.prev[0].sum - 1) * 100, 1) + '%', 'violet'] : null] }
+    ];
+    cardsRow(cards);
+    var k = view.querySelector('.pr1');
+    Array.prototype.forEach.call(k.querySelectorAll('.pv'), function (pv, i) { if (cards[i].small || cards[i].v.length > 6) pv.style.fontSize = '30px'; });
+    // 목록
+    var tb = el('tbody');
+    F.slice().reverse().forEach(function (f) {
+      var tone = f.state === '진행 중' ? 'good' : f.state === '예정' ? 'navy' : '';
+      tb.appendChild(el('tr', { class: f.id === festSel ? 'on' : '', onclick: function () { festSel = f.id; render(); } }, [
+        el('td', { html: '<b>' + f.title + '</b><br><small style="color:var(--sub)">' + (f.place || f.addr || '') + '</small>' }),
+        el('td', { text: mdLabel(f.start) + (f.end && f.end !== f.start ? '~' + mdLabel(f.end) : ''), style: 'white-space:nowrap' }),
+        el('td', {}, [el('span', { class: 'chip ' + tone, text: f.state })]),
+        el('td', { class: 'r', text: f.st && f.st.up != null ? (f.st.up >= 0 ? '+' : '') + fmt(f.st.up, 0) + '%' : '–' })]));
+    });
+    panel('행사·축제 목록', '누르면 오른쪽 분석 · 효과 = 평시 대비', el('table', { class: 'dt big ftab' }, [el('thead', {}, [el('tr', {}, ['행사', '기간', '상태', '효과'].map(function (h, j) { return el('th', { class: j === 3 ? 'r' : '', text: h }); }))]), tb]));
+    // 전후 일별
+    if (!S || !st || !st.fest) { panel(S ? S.title : '축제 분석', '', el('div', { class: 'empty', text: S && S.state !== '종료' ? '축제가 끝나고 방문자 자료가 나오면 분석합니다' : '방문자 자료가 없는 기간입니다' })); return; }
+    var lab = [], cur = [], p1 = [], p2 = [], a = addDays(S.start, -14), b = addDays(S.end, 14), i0 = null, i1 = null;
+    for (var d = a, i = 0; d <= b; d = addDays(d, 1), i++) { lab.push(mdLabel(d)); cur.push(VD[d] ? vday(VD[d]) : null); p1.push(VD[addDays(d, -364)] ? vday(VD[addDays(d, -364)]) : null); p2.push(VD[addDays(d, -728)] ? vday(VD[addDays(d, -728)]) : null); if (d === S.start) i0 = i; if (d === S.end) i1 = i; }
+    var y = +S.start.slice(0, 4);
+    var lines = [{ name: y + '년', color: '#1F6FD1', values: cur, width: 3.5, area: true }];
+    if (p1.some(function (v) { return v != null; })) lines.push({ name: (y - 1) + '년 같은 요일', color: '#E8873F', values: p1, width: 2, dash: '6 4' });
+    if (p2.some(function (v) { return v != null; })) lines.push({ name: (y - 2) + '년 같은 요일', color: '#9AA8BA', values: p2, width: 2, dash: '3 4' });
+    var peak = null; for (var j = i0; j <= i1; j++) if (cur[j] != null && (!peak || cur[j] > peak[1])) peak = [addDays(S.start, j - i0), cur[j]];
+    var foR = st.fest.fo / st.fest.sum * 100, ins = [
+      '<b>평시 대비</b> 축제 기간 하루 평균 ' + fmtK(st.fest.avg) + '명, 직전 2주 평균(' + fmtK(st.base ? st.base.avg : null) + '명)보다 <b>' + (st.up >= 0 ? '+' : '') + fmt(st.up, 1) + '%</b>',
+      st.prev[0] ? '<b>전년 비교</b> 작년 같은 요일 같은 기간 ' + fmtK(st.prev[0].sum) + '명 → 올해 ' + fmtK(st.fest.sum) + '명 (<b>' + ((st.fest.sum / st.prev[0].sum - 1) * 100 >= 0 ? '+' : '') + fmt((st.fest.sum / st.prev[0].sum - 1) * 100, 1) + '%</b>)' : '<b>전년 비교</b> 작년 같은 기간 자료 없음',
+      '<b>가장 붐빈 날</b> ' + mdw(peak[0]) + ' ' + fmtK(peak[1]) + '명' + (ymdDate(peak[0]).getDay() % 6 === 0 ? ' · 주말' : ' · 평일'),
+      '<b>외국인</b> 축제 기간 방문자의 ' + fmt(foR, 1) + '% (' + fmtK(st.fest.fo) + '명)'
+    ];
+    panel(S.title + ' 전후 일별 방문자', mdw(S.start) + ' ~ ' + mdw(S.end) + ' · 앞뒤 2주 · 명', [lineChart(lab, lines, { bands: [[i0, i1, '축제 기간']], step: 3 }),
+      el('div', { class: 'ins' }, ins.map(function (h) { return el('div', { html: h }); }))]).style.gridRow = 'span 1';
   }
 
   // ---------- 4. 액자 ----------
@@ -1048,7 +1385,7 @@ function startApp() {
   }
 
   // ---------- 그리기 ----------
-  var SCREENS = { main: screenMain, admin: screenAdminTabs, welfare: screenWelfare, traffic: screenTraffic, env: screenEnv, tour: screenTour, finance: screenFinance, frame: screenFrame };
+  var SCREENS = { main: screenMain, admin: screenAdminTabs, welfare: screenWelfare, traffic: screenTraffic, env: screenEnv, tour: screenTourTabs, finance: screenFinance, frame: screenFrame };
   function render() {
     view.textContent = '';
     view.className = '';
