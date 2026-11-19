@@ -126,20 +126,25 @@ def main():
             say('[신규 %s] 됨: %s' % (nm, t[:1500].replace('\n', ' ')))
         except Exception as e:  # noqa: BLE001
             say('[신규 %s] 안 됨: %s' % (nm, str(e)[-300:]))
-    from urllib.parse import unquote as _uq5
-    kk = _uq5(os.environ.get('DATA_GO_KR_KEY', '').strip())
-    for nm in ('prkplce_info', 'public_prkplce', 'public_traffic_light', 'public_trfcsign', 'public_crosswalk', 'public_unmanned_traffic_camera', 'public_child_safety_zone',
-               'public_child_safe_zone', 'public_crosswalks', 'public_tfcsgnl', 'public_bus_stop', 'public_taxi_stand'):
-        try:
-            t = http_get('https://api.data.go.kr/openapi/tn_pubr_%s_api' % nm, {'serviceKey': kk, 'type': 'json', 'numOfRows': '2', 'pageNo': '1'}, tries=1)
-            say('[교통표준 %s] %s' % (nm, t[:400].replace('\n', ' ')))
-        except Exception as e:  # noqa: BLE001
-            say('[교통표준 %s] %s' % (nm, str(e)[-160:].replace('\n', ' ')))
     kk0 = os.environ.get('KOSIS_KEY', '')
-    for q in ('택시', '버스 운수업체', '시내버스', '주차장 시군', '주차장 확보율', '교통사고 시군구', '주정차 위반', '과태료', '신호등', '교통안전시설', '여객자동차', '도로 현황 시군'):
+    import sources as _s0
+    for org, tb in (('211', 'DT_211002_P029'), ('211', 'DT_211002_I011'), ('211', 'DT_211002_J008'), ('116', 'DT_MLTM_6685'), ('110', 'DT_11006_A018'),
+                    ('116', 'DT_MLTM_5507'), ('110', 'DT_11001N_2013_A049')):
         try:
-            t = http_get('https://kosis.kr/openapi/statisticsSearch.do', {'method': 'getList', 'apiKey': kk0, 'searchNm': q, 'format': 'json', 'jsonVD': 'Y', 'resultCount': '15'})
+            meta = _s0.kosis_meta({'key_env': 'KOSIS_KEY', 'meta_url': 'https://kosis.kr/openapi/statisticsData.do', 'params': {'orgId': org, 'tblId': tb}})
+            objs = {}
+            for m in meta:
+                objs.setdefault(m.get('OBJ_ID'), []).append(m)
+            say('[메타] %s: %s' % (tb, ' / '.join('%s(%s개): %s' % (k, len(v), ', '.join('%s=%s' % (x.get('ITM_ID'), x.get('ITM_NM')) for x in v[:25])) for k, v in objs.items())))
+            t = http_get('https://kosis.kr/openapi/statisticsData.do', {'method': 'getMeta', 'type': 'PRD', 'orgId': org, 'tblId': tb, 'format': 'json', 'jsonVD': 'Y', 'apiKey': kk0})
+            say('[주기] %s: %s' % (tb, t[-250:]))
+        except Exception as e:  # noqa: BLE001
+            say('[메타] %s 실패 %s' % (tb, e))
+    for q in ('택시 운행', '운수업체', '자동차단속 및 처리', '주차장 현황', '교통사고 발생 현황', '교통안전시설물', '버스 노선', '자동차 운수사업', '주차장(', '교통 시군'):
+        try:
+            t = http_get('https://kosis.kr/openapi/statisticsSearch.do', {'method': 'getList', 'apiKey': kk0, 'searchNm': q, 'format': 'json', 'jsonVD': 'Y', 'resultCount': '40'})
             j = json.loads(t)
+            j = [x for x in j if str(x.get('ORG_ID')) in ('211', '116', '110', '101', '220')] if isinstance(j, list) else j
             say('[검색] %s → %s' % (q, ' | '.join('%s/%s %s(%s~%s)' % (x.get('ORG_ID'), x.get('TBL_ID'), x.get('TBL_NM'), x.get('STRT_PRD_DE'), x.get('END_PRD_DE')) for x in j) if isinstance(j, list) else str(j)[:200]))
         except Exception as e:  # noqa: BLE001
             say('[검색] %s 실패 %s' % (q, e))
