@@ -47,6 +47,13 @@
   .kpis.big .kpi .v { font-size: 44px; line-height: 1.05; letter-spacing: -0.5px; }
   .kpi.t-bad .v.tint { color: #B4531B; } .kpi.t-good .v.tint { color: #1B7A4B; }
   .kpi .v small { font-size: 18px; color: var(--sub); font-weight: 500; margin-left: 4px; }
+  .sh { position: relative; }
+  .zbtn { font: inherit; font-size: 13px; font-weight: 600; color: var(--blue); background: #EEF4FC; border: 1px solid #CFE0F6; border-radius: 999px; padding: 3px 10px; cursor: pointer; margin-left: 10px; white-space: nowrap; }
+  .zbtn:hover { background: var(--blue); color: #fff; }
+  section.zoom { position: fixed; left: 48px; right: 48px; top: 84px; bottom: 40px; z-index: 60; box-shadow: 0 20px 60px rgba(15,30,60,.35); }
+  section.zoom > * { zoom: 1.45; }
+  section.zoom .zbtn { background: var(--blue); color: #fff; }
+  #zoomBack { position: fixed; inset: 0; background: rgba(23,32,44,.45); z-index: 50; }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; }
   .chip { font-size: 13.5px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #EEF2F7; color: #3D4B5E; white-space: nowrap; }
   .chip.bad { background: #FDEBDD; color: #A4470F; } .chip.good { background: #E2F3E9; color: #1B7A4B; } .chip.navy { background: #E4EEFB; color: #1B3A6B; }
@@ -170,7 +177,7 @@ function startApp() {
   D.menu.forEach(function (m, i) {
     nav.appendChild(el('button', { type: 'button', 'data-id': m.id, text: (i + 1) + ' ' + m.label, onclick: function () { go(m.id); } }));
   });
-  function go(id) { current = id; if (location.hash !== '#' + id) location.hash = id; render(); }
+  function go(id) { current = id; zoomIdx = null; if (location.hash !== '#' + id) location.hash = id; render(); }
   window.addEventListener('hashchange', function () {
     var h = location.hash.slice(1);
     if (h !== current && order.indexOf(h) >= 0) { current = h; render(); }
@@ -245,17 +252,23 @@ function startApp() {
   }
 
   // ---------- 2. 행정 ----------
+  var admSel = null;
   function screenAdmin() {
-    var A = D.admin, me = A.regions[D.me] || {};
-    var pc = ind('pop_change'), wa = ind('working_age'), el65 = ind('elderly');
+    var A = D.admin;
+    admSel = (admSel && A.regions[admSel]) ? admSel : D.me;
+    var SN = admSel, isMe = SN === D.me, me = A.regions[SN] || {};
+    function pickR(i) { if (!i) return null; var r = i.ranking.filter(function (x) { return x.name === SN; })[0]; return r ? { name: i.name, n: i.n, me: r, ranking: i.ranking, digits: i.digits } : null; }
+    var pcAll = ind('pop_change'), pc = pickR(pcAll), wa = pickR(ind('working_age')), el65 = pickR(ind('elderly'));
+    var AG = (A.ages || {})[SN] || (isMe ? { bands: A.age_bands, working: (A.age_counts || {}).working, elderly: (A.age_counts || {}).elderly } : {});
+    var full = isMe ? D.me + '시' : SN;
     view.style.gridTemplateColumns = 'minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.9fr)';
     view.style.gridTemplateRows = '44px auto minmax(0, 1fr)';
     var diff = me.prev ? me.total - me.prev : null;
     var dm = me.prev_m ? me.total - me.prev_m : null;
     function sgn(v) { return (v >= 0 ? '+' : '') + fmt(v, 0); }
     view.appendChild(el('div', { class: 'title' }, [
-      el('h1', { text: D.me + '시 인구 ' + fmt(me.total, 0) + '명' + (dm != null ? ' · 지난달보다 ' + sgn(dm) + '명' : '') + (diff != null ? ' · 1년 새 ' + sgn(diff) + '명' : '') }),
-      el('span', { text: '행정안전부 주민등록 인구 · ' + ymLabel(A.ym) + ' 기준' })
+      el('h1', { text: full + ' 인구 ' + fmt(me.total, 0) + '명' + (dm != null ? ' · 지난달보다 ' + sgn(dm) + '명' : '') + (diff != null ? ' · 1년 새 ' + sgn(diff) + '명' : '') }),
+      el('span', { text: (isMe ? '' : '시·군을 다시 누르거나 동해를 누르면 동해시로 돌아옵니다 · ') + '행정안전부 주민등록 인구 · ' + ymLabel(A.ym) + ' 기준' })
     ]));
     var k = el('div', { class: 'kpis', style: 'grid-template-columns:repeat(5,minmax(0,1fr))' });
     k.classList.add('big');
@@ -267,7 +280,7 @@ function startApp() {
     function up(v) { return v > 0 ? 'good' : v < 0 ? 'bad' : ''; }
     function jt(j) { return j === 'strong' ? 'good' : j === 'weak' ? 'bad' : j === 'excluded' ? 'mute' : 'navy'; }
     function jchip(j) { return j === 'strong' ? 'good' : j === 'weak' ? 'bad' : ''; }
-    var ac = A.age_counts || {};
+    var ac = AG;
     kpi('총인구', '', fmt(me.total, 0), '명', 'navy', [dm != null ? ['전월 ' + sgn(dm) + '명', up(dm)] : null, diff != null ? ['전년 ' + sgn(diff) + '명', up(diff)] : null]);
     kpi('인구 증감률', '전년 같은 달 대비', pc && pc.me ? fmt(pc.me.value, 2) : '–', '%', pc && pc.me ? jt(pc.me.judge) : 'mute',
       pc && pc.me ? [['도내 ' + pc.me.rank + '위 / ' + pc.n, jchip(pc.me.judge)], pc.me.judge === 'weak' ? ['하위 25%', 'bad'] : pc.me.judge === 'strong' ? ['상위 25%', 'good'] : null] : [], true);
@@ -278,12 +291,12 @@ function startApp() {
       el65 && el65.me ? [ac.elderly ? [fmt(ac.elderly, 0) + '명', 'navy'] : null, ['도내 ' + el65.me.rank + '위 · 판정 제외', '']] : [['연령 자료 연결 전', '']]);
     view.appendChild(k);
 
-    var s1 = el('section', {}, [el('div', { class: 'sh' }, [el('h2', { text: '인구 증감률 · 강원 18개 시·군' }), el('small', { text: '전년 같은 달 대비 %' })])]);
-    if (pc) s1.appendChild(rankList(pc)); else s1.appendChild(el('div', { class: 'empty', text: '자료 없음' }));
+    var s1 = el('section', {}, [el('div', { class: 'sh' }, [el('h2', { text: '인구 증감률 · 강원 18개 시·군' }), el('small', { text: '누르면 그 시·군 지표 · 전년 같은 달 대비 %' })])]);
+    if (pcAll) s1.appendChild(rankList(pcAll, function (n) { admSel = (n === admSel ? D.me : n); render(); }, isMe ? null : SN)); else s1.appendChild(el('div', { class: 'empty', text: '자료 없음' }));
     view.appendChild(s1);
 
-    var s2 = el('section', {}, [el('div', { class: 'sh' }, [el('h2', { text: '연령대별 인구' }), el('small', { text: '10세 단위 · 명' })])]);
-    var b = A.age_bands;
+    var s2 = el('section', {}, [el('div', { class: 'sh' }, [el('h2', { text: '연령대별 인구 · ' + full }), el('small', { text: '10세 단위 · 명' })])]);
+    var b = AG.bands;
     if (b) {
       var keys = ['0', '10', '20', '30', '40', '50', '60', '70', '80', '90', '100'];
       var mx = Math.max.apply(null, keys.map(function (x) { return b[x] || 0; })) || 1;
@@ -298,7 +311,7 @@ function startApp() {
     } else s2.appendChild(el('div', { class: 'empty', text: '연령 자료 연결 전입니다(점검 스크립트 결과로 설정).' }));
     view.appendChild(s2);
 
-    var s3 = el('section', {}, [el('div', { class: 'sh' }, [el('h2', { text: '동별 인구' }), el('small', { text: '많은 순 · 주민등록 기준' })])]);
+    var s3 = el('section', {}, [el('div', { class: 'sh' }, [el('h2', { text: D.me + '시 동별 인구' }), el('small', { text: '많은 순 · 주민등록 기준' })])]);
     function dongTable(head, rows, cols) {
       var tb = el('tbody');
       rows.forEach(function (d) { tb.appendChild(el('tr', {}, cols.map(function (c, i) { return el('td', { class: i ? 'r' : '', text: c[1](d) }); }))); });
@@ -361,9 +374,10 @@ function startApp() {
           : sel.name + '는 ' + fmt(sel.value, 1) + '%로 동해시보다 ' + fmt(Math.abs(sel.value - me.value), 1) + '%p ' + (sel.value > me.value ? '높습니다.' : '낮습니다.')])]));
     // 당초 vs 최종: 같은 해끼리만 비교합니다(최종은 연말이 지나야 나오므로 보통 작년).
     var F = D.finance || {}, ini = F.initial || {}, fin = F.final || {};
-    var both = Object.keys(fin).filter(function (y) { return ini[y]; }).sort();
-    var cy = both[both.length - 1];
-    var s3 = el('section', {}, [el('div', { class: 'sh' }, [el('h2', { text: '당초 → 최종 · ' + sel.name }), el('small', { text: cy ? cy + '년 · 연말 추경 반영 후 변화' : '' })])]);
+    // 최신 연도만 씁니다: 올해 최종이 나오면 당초→최종 비교, 그 전에는 올해 예산 규모 비교.
+    var latest = Object.keys(ini).sort().pop();
+    var cy = latest && fin[latest] ? latest : null;
+    var s3 = el('section', {}, [el('div', { class: 'sh' }, [el('h2', { text: cy ? '당초 → 최종 · ' + sel.name : (ly || latest || '') + ' 당초 예산 규모 · 강원 18개 시·군' }), el('small', { text: cy ? cy + '년 · 추경 반영 후 변화' : '억 원 · 진한 부분 = 자체수입' })])]);
     if (cy && ini[cy][sel.name] != null && fin[cy][sel.name] != null) {
       var a = ini[cy][sel.name], b = fin[cy][sel.name], d = b - a;
       var dm = (fin[cy][D.me] != null && ini[cy][D.me] != null) ? fin[cy][D.me] - ini[cy][D.me] : null;
@@ -385,10 +399,23 @@ function startApp() {
           el('span', { text: c[0], style: 'font-size:12px;' + (me2 ? 'color:#1F6FD1;font-weight:700' : '') })]));
       });
       s3.appendChild(cols);
+    } else if (Object.keys(am).length) {
+      var bl = Object.keys(am).map(function (n) { return [n, am[n].budget, am[n].own || 0]; }).sort(function (x, y) { return y[1] - x[1]; });
+      var bmx = bl[0][1] || 1;
+      var bcols = el('div', { class: 'cols', style: 'gap:6px' });
+      bl.forEach(function (c) {
+        var me3 = c[0] === D.me, pick3 = c[0] === sel.name && !me3;
+        bcols.appendChild(el('div', { class: 'col' }, [el('b', { text: fmt(c[1] / 1e8, 0), style: 'font-size:11.5px' + (me3 ? ';color:#1F6FD1' : '') }),
+          el('div', { class: 'c', style: 'height:' + (c[1] / bmx * 78).toFixed(1) + '%;display:flex;flex-direction:column;justify-content:flex-end;background:' + (me3 ? '#9EC1EE' : pick3 ? '#F2C79A' : '#D5DDE8') }, [
+            el('div', { style: 'height:' + (c[2] / c[1] * 100).toFixed(1) + '%;border-radius:0 0 6px 6px;background:' + (me3 ? '#1F6FD1' : pick3 ? '#D9822B' : '#8EA0B8') })]),
+          el('span', { text: c[0], style: 'font-size:12px;' + (me3 ? 'color:#1F6FD1;font-weight:700' : '') })]));
+      });
+      s3.appendChild(bcols);
     } else {
-      s3.appendChild(el('div', { class: 'empty', text: '최종 재정자립도 자료가 연결되면 같은 해 당초와 비교해 보여 줍니다.' }));
+      s3.appendChild(el('div', { class: 'empty', text: '예산 자료가 연결되면 보여 줍니다.' }));
     }
-    s3.appendChild(el('div', { class: 'note' }, [el('b', { text: '읽는 법 ' }), '순위는 올해 당초예산 기준입니다. 최종은 연말이 지나야 나오므로 작년 당초와 작년 최종을 비교합니다.']));
+    s3.appendChild(el('div', { class: 'note' }, [el('b', { text: '읽는 법 ' }), cy ? '같은 해 당초예산과 최종예산(추경 반영)을 비교합니다.'
+      : '모두 ' + (latest || '') + '년 당초예산 기준입니다. 올해 최종예산이 발표되면(보통 연초) 당초→최종 비교로 바뀝니다.']));
     right.appendChild(s3);
     view.appendChild(right);
   }
@@ -439,10 +466,31 @@ function startApp() {
     });
     try { (SCREENS[current] || screenMain)(); }
     catch (e) { view.textContent = ''; view.appendChild(el('div', { class: 'empty', style: 'font-size:24px;padding:60px', text: '이 화면을 그리지 못했습니다: ' + e.message })); }
+    addZoom();
+  }
+
+  // ---------- 크게 보기: 각 칸 제목 오른쪽 버튼, 다시 누르거나 Esc로 닫기 ----------
+  var zoomIdx = null;
+  function addZoom() {
+    var old = document.getElementById('zoomBack'); if (old) old.remove();
+    var secs = view.querySelectorAll('section');
+    Array.prototype.forEach.call(secs, function (sec, idx) {
+      var sh = sec.querySelector('.sh'); if (!sh) return;
+      var on = zoomIdx === idx;
+      sh.appendChild(el('button', { class: 'zbtn', type: 'button', text: on ? '✕ 닫기' : '⤢ 크게 보기',
+        onclick: function (ev) { ev.stopPropagation(); zoomIdx = on ? null : idx; render(); } }));
+      if (on) {
+        sec.classList.add('zoom');
+        var back = el('div', { id: 'zoomBack', onclick: function () { zoomIdx = null; render(); } });
+        view.appendChild(back);
+      }
+    });
+    if (zoomIdx != null && !view.querySelector('section.zoom')) zoomIdx = null;
   }
 
   // ---------- 리모컨(무선 키보드) ----------
   document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && zoomIdx != null) { zoomIdx = null; render(); return; }
     var i = order.indexOf(current);
     if (e.key === 'ArrowRight') go(order[(i + 1) % order.length]);
     else if (e.key === 'ArrowLeft') go(order[(i - 1 + order.length) % order.length]);

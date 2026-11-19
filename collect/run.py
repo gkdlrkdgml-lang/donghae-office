@@ -86,6 +86,10 @@ def collect(state, S, C):
                 state['admin']['age_counts'] = {'total': round(mine['total']),
                                                 'working': round(mine['total'] * mine['working_age'] / 100),
                                                 'elderly': round(mine['total'] * mine['elderly'] / 100)}
+            state['admin']['ages'] = {k: {'bands': v.get('bands'), 'total': round(v['total']),
+                                          'working': round(v['total'] * v['working_age'] / 100),
+                                          'elderly': round(v['total'] * v['elderly'] / 100)}
+                                      for k, v in ages.items() if v.get('total')}
         ok(state, 'age', '%s · %d개 시·군' % (mode, len(ages)))
         if mode == 'kosis' and state.get('admin'):
             try:
