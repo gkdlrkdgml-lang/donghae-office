@@ -96,6 +96,11 @@ def main():
         say('  연령 분류 이름: %s' % ', '.join('%s=%s' % (m.get('ITM_ID'), m.get('ITM_NM')) for m in meta if m.get('OBJ_ID') not in (oid, 'ITEM')))
     except Exception as e:  # noqa: BLE001
         say('  → 실패: %s' % e)
+    for op in ('selectAdmmSexdAgeErsr', 'selectAdmmSexdAgeErsrStus'):
+        for lv in ('2', '3'):
+            probe('death_%s_lv%s' % (op, lv), {'url': 'https://apis.data.go.kr/1741000/admmSexdAgeErsr/' + op, 'key_env': 'DATA_GO_KR_KEY',
+                                               'params': {'type': 'JSON', 'numOfRows': '100', 'pageNo': '1', 'lv': lv, 'regSeCd': '1'}},
+                  {'admmCd': me['stdg'], 'srchFrYm': ym, 'srchToYm': ym})
     probe('admm_population', {'url': 'https://apis.data.go.kr/1741000/admmPpltnHhStus/selectAdmmPpltnHhStus', 'key_env': 'DATA_GO_KR_KEY',
                                'params': {'type': 'JSON', 'numOfRows': '100', 'pageNo': '1', 'lv': '3', 'regSeCd': '1'}},
           {'admmCd': me['stdg'], 'srchFrYm': ym, 'srchToYm': ym})
