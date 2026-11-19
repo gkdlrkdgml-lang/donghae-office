@@ -19,6 +19,26 @@
       "show": true
     },
     {
+      "id": "welfare",
+      "label": "복지",
+      "show": true
+    },
+    {
+      "id": "traffic",
+      "label": "교통",
+      "show": true
+    },
+    {
+      "id": "env",
+      "label": "환경",
+      "show": true
+    },
+    {
+      "id": "tour",
+      "label": "관광",
+      "show": true
+    },
+    {
       "id": "finance",
       "label": "예산",
       "show": true
