@@ -128,11 +128,15 @@ def _gangwon(r):
     return '강원' in t or str(r.get('signguCode', '')).startswith(('51', '42')) or str(r.get('areaCode', '')) in ('51', '42', '32')
 
 
-def visitors(C, cache):
-    """관광공사 데이터랩: 시·군별 월 방문자(현지인·외지인·외국인). cache = {'YYYYMM': {시군: {...}}} 를 이어서 채웁니다."""
+def visitors(C, cache, days=None, n_months=37):
+    """관광공사 데이터랩: 시·군별 월 방문자(현지인·외지인·외국인).
+
+    cache = {'YYYYMM': {시군: {...}}}, days = {'YYYYMMDD': [현지인, 외지인, 외국인]} (동해시 일별) 를 이어서 채웁니다.
+    최근 n_months개월(3년+1달)을 보관하고, 마지막 날이 든 달은 일별만 매번 새로 받습니다.
+    """
     cache = dict(cache or {})
+    days = dict(days or {})
     today = now().date()
-    # 1) 자료가 있는 마지막 날 찾기(보통 며칠~몇 주 늦음)
     last = None
     for back in range(1, 70, 3):
         d = today - _dt.timedelta(days=back)
@@ -142,24 +146,25 @@ def visitors(C, cache):
             break
     if not last:
         raise RuntimeError('방문자 자료를 최근 70일 안에서 찾지 못함')
-    # 2) 마지막 날까지 다 찬 달만, 최근 13개월 중 없는 달만 받기
+    # 마지막 날 뒤로 더 있는지 하루씩 확인
+    for fwd in range(1, 3):
+        d = last + _dt.timedelta(days=fwd)
+        if d >= today or not _visit_rows(d.strftime('%Y%m%d'), d.strftime('%Y%m%d')):
+            break
+        last = d
     first_of = _dt.date(last.year, last.month, 1)
     full_end = first_of - _dt.timedelta(days=1) if last.day < 28 else last
     months = []
     y, m = full_end.year, full_end.month
-    for _ in range(13):
+    for _ in range(n_months):
         months.append('%04d%02d' % (y, m))
         m -= 1
         if m == 0:
             y, m = y - 1, 12
-    for ym in months:
-        if ym in cache:
-            continue
-        y, m = int(ym[:4]), int(ym[4:])
-        start = _dt.date(y, m, 1)
-        end = (_dt.date(y + (m == 12), m % 12 + 1, 1) - _dt.timedelta(days=1))
+
+    def fetch(start, end):
         rows = _visit_rows(start.strftime('%Y%m%d'), end.strftime('%Y%m%d'))
-        agg = {}
+        agg, dd = {}, {}
         for r in rows:
             if not _gangwon(r):
                 continue
@@ -168,12 +173,38 @@ def visitors(C, cache):
                 continue
             v = to_num(r.get('touNum')) or 0
             div = str(r.get('touDivCd') or r.get('touDivNm') or '')
-            key = 'local' if div in ('1', '현지인(a)', '현지인') else 'outside' if div in ('2', '외지인(b)', '외지인') else 'foreign' if div in ('3', '외국인(c)', '외국인') else 'other'
+            idx = 0 if div in ('1', '현지인(a)', '현지인') else 1 if div in ('2', '외지인(b)', '외지인') else 2 if div in ('3', '외국인(c)', '외국인') else None
+            key = ('local', 'outside', 'foreign')[idx] if idx is not None else 'other'
             d = agg.setdefault(name, {'local': 0, 'outside': 0, 'foreign': 0, 'other': 0})
             d[key] += v
+            if name == C['me'] and idx is not None:
+                ymd = str(r.get('baseYmd'))
+                dd.setdefault(ymd, [0, 0, 0])[idx] += round(v)
+        return agg, dd
+    for ym in months:
+        y, m = int(ym[:4]), int(ym[4:])
+        start = _dt.date(y, m, 1)
+        end = (_dt.date(y + (m == 12), m % 12 + 1, 1) - _dt.timedelta(days=1))
+        have_days = sum(1 for k in days if k.startswith(ym))
+        if ym in cache and have_days >= end.day:
+            continue
+        try:
+            agg, dd = fetch(start, end)
+        except Exception as e:  # noqa: BLE001
+            log('방문자 %s 실패: %s' % (ym, e))
+            continue
         if len(agg) >= 15:
             cache[ym] = agg
+            days.update(dd)
         else:
             log('방문자 %s: 강원 시·군 %d곳만 있어 보관 안 함' % (ym, len(agg)))
-    keep = sorted(cache)[-13:]
-    return {k: cache[k] for k in keep}, last.strftime('%Y-%m-%d')
+    if last >= first_of and full_end < last:  # 진행 중인 달은 일별만
+        try:
+            _, dd = fetch(first_of, last)
+            days.update(dd)
+        except Exception as e:  # noqa: BLE001
+            log('방문자 이번 달 일별 실패: %s' % e)
+    keep = sorted(cache)[-n_months:]
+    lo = keep[0] + '01' if keep else '0'
+    days = {k: v for k, v in days.items() if k >= lo}
+    return {k: cache[k] for k in keep}, last.strftime('%Y-%m-%d'), dict(sorted(days.items()))

@@ -12,7 +12,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from common import (settings, codes, load_env, save_json, load_json, log, now, read_manual, WEB_DATA, ym_shift)  # noqa: E402
 import sources  # noqa: E402
-import life  # noqa: E402
+import life
+import tour  # noqa: E402
 from rank import rank  # noqa: E402
 
 STATE = os.path.join(WEB_DATA, 'state.json')
@@ -161,11 +162,30 @@ def collect(state, S, C):
     except Exception as e:  # noqa: BLE001
         fail(state, 'air', e)
     try:
-        months, last = life.visitors(C, L.get('visit_months'))
-        L['visit_months'], L['visit_last'] = months, last
+        months, last, vdays = life.visitors(C, L.get('visit_months'), L.get('visit_days'))
+        L['visit_months'], L['visit_last'], L['visit_days'] = months, last, vdays
         ok(state, 'visitors', '%s까지' % last)
     except Exception as e:  # noqa: BLE001
         fail(state, 'visitors', e)
+    # 관광지 집중률·단기예보(매번), 관광지·축제 목록(주 1회)
+    for key, fn in (('cnctr', tour.concentration), ('weather', tour.weather)):
+        try:
+            L[key] = fn()
+            ok(state, key, L[key].get('at') or L[key].get('base'))
+        except Exception as e:  # noqa: BLE001
+            fail(state, key, e)
+    if stale('places', 6) or '--force-life' in sys.argv:
+        try:
+            L['places'] = {'at': now().strftime('%Y-%m-%d'), 'items': tour.places()}
+            ok(state, 'places', '%d곳' % len(L['places']['items']))
+        except Exception as e:  # noqa: BLE001
+            fail(state, 'places', e)
+    if stale('festivals', 6) or '--force-life' in sys.argv:
+        try:
+            L['festivals'] = {'at': now().strftime('%Y-%m-%d'), 'items': tour.festivals()}
+            ok(state, 'festivals', '%d건' % len(L['festivals']['items']))
+        except Exception as e:  # noqa: BLE001
+            fail(state, 'festivals', e)
     vm = L.get('visit_months') or {}
     if len(vm) >= 12:
         last12 = sorted(vm)[-12:]
