@@ -77,7 +77,7 @@
   .basis { background: var(--navy); color: #fff !important; border-radius: 999px; padding: 6px 16px; font-weight: 700; font-size: 15px !important; }
   .popL { display: grid; grid-template-rows: auto auto minmax(0, 1fr); gap: 14px; min-height: 0; }
   .pr1 { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); grid-template-columns: 1.35fr; gap: 12px; }
-  .pc { background: #fff; border: 1.5px solid #C9D8EE; border-radius: 16px; padding: 12px 14px; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; min-width: 0; }
+  .pc { background: #fff; border: 1.5px solid #C9D8EE; border-radius: 16px; padding: 12px 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; min-width: 0; }
   .pc .pl { font-size: 19px; font-weight: 800; color: var(--ink); }
   .pc .pl small { font-size: 14px; font-weight: 600; color: var(--sub); }
   .pc .pv { font-size: 36px; font-weight: 800; line-height: 1.05; letter-spacing: -0.5px; }
@@ -137,8 +137,9 @@
   .row.sel { outline: 2px solid var(--blue); }
   .row .rk { color: var(--sub); text-align: right; font-weight: 400; }
   .row .v { text-align: right; }
-  .bar { height: 14px; background: var(--track); border-radius: 4px; overflow: hidden; }
-  .bar > div { height: 100%; border-radius: 4px; }
+  .bar { height: 16px; background: var(--track); border-radius: 999px; overflow: hidden; box-shadow: inset 0 1px 2px rgba(20,30,50,.06); }
+  .bar > div { height: 100%; border-radius: 999px; background-image: linear-gradient(90deg, rgba(255,255,255,.0), rgba(255,255,255,.28)) !important; box-shadow: 0 1px 3px rgba(20,30,50,.15); }
+  .row.me .bar > div { box-shadow: 0 0 0 2px rgba(31,111,209,.25), 0 2px 6px rgba(31,111,209,.35); }
   .tag { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 13px; }
   .tag.strong { background: var(--goodbg); color: var(--good); }
   .tag.weak { background: var(--badbg); color: var(--bad); }
@@ -159,7 +160,10 @@
   td.r, th.r { text-align: right; }
   .cols { display: flex; align-items: flex-end; gap: 10px; flex: 1 1 auto; min-height: 0; }
   .col { flex: 1 1 0; min-width: 0; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 6px; }
-  .col .c { width: 100%; border-radius: 4px 4px 0 0; }
+  .col .c { width: 100%; border-radius: 8px 8px 3px 3px; background-image: linear-gradient(180deg, rgba(255,255,255,.32), rgba(255,255,255,0) 55%) !important; box-shadow: 0 2px 6px rgba(20,30,50,.12); }
+  .cols { position: relative; background-image: repeating-linear-gradient(0deg, transparent 0, transparent calc(20% - 1px), #EEF2F7 calc(20% - 1px), #EEF2F7 20%); background-position: 0 -28px; padding-top: 6px; }
+  .avgline { position: absolute; left: 0; right: 0; border-top: 2px dashed #1B3A6B; opacity: .55; z-index: 2; pointer-events: none; }
+  .avgline span { position: absolute; right: 0; top: -22px; font-size: 12px; font-weight: 700; color: #1B3A6B; background: #fff; padding: 1px 6px; border-radius: 6px; }
   .col span { font-size: 13px; color: var(--sub); text-align: center; }
   .col b { font-size: 15px; white-space: nowrap; letter-spacing: -0.4px; }
   .cols.tight .col b { font-size: 13px; }
@@ -284,6 +288,13 @@ function startApp() {
     var mx = Math.max.apply(null, series.map(function (c) { return Math.abs(c[1]); })) || 1;
     var cols = el('div', { class: 'cols tight', style: 'gap:5px' });
     var cut = Math.ceil(series.length * (D.judge.strong_pct || 25) / 100);
+    var avg = series.reduce(function (t, c) { return t + c[1]; }, 0) / (series.length || 1);
+    setTimeout(function () {
+      var any = cols.querySelector('.col .c'); if (!any) return;
+      var colH = any.parentNode.getBoundingClientRect().height, lab = any.parentNode.querySelector('span').getBoundingClientRect().height + 6;
+      var y = colH - lab - (avg / mx * 0.82) * (colH - lab) * (1 / 1) ;
+      cols.appendChild(el('div', { class: 'avgline', style: 'top:' + y.toFixed(0) + 'px' }, [el('span', { text: '도내 평균 ' + fmt(avg, digits || 0) })]));
+    }, 0);
     series.forEach(function (c, i) {
       var m = c[0] === D.me, p = c[0] === selected && !m;
       var base = i < cut ? '#5DB88E' : i >= series.length - cut ? '#E8A867' : '#8FB2E0';
@@ -604,12 +615,16 @@ function startApp() {
       el('h1', { text: full + ' 인구 ' + fmt(me.total, 0) + '명' + (dm != null ? ' · 지난달보다 ' + sgn(dm) + '명' : '') + (diff != null ? ' · 1년 새 ' + sgn(diff) + '명' : '') }),
       el('span', { text: (isMe ? '왼쪽 시·군을 누르면 그 지역 지표로 바뀝니다 · ' : '다시 누르면 동해시로 돌아옵니다 · ') + '행정안전부 주민등록 인구 · ' + ymLabel(A.ym) + ' 기준' })
     ]));
-    var k = el('div', { class: 'kpis', style: 'grid-template-columns:repeat(5,minmax(0,1fr))' });
-    k.classList.add('big');
+    var k = el('div', { class: 'pr1 fin' });
+    var cn = 0, CIC = [['people', '#fff', 'rgba(255,255,255,.18)'], ['trend', '#7A4FC4', '#EFE9FB'], ['house', '#2E8B57', '#E2F3E9'], ['youth', '#1F6FD1', '#E4EEFB'], ['senior', '#1B7A6B', '#E0F2EE']];
     function kpi(l, sub, v, u, tone, chips, tint) {
-      var lab = el('div', { class: 'l' }, [l]); if (sub) lab.appendChild(el('small', { text: sub }));
-      k.appendChild(el('div', { class: 'kpi t-' + tone }, [lab, el('div', { class: 'v' + (tint ? ' tint' : '') }, [v, el('small', { text: u })]),
-        el('div', { class: 'chips' }, chips.filter(Boolean).map(function (c) { return el('span', { class: 'chip ' + (c[1] || ''), text: c[0] }); }))]));
+      var ic = CIC[cn] || CIC[0], hero = cn === 0; cn++;
+      var col = hero ? '#fff' : (tint && tone === 'bad' ? '#B4531B' : tint && tone === 'good' ? '#1B7A4B' : ic[1]);
+      k.appendChild(el('div', { class: 'pc' + (hero ? ' hero' : '') }, [
+        el('div', { class: 'pl' }, [l, sub ? el('small', { text: ' ' + sub, style: hero ? 'color:#C9D6EA' : '' }) : null].filter(Boolean)),
+        icon(ic[0], ic[1], ic[2]),
+        el('div', { class: 'pv', style: 'color:' + col, html: v + '<small>' + u + '</small>' }),
+        el('div', { class: 'chips', style: 'justify-content:center' }, chips.filter(Boolean).map(function (c) { return el('span', { class: 'chip ' + (c[1] || ''), text: c[0] }); }))]));
     }
     function up(v) { return v > 0 ? 'good' : v < 0 ? 'bad' : ''; }
     function jt(j) { return j === 'strong' ? 'good' : j === 'weak' ? 'bad' : j === 'excluded' ? 'mute' : 'navy'; }
@@ -657,8 +672,8 @@ function startApp() {
     if (adm.length) wrapA.appendChild(dongTable('행정동', adm, [['', function (d) { return d[0]; }], ['인구', function (d) { return fmt(d[1].total, 0); }], ['고령', function (d) { return fmt(d[1].elderly, 1) + '%'; }]]));
     else wrapA.appendChild(el('div', { class: 'empty', text: '자료 없음' }));
     var dongs = Object.keys(A.dongs || {}).map(function (n) { return [n, A.dongs[n]]; }).sort(function (a, c) { return c[1].total - a[1].total; });
-    var wrapB = el('div', {}, [el('div', { class: 'cap', text: '법정동 상위 16곳 / ' + dongs.length })]);
-    if (dongs.length) wrapB.appendChild(dongTable('법정동', dongs.slice(0, 16), [['', function (d) { return d[0]; }], ['인구', function (d) { return fmt(d[1].total, 0); }], ['세대', function (d) { return fmt(d[1].hh, 0); }]]));
+    var wrapB = el('div', {}, [el('div', { class: 'cap', text: '법정동 상위 14곳 / ' + dongs.length })]);
+    if (dongs.length) wrapB.appendChild(dongTable('법정동', dongs.slice(0, 14), [['', function (d) { return d[0]; }], ['인구', function (d) { return fmt(d[1].total, 0); }], ['세대', function (d) { return fmt(d[1].hh, 0); }]]));
     else wrapB.appendChild(el('div', { class: 'empty', text: '자료 없음' }));
     two.appendChild(wrapA); two.appendChild(wrapB);
     s3.appendChild(two);
