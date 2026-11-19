@@ -120,7 +120,10 @@
   .subtabs button.on { background: var(--navy); border-color: var(--navy); color: #fff; }
   .pc.click, section.click { position: relative; cursor: pointer; }
   .pc .more { position: absolute; right: 12px; top: 10px; font-size: 13px; font-weight: 700; color: var(--blue); }
-  .pr1 .pc .more { top: auto; bottom: 8px; right: 12px; } .pc.hero .more { color: #BFD3F2; }
+  .pr1 .pc .more { top: auto; bottom: 8px; right: 12px; }
+  .pr1.fin { grid-column: 1 / -1; }
+  .pr1.fin .pc .pv { font-size: 34px; } .pr1.fin .pc.hero .pv { font-size: 46px; }
+  .pc.hero .chip { background: rgba(255,255,255,.92); } .pc.hero .more { color: #BFD3F2; }
   .band { position: relative; }
   .more.inband { position: absolute; right: 16px; top: 50%; margin-top: -10px; font-size: 14px; font-weight: 700; color: #BFD3F2; }
   .pc.click:hover, section.click:hover { box-shadow: 0 6px 18px rgba(31,111,209,.18); }
@@ -377,6 +380,11 @@ function startApp() {
     baby: '<circle cx="24" cy="17" r="10"/><circle cx="20" cy="16" r="1.6" fill="#fff"/><circle cx="28" cy="16" r="1.6" fill="#fff"/><path d="M20 21q4 3 8 0" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round"/><path d="M12 44c0-9 5-15 12-15s12 6 12 15z"/>',
     grave: '<path d="M12 44V20a12 12 0 0 1 24 0v24z"/><path d="M24 18v14M18 24h12" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/><rect x="8" y="41" width="32" height="4" rx="2"/>',
     heart: '<path d="M24 42S6 31 6 18a9 9 0 0 1 18-3 9 9 0 0 1 18 3c0 13-18 24-18 24z"/><path d="M10 24h8l3-6 5 12 3-6h9" stroke="#fff" stroke-width="2.6" fill="none" stroke-linejoin="round" stroke-linecap="round"/>',
+    coin: '<ellipse cx="24" cy="12" rx="15" ry="6"/><path d="M9 12v8c0 3.3 6.7 6 15 6s15-2.7 15-6v-8c0 3.3-6.7 6-15 6S9 15.3 9 12z"/><path d="M9 24v8c0 3.3 6.7 6 15 6s15-2.7 15-6v-8c0 3.3-6.7 6-15 6S9 27.3 9 24z" opacity=".75"/>',
+    bank: '<path d="M24 5 5 15v4h38v-4z"/><rect x="9" y="21" width="5" height="15" rx="1"/><rect x="18" y="21" width="5" height="15" rx="1"/><rect x="27" y="21" width="5" height="15" rx="1"/><rect x="36" y="21" width="3.5" height="15" rx="1"/><rect x="5" y="38" width="38" height="5" rx="1.5"/>',
+    hand: '<path d="M4 30h8l9 5h10a3 3 0 0 0 0-6h-8"/><path d="M4 30h8l9 5h10a3 3 0 0 0 0-6h-8l11-4c3-1 5 3 2 5L22 41H4z"/><circle cx="30" cy="13" r="8"/><path d="M27 13h6M30 10v6" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>',
+    gauge: '<path d="M6 34a18 18 0 0 1 36 0z" opacity=".35"/><path d="M6 34a18 18 0 0 1 9-15.6l9 15.6z"/><circle cx="24" cy="34" r="4"/><path d="M24 34 33 20" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/>',
+    wonPerson: '<circle cx="17" cy="12" r="6"/><path d="M6 40c0-8 5-13 11-13s11 5 11 13z"/><circle cx="35" cy="28" r="10"/><path d="M30 24l2.5 9 2.5-7 2.5 7 2.5-9M29 28h12" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
     trend: '<path d="M6 34 18 22l8 8 14-16" stroke="currentColor" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M33 12h9v9z"/>'
   };
   function icon(name, color, bg, size) {
@@ -522,8 +530,8 @@ function startApp() {
           el('div', { class: 'pd' }, [el('span', { text: '전월 대비' }), delta(d)])].filter(Boolean)));
       }
       if (bc && dc) {
-        mc('출생', '', 'baby', '#2E8B57', '#E2F3E9', bc.total, bp ? bc.total - bp.total : null);
-        mc('사망', '', 'grave', '#5F6B7A', '#EEF2F7', dc.total, dp ? dc.total - dp.total : null);
+        mc('출생', '출생 신고', 'baby', '#2E8B57', '#E2F3E9', bc.total, bp ? bc.total - bp.total : null);
+        mc('사망', '사망 신고', 'grave', '#5F6B7A', '#EEF2F7', dc.total, dp ? dc.total - dp.total : null);
         var nat = bc.total - dc.total, natp = bp && dp ? bp.total - dp.total : null;
         mc('자연증감', '출생 - 사망', 'heart', nat < 0 ? '#D6457A' : '#1B7A4B', nat < 0 ? '#FCE6EE' : '#E2F3E9', nat, natp != null ? nat - natp : null, true);
       }
@@ -686,13 +694,20 @@ function startApp() {
       el('h1', { text: ly + ' 당초예산 ' + full + ' ' + eok(sel.budget) + '억 원 · 도내 ' + rk(rb, SN) + '위 / ' + rb.n + (diffMe != null ? ' · 동해보다 ' + (diffMe >= 0 ? '+' : '') + eok(diffMe) + '억' : '') }),
       el('span', { text: (isMe ? '아래 목록에서 시·군을 누르면 위 값이 그 지역으로 바뀝니다 · ' : '다시 누르면 동해시로 돌아옵니다 · ') + '지방재정365 · ' + ly + '년 당초예산(일반회계)' })
     ]));
-    var k = el('div', { class: 'kpis big', style: 'grid-template-columns:repeat(5,minmax(0,1fr))' });
+    var k = el('div', { class: 'pr1 fin' });
+    var FIC = { navy: ['coin', '#fff', 'rgba(255,255,255,.16)'], good: ['bank', '#2E8B57', '#E2F3E9'], mute: ['hand', '#7A4FC4', '#EFE9FB'], navy2: ['gauge', '#1F6FD1', '#E4EEFB'], bad: ['gauge', '#D9822B', '#FFF1E2'] };
+    var kn = 0;
     function kpi(l, sub, v, u, tone, chips, onOpen) {
-      var lab = el('div', { class: 'l' }, [l]); if (sub) lab.appendChild(el('small', { text: sub }));
-      if (onOpen) lab.appendChild(el('span', { class: 'more', text: '👆 클릭 · 세부' }));
-      k.appendChild(el('div', { class: 'kpi t-' + tone + (onOpen ? ' click' : ''), onclick: onOpen || null, role: onOpen ? 'button' : null, tabindex: onOpen ? '0' : null },
-        [lab, el('div', { class: 'v' }, [v, el('small', { text: u })]),
-        el('div', { class: 'chips' }, chips.filter(Boolean).map(function (c) { return el('span', { class: 'chip ' + (c[1] || ''), text: c[0] }); }))]));
+      kn++;
+      var ic = kn === 1 ? ['coin', '#fff', 'rgba(255,255,255,.18)'] : kn === 2 ? ['bank', '#2E8B57', '#E2F3E9'] : kn === 3 ? ['hand', '#7A4FC4', '#EFE9FB'] : kn === 4 ? ['gauge', '#1F6FD1', '#E4EEFB'] : ['wonPerson', '#C0602B', '#FDEBDD'];
+      var col = kn === 1 ? '#fff' : ic[1];
+      var node = el('div', { class: 'pc' + (kn === 1 ? ' hero' : ''), role: onOpen ? 'button' : null, tabindex: onOpen ? '0' : null }, [
+        el('div', { class: 'pl' }, [l, sub ? el('small', { text: ' ' + sub, style: kn === 1 ? 'color:#C9D6EA' : '' }) : null].filter(Boolean)),
+        icon(ic[0], ic[1], ic[2]),
+        el('div', { class: 'pv', style: 'color:' + col, html: v + '<small>' + u + '</small>' }),
+        el('div', { class: 'chips', style: 'justify-content:center' }, chips.filter(Boolean).map(function (c) { return el('span', { class: 'chip ' + (c[1] || ''), text: c[0] }); }))]);
+      if (onOpen) { node.classList.add('click'); node.appendChild(el('span', { class: 'more', text: '자세히 ›' })); node.addEventListener('click', onOpen); }
+      k.appendChild(node);
     }
     var ACC = (F.accounts || {}), ay = Object.keys(ACC).sort().pop(), acc = ay ? ACC[ay] : {};
     var dep = sel.budget - (sel.own || 0), f1 = fiv(SN), pop = ((D.admin || {}).regions || {})[SN];
