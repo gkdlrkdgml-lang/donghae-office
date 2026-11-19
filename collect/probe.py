@@ -128,16 +128,20 @@ def main():
             say('[신규 %s] 안 됨: %s' % (nm, str(e)[-300:]))
     from urllib.parse import unquote as _uq7
     kk = _uq7(os.environ.get('DATA_GO_KR_KEY', '').strip())
-    for nm, url in (('버스정류소', 'https://apis.data.go.kr/1613000/BusSttnInfoInqireService/getCtyCodeList'),
-                    ('버스도착', 'https://apis.data.go.kr/1613000/ArvlInfoInqireService/getCtyCodeList'),
-                    ('버스노선', 'https://apis.data.go.kr/1613000/BusRouteInfoInqireService/getCtyCodeList'),
-                    ('버스위치', 'https://apis.data.go.kr/1613000/BusLcInfoInqireService/getCtyCodeList'),
-                    ('열차', 'https://apis.data.go.kr/1613000/TrainInfoService/getCtyCodeList')):
+    tries = []
+    for base in ('https://apis.data.go.kr/1613000/BusStop', 'https://apis.data.go.kr/1613000/NumberofRoutesServingEachStop'):
+        for op in ('', 'getBusStop', 'getBusStopList', 'getList', 'list', 'getBusStopInfo', 'getNumberofRoutesServingEachStop', 'getNumberOfRoutes', 'getRouteCount', 'busStop', 'getInfo'):
+            tries.append((base.split('/')[-1] + '/' + op, base + ('/' + op if op else '')))
+    for nm in ('public_taxi_company', 'public_taxi_cmpny', 'taxi_company', 'public_taxi_bsnes', 'public_taxi', 'public_taxi_stand', 'taxi_stand', 'public_taxi_stnd', 'public_txi_cmpny', 'public_taxi_stop'):
+        tries.append(('std ' + nm, 'https://api.data.go.kr/openapi/tn_pubr_%s_api' % nm))
+    for nm, url in tries:
         try:
-            t = http_get(url, {'serviceKey': kk, '_type': 'json', 'numOfRows': '300', 'pageNo': '1'}, tries=1)
-            say('[TAGO %s] 됨 %s' % (nm, ('동해 있음 ' + t[max(0, t.find('동해') - 60):t.find('동해') + 20]) if '동해' in t else t[:200]))
+            t = http_get(url, {'serviceKey': kk, 'type': 'json', '_type': 'json', 'numOfRows': '3', 'pageNo': '1'}, tries=1)
+            say('[찾기 %s] 됨 %s' % (nm, t[:700].replace('\n', ' ')))
         except Exception as e:  # noqa: BLE001
-            say('[TAGO %s] 안 됨 %s' % (nm, str(e)[-120:].replace('\n', ' ')))
+            m = str(e)
+            code = 'NO_SERVICE' if 'NO_OPENAPI' in m or '404' in m else 'NOT_REG' if 'NOT_REGISTERED' in m else m[-160:].replace('\n', ' ')
+            say('[찾기 %s] %s' % (nm, code))
     if os.environ.get('PROBE_FULL') != '1':
         return
     probe('admm_population', {'url': 'https://apis.data.go.kr/1741000/admmPpltnHhStus/selectAdmmPpltnHhStus', 'key_env': 'DATA_GO_KR_KEY',
