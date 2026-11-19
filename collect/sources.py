@@ -617,3 +617,87 @@ def vehicles(S, C):
         except Exception as e:  # noqa: BLE001
             log('자동차 추이 실패: %s' % e)
     return res
+
+
+# ---------------------------------------------------------------- 교통안전(KOSIS): 교통사고·교통단속·도로·운수업체
+SIDO_NAMES = ('서울', '부산', '대구', '인천', '광주', '대전', '울산', '세종', '경기', '강원', '충청', '충북', '충남', '전라', '전북', '전남', '경상', '경북', '경남', '제주')
+
+
+def _gw_rows(rows, name_key, code_key):
+    """시·도 머리행 다음에 오는 시·군 행 가운데 강원 것만 고릅니다(고성군처럼 이름이 겹치는 경우 대비)."""
+    out, in_gw = [], False
+    for r in sorted(rows, key=lambda x: str(x.get(code_key))):
+        nm = str(r.get(name_key, '')).strip()
+        if nm.startswith(SIDO_NAMES) and (nm.endswith('도') or nm.endswith('시') and ('특별' in nm or '광역' in nm)):
+            in_gw = nm.startswith('강원')
+            continue
+        if in_gw:
+            out.append(r)
+    return out
+
+
+def traffic_safety(S, C):
+    res = {}
+    # 1) 교통사고(행안부, 시군구, 연)
+    try:
+        rows = _kosis_rows('DT_110001_A046', {'orgId': '110', 'objL1': 'ALL', 'objL2': 'ALL', 'itmId': 'ALL', 'newEstPrdCnt': '1'}, 'acc')
+        acc = {}
+        for r in _gw_rows(rows, 'C1_NM', 'C1'):
+            name = match_region(str(r.get('C1_NM', '')).strip(), C['regions'])
+            if name:
+                acc.setdefault(name, {})[str(r.get('C2'))] = to_num(r.get('DT'))
+        if len(acc) >= 15:
+            res['acc'] = {'year': str(rows[0].get('PRD_DE')), 'regions': acc}
+        else:
+            log('교통사고: 강원 %d곳만 찾음' % len(acc))
+    except Exception as e:  # noqa: BLE001
+        log('교통사고 실패: %s' % e)
+    # 2) 교통단속 위반(강원 경찰서별, 연)
+    try:
+        rows = _kosis_rows('DT_211002_P029', {'orgId': '211', 'objL1': 'ALL', 'objL2': 'ALL', 'itmId': 'ALL', 'newEstPrdCnt': '1'}, 'enf')
+        enf = {}
+        for r in rows:
+            st = str(r.get('C1_NM', '')).replace('경찰서', '').strip()
+            name = match_region(st, C['regions'])
+            v = to_num(r.get('DT'))
+            if name and v is not None:
+                enf.setdefault(name, {})[str(r.get('C2_NM', '')).strip()] = v
+        if enf:
+            res['enf'] = {'year': str(rows[0].get('PRD_DE')), 'regions': enf}
+    except Exception as e:  # noqa: BLE001
+        log('교통단속 실패: %s' % e)
+    # 3) 도로(강원 시군, 연): 도로종류 × 시군 × 항목
+    try:
+        rows = _kosis_rows('DT_211002_I011', {'orgId': '211', 'objL1': 'ALL', 'objL2': 'ALL', 'itmId': 'ALL', 'newEstPrdCnt': '1'}, 'road')
+        road = {}
+        for r in rows:
+            a, b = str(r.get('C1_NM', '')).strip(), str(r.get('C2_NM', '')).strip()
+            reg, kind = (a, b) if match_region(a, C['regions']) else (b, a)
+            name = match_region(reg, C['regions'])
+            if not name or reg.endswith('군') and name in ('춘천', '원주', '삼척'):  # 옛 춘천군·원주군·삼척군 제외
+                continue
+            v = to_num(r.get('DT'))
+            if v is not None:
+                road.setdefault(name, {}).setdefault(kind, {})[str(r.get('ITM_NM', '')).strip()] = v
+        if road:
+            res['road'] = {'year': str(rows[0].get('PRD_DE')), 'regions': road}
+    except Exception as e:  # noqa: BLE001
+        log('도로 실패: %s' % e)
+    # 4) 운수업 사업체수(통계청, 시군구, 연)
+    try:
+        rows = _kosis_rows('DT_1YL5902', {'orgId': '101', 'objL1': 'ALL', 'itmId': 'T10', 'newEstPrdCnt': '1'}, 'transport_biz')
+        gw = [r for r in rows if str(r.get('C1', '')).startswith(('32', '51')) and len(str(r.get('C1', ''))) == 5]
+        biz = {}
+        for r in gw:
+            name = match_region(str(r.get('C1_NM', '')).strip(), C['regions'])
+            if name:
+                biz[name] = to_num(r.get('DT'))
+        if len(biz) >= 15:
+            res['biz'] = {'year': str(rows[0].get('PRD_DE')), 'regions': biz}
+        else:
+            log('운수업: 강원 %d곳만 찾음' % len(biz))
+    except Exception as e:  # noqa: BLE001
+        log('운수업 실패: %s' % e)
+    if not res:
+        raise RuntimeError('교통안전 통계를 하나도 받지 못함')
+    return res

@@ -175,6 +175,16 @@ def collect(state, S, C):
     if L.get('cars'):
         set_ind(state, 'cars', per({k: v.get('total', {}).get('all') for k, v in L['cars']['regions'].items() if v.get('total', {}).get('all')}, 1000),
                 '%s년 %d월 자동차 등록대수' % (L['cars']['ym'][:4], int(L['cars']['ym'][4:])))
+    if stale('tsafe', 6) or '--force-life' in sys.argv:
+        try:
+            L['tsafe'] = dict(sources.traffic_safety(S, C), at=now().strftime('%Y-%m-%d'))
+            ok(state, 'tsafe', ', '.join(k for k in L['tsafe'] if k != 'at'))
+        except Exception as e:  # noqa: BLE001
+            fail(state, 'tsafe', e)
+    T = L.get('tsafe') or {}
+    if T.get('acc'):
+        set_ind(state, 'accidents', {k: v.get('A1') / pops[k] * 100000 for k, v in T['acc']['regions'].items() if v.get('A1') is not None and pops.get(k)},
+                '%s년 교통사고(행정안전부)' % T['acc']['year'])
     # 관광지 집중률·단기예보(매번), 관광지·축제 목록(주 1회)
     for key, fn in (('cnctr', tour.concentration), ('weather', tour.weather)):
         try:

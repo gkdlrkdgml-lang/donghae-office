@@ -147,6 +147,18 @@
       "note": "높고 낮음이 곧 좋고 나쁨이 아니어서 판정에서 제외"
     },
     {
+      "id": "accidents",
+      "no": 7,
+      "field": "교통",
+      "name": "인구 10만명당 교통사고",
+      "unit": "건",
+      "dir": -1,
+      "digits": 0,
+      "source": "행정안전부 교통사고(KOSIS)",
+      "show": true,
+      "main": false
+    },
+    {
       "id": "pm25",
       "no": 8,
       "field": "환경",

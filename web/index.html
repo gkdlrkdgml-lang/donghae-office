@@ -1050,9 +1050,10 @@ function startApp() {
     var L = D.life || {}, tabs = [];
     if (L.cars) tabs.push(['cars', '자동차 등록']);
     if (L.ev) tabs.push(['ev', '전기차 충전']);
+    if (L.tsafe) tabs.push(['safe', '교통안전·도로']);
     tabs.push(['bus', '라이브 버스']);
     if (!tabs.some(function (t) { return t[0] === trTab; })) trTab = tabs[0][0];
-    ({ cars: screenCars, ev: screenTraffic, bus: screenBus })[trTab]();
+    ({ cars: screenCars, ev: screenTraffic, safe: screenTSafe, bus: screenBus })[trTab]();
     var title = view.querySelector('.title');
     if (title && tabs.length > 1) title.insertBefore(tabsBar(tabs, trTab, function (k) { trTab = k; }), title.children[1] || null);
   }
@@ -1062,6 +1063,32 @@ function startApp() {
     view.appendChild(el('div', { class: 'title' }, [el('h1', { text: D.me + '시 라이브 버스' }), el('span', { class: 'basis', text: '동해 LIVE BUS (livebus.dhits.kr) · 실시간 위치' })]));
     var fr = el('iframe', { src: 'https://livebus.dhits.kr/', title: '동해 라이브 버스', style: 'flex:1;width:100%;border:0;border-radius:10px;background:#EEF3F8', allow: 'geolocation' });
     view.appendChild(el('section', { class: 'detail', style: 'grid-row:2;display:flex;flex-direction:column;padding:8px' }, [fr]));
+  }
+  function screenTSafe() {
+    var T = (D.life || {}).tsafe || {}, A = (T.acc || {}).regions || {}, E = (T.enf || {}).regions || {}, RD = (T.road || {}).regions || {}, B = (T.biz || {}).regions || {};
+    var SN = A[regName()] || E[regName()] ? regName() : D.me, isMe = SN === D.me, I0 = ind('accidents'), I = indFor(I0, SN);
+    var a = A[SN] || {}, am = A[D.me] || {}, e = E[SN] || {}, em = E[D.me] || {};
+    function roadOf(n) { var r = (RD[n] || {})['합계'] || {}; return r; }
+    var rd = roadOf(SN), rdm = roadOf(D.me);
+    var enfTot = e['합계'], enfMe = em['합계'];
+    lifeTitle(fullName(SN) + ' 교통안전·도로', (T.acc ? T.acc.year + '년 교통사고(행안부)' : '') + (T.enf ? ' · ' + T.enf.year + '년 교통단속(경찰서)' : '') + (T.road ? ' · ' + T.road.year + '년 도로' : '') + selHint());
+    cardsRow([
+      { l: '교통사고', sub: T.acc ? T.acc.year + '년' : '', ic: 'car', v: fmt(a.A1, 0), u: '건', chips: [rankChip(I), I && I.me ? ['10만명당 ' + fmt(I.me.value, 0) + '건', 'violet'] : null] },
+      { l: '사망자', ic: 'heart', col: '#D9534F', bg: '#FDE7E4', v: fmt(a.A2, 0), u: '명', chips: [a.A4 != null ? ['10만명당 ' + fmt(a.A4, 1), 'bad'] : null, meChip(am.A2, '명')] },
+      { l: '부상자', ic: 'hospital', col: '#C0602B', bg: '#FDEBDD', v: fmt(a.A5, 0), u: '명', chips: [a.A7 != null ? ['10만명당 ' + fmt(a.A7, 0), 'violet'] : null, meChip(am.A5, '명')] },
+      { l: '교통단속', sub: (T.enf || {}).year ? T.enf.year + '년 · 경찰서' : '', ic: 'gauge', col: '#7A4FC4', bg: '#EFE9FB', v: fmt(enfTot, 0), u: '건', chips: [e['주정차'] != null ? ['주정차 ' + fmt(e['주정차'], 0), 'navy'] : null, meChip(enfMe, '건')] },
+      { l: '도로 포장률', sub: rd['개통'] != null ? '도로 ' + fmt(rd['개통'], 0) + 'm 개통' : '', ic: 'trend', col: '#2E8B57', bg: '#E2F3E9', v: fmt(rd['포장률'], 1), u: '%', chips: [meChip(rdm['포장률'], '%', 1), B[SN] != null ? ['운수업체 ' + fmt(B[SN], 0) + '곳', 'navy'] : null] }
+    ]);
+    panel('인구 10만명당 교통사고', '강원 18개 시·군 · 건 · 적을수록 좋음 · 누르면 그 지역', I ? rankList(I, regPick, regSel) : el('div', { class: 'empty', text: '자료 없음' }));
+    var kinds = ['신호위반', '과속', '안전띠미착용', '음주운전', '중앙선침범', '주정차', '안전운전의무불이행'].filter(function (k) { return em[k] != null || e[k] != null; });
+    var who = isMe ? [D.me, '강원 평균'] : [SN, D.me, '강원 평균'];
+    var per = function (n, k) { var p = popOf(n), v = (E[n] || {})[k]; return p && v != null ? v / p * 1000 : null; };
+    panel('교통단속 위반 유형 · 인구 1천명당', who.map(fullName).join(' · ') + ' · 건(경찰서 관할 기준)', groupCols(kinds.map(function (k) { return k.replace('안전운전의무불이행', '안전운전').replace('안전띠미착용', '안전띠'); }), cmpSeries(who, function (n) {
+      return kinds.map(function (k) { return n === '강원 평균' ? avgOf(E, function (o, kk) { return per(kk, k); }) : per(n, k); }); }), null, true));
+    var kindsR = ['고속국도', '일반국도', '지방도', '시군도'];
+    var road = RD[SN] || {};
+    panel('도로 · ' + fullName(SN), '종류별 개통 길이(m)·포장률', [donut(kindsR.filter(function (k) { return road[k] && road[k]['개통']; }).map(function (k, i) { return [k + ' ' + fmtK(road[k]['개통']) + 'm', road[k]['개통'], ['#1F6FD1', '#F0A04B', '#5DB88E', '#7A4FC4'][i]]; }), fmt(rd['포장률'], 1) + '%', '포장률'),
+      el('div', { style: 'margin-top:8px' }, [colChart(Object.keys(RD).map(function (n) { return [n, ((RD[n] || {})['합계'] || {})['포장률']]; }).filter(function (x) { return x[1] != null; }), regPick, SN, 1, '%')])]);
   }
   function screenCars() {
     var V = (D.life || {}).cars || {}, R = V.regions || {}, SN = R[regName()] ? regName() : D.me, isMe = SN === D.me;
@@ -1488,6 +1515,12 @@ function startApp() {
     // 목록
     var tb = el('tbody');
     var listF = F.filter(function (f) { return f.state !== '종료'; }).concat(F.filter(function (f) { return f.state === '종료'; }).reverse());
+    var fullList = zoomIdx === 0, LIM = 7, allN = listF.length;
+    if (!fullList && listF.length > LIM) {
+      var si = listF.indexOf(S);
+      listF = listF.slice(0, LIM);
+      if (S && si >= LIM) listF[LIM - 1] = S;
+    }
     listF.forEach(function (f) {
       var tone = f.state === '진행 중' ? 'good' : f.state === '예정' ? 'navy' : '';
       tb.appendChild(el('tr', { class: f.id === festSel ? 'on' : '', onclick: function () { festSel = f.id; render(); } }, [
@@ -1496,7 +1529,7 @@ function startApp() {
         el('td', {}, [el('span', { class: 'chip ' + tone, text: f.state })]),
         el('td', { class: 'r', text: f.st && f.st.up != null ? (f.st.up >= 0 ? '+' : '') + fmt(f.st.up, 0) + '%' : '–' })]));
     });
-    panel('행사·축제 목록', '누르면 오른쪽 분석 · 효과 = 평시 대비', el('table', { class: 'dt big ftab' }, [el('thead', {}, [el('tr', {}, ['행사', '기간', '상태', '효과'].map(function (h, j) { return el('th', { class: j === 3 ? 'r' : '', text: h }); }))]), tb]));
+    panel('행사·축제 목록', fullList ? '전체 ' + allN + '건 · 누르면 분석 · 효과 = 평시 대비' : allN + '건 중 ' + Math.min(LIM, allN) + '건 · 「크게 보기」를 누르면 전체 목록', el('table', { class: 'dt big ftab' }, [el('thead', {}, [el('tr', {}, ['행사', '기간', '상태', '효과'].map(function (h, j) { return el('th', { class: j === 3 ? 'r' : '', text: h }); }))]), tb]));
     // 전후 일별
     if (!S || !st || !st.fest) { panel(S ? S.title : '축제 분석', '', el('div', { class: 'empty', text: S && S.state !== '종료' ? '축제가 끝나고 방문자 자료가 나오면 분석합니다' : '방문자 자료가 없는 기간입니다' })); return; }
     var lab = [], cur = [], p1 = [], p2 = [], a = addDays(S.start, -14), b = addDays(S.end, 14), i0 = null, i1 = null;
