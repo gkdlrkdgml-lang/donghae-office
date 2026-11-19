@@ -126,27 +126,22 @@ def main():
             say('[신규 %s] 됨: %s' % (nm, t[:1500].replace('\n', ' ')))
         except Exception as e:  # noqa: BLE001
             say('[신규 %s] 안 됨: %s' % (nm, str(e)[-300:]))
-    import urllib.request as _ur, ssl as _ssl, re as _re6
-    _cx = _ssl.create_default_context(); _cx.check_hostname = False; _cx.verify_mode = _ssl.CERT_NONE  # 헤더·링크 확인용(읽기만)
-    def _get(u):
-        rq = _ur.Request(u, headers={'User-Agent': 'Mozilla/5.0'})
-        with _ur.urlopen(rq, timeout=25, context=_cx) as r:
-            return r.status, dict(r.headers), r.read().decode('utf-8', 'replace'), r.geturl()
-    seen = set()
-    for u in ('https://www.gangwon.to/page/gwtour2022/images/map/tourmap_04.pdf', 'https://www.gangwon.to/', 'https://www.ktourmap.com/mapDetails.jsp?num=6'):
+    from urllib.parse import unquote as _uq7
+    kk = _uq7(os.environ.get('DATA_GO_KR_KEY', '').strip())
+    for nm, url, q in (('주차장', 'https://api.data.go.kr/openapi/tn_pubr_prkplce_info_api', {'type': 'json', 'numOfRows': '3', 'pageNo': '1'}),
+                       ('주차장동해', 'https://api.data.go.kr/openapi/tn_pubr_prkplce_info_api', {'type': 'json', 'numOfRows': '3', 'pageNo': '1', 'institutionNm': '강원특별자치도 동해시'}),
+                       ('보호구역', 'https://apis.data.go.kr/1320000/safetyzonedtlinfo', {'type': 'json', 'numOfRows': '3', 'pageNo': '1'})):
         try:
-            st, hd, body, fu = _get(u)
-            say('[관광 유형] %s %s %s' % (u, hd.get('Content-Type'), hd.get('Content-Length')))
-            say('[관광 %s] %s → %s | XFO=%s CSP=%s' % (u, st, fu, hd.get('X-Frame-Options'), (hd.get('Content-Security-Policy') or '')[:200]))
-            links = _re6.findall(r'<a[^>]+href="([^"#]+)"[^>]*>(.*?)</a>', body, _re6.S)
-            hits = []
-            for h, t in links:
-                tt = _re6.sub(r'<[^>]+>|\s+', ' ', t).strip()
-                if any(k in tt + h for k in ('지도', 'map', 'Map', 'VR', 'vr', '3D', '360', '스마트', '투어', '관광안내')) and h not in seen:
-                    seen.add(h); hits.append('%s=%s' % (tt[:20], h))
-            say('[관광 링크] ' + ' | '.join(hits[:60]))
+            t = http_get(url, dict(q, serviceKey=kk), tries=1)
+            say('[신청2 %s] %s' % (nm, t[:1500].replace('\n', ' ')))
         except Exception as e:  # noqa: BLE001
-            say('[관광 %s] 실패 %s' % (u, e))
+            say('[신청2 %s] %s' % (nm, str(e)[-300:].replace('\n', ' ')))
+    for op in ('getSafetyZoneDtlInfo', 'getSafetyzonedtlinfo', 'safetyZoneDtlInfo', 'getList', 'list', 'getSafetyZoneList', 'getSafetyZoneInfo', 'safetyzonedtlinfo'):
+        try:
+            t = http_get('https://apis.data.go.kr/1320000/safetyzonedtlinfo/' + op, {'serviceKey': kk, 'type': 'json', '_type': 'json', 'numOfRows': '3', 'pageNo': '1'}, tries=1)
+            say('[보호구역 %s] %s' % (op, t[:1200].replace('\n', ' ')))
+        except Exception as e:  # noqa: BLE001
+            say('[보호구역 %s] %s' % (op, str(e)[-200:].replace('\n', ' ')))
     if os.environ.get('PROBE_FULL') != '1':
         return
     probe('admm_population', {'url': 'https://apis.data.go.kr/1741000/admmPpltnHhStus/selectAdmmPpltnHhStus', 'key_env': 'DATA_GO_KR_KEY',
