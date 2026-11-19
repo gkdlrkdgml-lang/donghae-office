@@ -96,11 +96,19 @@ def main():
         say('  연령 분류 이름: %s' % ', '.join('%s=%s' % (m.get('ITM_ID'), m.get('ITM_NM')) for m in meta if m.get('OBJ_ID') not in (oid, 'ITEM')))
     except Exception as e:  # noqa: BLE001
         say('  → 실패: %s' % e)
-    for op in ('selectAdmmSexdAgeErsr', 'selectAdmmSexdAgeErsrStus'):
+    import re as _re2
+    for nm, url in (('death', 'https://apis.data.go.kr/1741000/admmSexdAgeErsr/selectAdmmSexdAgeErsr'),
+                    ('hsmb', 'https://apis.data.go.kr/1741000/admmHsmbHh/selectAdmmHsmbHh')):
         for lv in ('2', '3'):
-            probe('death_%s_lv%s' % (op, lv), {'url': 'https://apis.data.go.kr/1741000/admmSexdAgeErsr/' + op, 'key_env': 'DATA_GO_KR_KEY',
-                                               'params': {'type': 'JSON', 'numOfRows': '100', 'pageNo': '1', 'lv': lv, 'regSeCd': '1'}},
-                  {'admmCd': me['stdg'], 'srchFrYm': ym, 'srchToYm': ym})
+            try:
+                key = urllib.parse.unquote(os.environ.get('DATA_GO_KR_KEY', '').strip())
+                t = http_get(url, {'serviceKey': key, 'type': 'JSON', 'numOfRows': '30', 'pageNo': '1', 'lv': lv, 'regSeCd': '1', 'admmCd': me['stdg'], 'srchFrYm': ym, 'srchToYm': ym})
+                items = find_items(parse_body(t))
+                say('[%s lv%s] %d건' % (nm, lv, len(items)))
+                for it in items[:12]:
+                    say('   ' + json.dumps({k: v for k, v in it.items() if not _re2.match(r'^(male|feml)\d+Age', k)}, ensure_ascii=False)[:600])
+            except Exception as e:  # noqa: BLE001
+                say('[%s lv%s] 실패 %s' % (nm, lv, str(e)[:400]))
     probe('admm_population', {'url': 'https://apis.data.go.kr/1741000/admmPpltnHhStus/selectAdmmPpltnHhStus', 'key_env': 'DATA_GO_KR_KEY',
                                'params': {'type': 'JSON', 'numOfRows': '100', 'pageNo': '1', 'lv': '3', 'regSeCd': '1'}},
           {'admmCd': me['stdg'], 'srchFrYm': ym, 'srchToYm': ym})
