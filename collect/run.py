@@ -215,7 +215,7 @@ def collect(state, S, C):
         last = max(L['demand'])
         set_ind(state, 'tour_exp', {k: v.get('22') for k, v in L['demand'][last].items() if k != '강원' and v.get('22') is not None},
                 '%s년 %d월 관광소비강도(한국관광공사)' % (last[:4], int(last[4:])))
-    if stale('events', 3) or not (L.get('events') or {}).get('items') or any(str(x.get('title', '')).startswith('[') for x in (L.get('events') or {}).get('items', [])) or '--force-life' in sys.argv:
+    if stale('events', 3) or not (L.get('events') or {}).get('items') or any(str(x.get('title', '')).startswith(('[', '연극 ')) for x in (L.get('events') or {}).get('items', [])) or '--force-life' in sys.argv:
         try:
             L['events'] = {'at': now().strftime('%Y-%m-%d'), 'items': tour.events()}
             ok(state, 'events', '%d건' % len(L['events']['items']))

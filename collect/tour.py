@@ -310,5 +310,13 @@ def events():
         seen.add(k)
         x['title'] = str(x['title']).strip()
         out.append(x)
-    out.sort(key=lambda x: x['start'])
-    return out
+    # 같은 날 같은 공연이 출처마다 다른 이름으로 올 때(예: '연극 노인의 꿈'과 '노인의 꿈') 하나만 남깁니다
+    def nk(t):
+        return _re.sub(r'[\s&·,:\-"“”\'<>《》]|\d{4}', '', t)
+    keep = []
+    for x in sorted(out, key=lambda x: len(x['title'])):
+        if any(y['start'] == x['start'] and (nk(y['title']) in nk(x['title']) or nk(x['title']) in nk(y['title'])) for y in keep):
+            continue
+        keep.append(x)
+    keep.sort(key=lambda x: x['start'])
+    return keep

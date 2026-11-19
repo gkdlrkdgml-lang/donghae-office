@@ -1087,8 +1087,8 @@ function startApp() {
       return kinds.map(function (k) { return n === '강원 평균' ? avgOf(E, function (o, kk) { return per(kk, k); }) : per(n, k); }); }), null, true));
     var kindsR = ['고속국도', '일반국도', '지방도', '시군도'];
     var road = RD[SN] || {};
-    panel('도로 · ' + fullName(SN), '종류별 개통 길이(m)·포장률', [donut(kindsR.filter(function (k) { return road[k] && road[k]['개통']; }).map(function (k, i) { return [k + ' ' + fmtK(road[k]['개통']) + 'm', road[k]['개통'], ['#1F6FD1', '#F0A04B', '#5DB88E', '#7A4FC4'][i]]; }), fmt(rd['포장률'], 1) + '%', '포장률'),
-      el('div', { style: 'margin-top:8px' }, [colChart(Object.keys(RD).map(function (n) { return [n, ((RD[n] || {})['합계'] || {})['포장률']]; }).filter(function (x) { return x[1] != null; }), regPick, SN, 1, '%')])]);
+    panel('도로 · ' + fullName(SN), '종류별 개통 길이(m) · 아래는 시·군별 포장률(%)', [el('div', { style: 'flex:0 0 44%;min-height:0;display:flex;flex-direction:column' }, [donut(kindsR.filter(function (k) { return road[k] && road[k]['개통']; }).map(function (k, i) { return [k + ' ' + fmtK(road[k]['개통']) + 'm', road[k]['개통'], ['#1F6FD1', '#F0A04B', '#5DB88E', '#7A4FC4'][i]]; }), fmt(rd['포장률'], 1) + '%', '포장률')]),
+      el('div', { style: 'flex:1;min-height:0;display:flex;flex-direction:column;margin-top:6px' }, [colChart(Object.keys(RD).map(function (n) { return [n, ((RD[n] || {})['합계'] || {})['포장률']]; }).filter(function (x) { return x[1] != null; }), regPick, SN, 1, '%')])]);
   }
   function screenCars() {
     var V = (D.life || {}).cars || {}, R = V.regions || {}, SN = R[regName()] ? regName() : D.me, isMe = SN === D.me;
