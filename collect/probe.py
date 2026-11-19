@@ -126,20 +126,17 @@ def main():
             say('[신규 %s] 됨: %s' % (nm, t[:1500].replace('\n', ' ')))
         except Exception as e:  # noqa: BLE001
             say('[신규 %s] 안 됨: %s' % (nm, str(e)[-300:]))
-    kk0 = os.environ.get('KOSIS_KEY', '')
-    import sources as _s0
-    for org, tb in (('116', 'DT_MLTM_5498'), ('101', 'DT_1YL20731')):
-        try:
-            meta = _s0.kosis_meta({'key_env': 'KOSIS_KEY', 'meta_url': 'https://kosis.kr/openapi/statisticsData.do', 'params': {'orgId': org, 'tblId': tb}})
-            objs = {}
-            for m in meta:
-                objs.setdefault(m.get('OBJ_ID'), []).append(m)
-            say('[메타] %s: %s' % (tb, ' / '.join('%s(%s개, %s): %s' % (k, len(v), v[0].get('OBJ_NM'), ', '.join('%s=%s' % (x.get('ITM_ID'), x.get('ITM_NM')) for x in v[:14])) for k, v in objs.items())))
-            say('[메타] %s 동해: %s' % (tb, ', '.join('%s:%s=%s(up %s)' % (x.get('OBJ_ID'), x.get('ITM_ID'), x.get('ITM_NM'), x.get('UP_ITM_ID')) for x in meta if '동해' in str(x.get('ITM_NM')))))
-            t = http_get('https://kosis.kr/openapi/statisticsData.do', {'method': 'getMeta', 'type': 'PRD', 'orgId': org, 'tblId': tb, 'format': 'json', 'jsonVD': 'Y', 'apiKey': kk0})
-            say('[주기] %s: %s' % (tb, t[:300]))
-        except Exception as e:  # noqa: BLE001
-            say('[메타] %s 실패 %s' % (tb, e))
+    from urllib.parse import unquote as _uq3
+    kk = _uq3(os.environ.get('DATA_GO_KR_KEY', '').strip())
+    base = 'https://apis.data.go.kr/B551011/AreaTarDemDsService/'
+    for op in ('areaTarExpDsList', 'areaTarSjrnDsList', 'areaTarExpDsList1', 'areaTarExpDsInfo', 'getAreaTarExpDsList', 'areaTarDemDsList'):
+        for ym in ('202609', '202608'):
+            try:
+                t = http_get(base + op, {'serviceKey': kk, 'MobileOS': 'ETC', 'MobileApp': 'donghae', '_type': 'json', 'baseYm': ym, 'areaCd': '51', 'signguCd': '51170', 'numOfRows': '50', 'pageNo': '1'}, tries=1)
+                say('[수요 %s %s] %s' % (op, ym, t[:1800].replace('\n', ' ')))
+                break
+            except Exception as e:  # noqa: BLE001
+                say('[수요 %s %s] 안 됨 %s' % (op, ym, str(e)[-200:]))
     if os.environ.get('PROBE_FULL') != '1':
         return
     probe('admm_population', {'url': 'https://apis.data.go.kr/1741000/admmPpltnHhStus/selectAdmmPpltnHhStus', 'key_env': 'DATA_GO_KR_KEY',
