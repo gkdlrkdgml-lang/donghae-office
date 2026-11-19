@@ -54,6 +54,11 @@
   section.zoom > * { zoom: 1.45; }
   section.zoom .zbtn { background: var(--blue); color: #fff; }
   #zoomBack { position: fixed; inset: 0; background: rgba(23,32,44,.45); z-index: 50; }
+  .donut { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 12px; min-height: 0; }
+  .dsvg { min-height: 0; display: flex; justify-content: center; }
+  .legend { display: flex; flex-direction: column; gap: 10px; font-size: 15px; }
+  .legend div { display: grid; grid-template-columns: 14px 1fr auto; gap: 8px; align-items: center; }
+  .legend i { width: 14px; height: 14px; border-radius: 3px; display: inline-block; }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; }
   .chip { font-size: 13.5px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #EEF2F7; color: #3D4B5E; white-space: nowrap; }
   .chip.bad { background: #FDEBDD; color: #A4470F; } .chip.good { background: #E2F3E9; color: #1B7A4B; } .chip.navy { background: #E4EEFB; color: #1B3A6B; }
@@ -202,6 +207,42 @@ function startApp() {
       rows.appendChild(row);
     });
     return rows;
+  }
+
+  // 세로 막대(누르면 선택). series: [[이름, 값]], 큰 순으로 그립니다.
+  function colChart(series, onPick, selected, digits, unit) {
+    series = series.slice().sort(function (a, b) { return b[1] - a[1]; });
+    var mx = Math.max.apply(null, series.map(function (c) { return Math.abs(c[1]); })) || 1;
+    var cols = el('div', { class: 'cols tight', style: 'gap:5px' });
+    series.forEach(function (c) {
+      var m = c[0] === D.me, p = c[0] === selected && !m;
+      cols.appendChild(el('div', { class: 'col', style: onPick ? 'cursor:pointer' : '', onclick: onPick ? function () { onPick(c[0]); } : null }, [
+        el('b', { text: fmt(c[1], digits || 0), style: 'font-size:11.5px' + (m ? ';color:#1F6FD1' : p ? ';color:#A4470F' : '') }),
+        el('div', { class: 'c', style: 'height:' + (Math.abs(c[1]) / mx * 82).toFixed(1) + '%;background:' + (m ? '#1F6FD1' : p ? '#D9822B' : '#B8C4D4') + (p ? ';outline:2px solid #D9822B' : '') }),
+        el('span', { text: c[0], style: 'font-size:12px;' + (m ? 'color:#1F6FD1;font-weight:700' : p ? 'color:#A4470F;font-weight:700' : '') })]));
+    });
+    return cols;
+  }
+  // 원형(도넛). parts: [[이름, 값, 색]]
+  function donut(parts, center, sub) {
+    var tot = parts.reduce(function (t, x) { return t + x[1]; }, 0) || 1, R = 80, C = 2 * Math.PI * R, off = 0;
+    var NS = 'http://www.w3.org/2000/svg', svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('viewBox', '0 0 220 220'); svg.setAttribute('style', 'width:100%;height:100%;max-height:260px');
+    parts.forEach(function (x) {
+      var c = document.createElementNS(NS, 'circle'), len = x[1] / tot * C;
+      c.setAttribute('cx', 110); c.setAttribute('cy', 110); c.setAttribute('r', R); c.setAttribute('fill', 'none');
+      c.setAttribute('stroke', x[2]); c.setAttribute('stroke-width', 34);
+      c.setAttribute('stroke-dasharray', len + ' ' + (C - len)); c.setAttribute('stroke-dashoffset', -off);
+      c.setAttribute('transform', 'rotate(-90 110 110)'); svg.appendChild(c); off += len;
+    });
+    [[center, 106, 22, 700, '#1B3A6B'], [sub, 130, 13, 500, '#556274']].forEach(function (t) {
+      var e = document.createElementNS(NS, 'text'); e.setAttribute('x', 110); e.setAttribute('y', t[1]); e.setAttribute('text-anchor', 'middle');
+      e.setAttribute('font-size', t[2]); e.setAttribute('font-weight', t[3]); e.setAttribute('fill', t[4]); e.textContent = t[0]; svg.appendChild(e);
+    });
+    var legend = el('div', { class: 'legend' }, parts.map(function (x) {
+      return el('div', {}, [el('i', { style: 'background:' + x[2] }), el('span', { text: x[0] }), el('b', { text: fmt(x[1] / tot * 100, 1) + '%' })]);
+    }));
+    return el('div', { class: 'donut' }, [el('div', { class: 'dsvg' }, [svg]), legend]);
   }
 
   // ---------- 1. 한눈에 보기 ----------
@@ -381,12 +422,21 @@ function startApp() {
 
     function pick(n) { finSel = (n === finSel ? D.me : n); render(); }
     var hl = isMe ? null : SN;
+    // 왼쪽: 예산 규모(가로 목록)
     var s1 = el('section', {}, [el('div', { class: 'sh' }, [el('h2', { text: '예산 규모' }), el('small', { text: ly + ' 당초 · 억 원' })])]);
     s1.appendChild(rankList(rb, pick, hl)); view.appendChild(s1);
+    // 가운데: 자체수입(세로 막대)
     var s2 = el('section', {}, [el('div', { class: 'sh' }, [el('h2', { text: '자체수입' }), el('small', { text: '지방세 + 세외수입 · 억 원' })])]);
-    s2.appendChild(rankList(ro, pick, hl)); view.appendChild(s2);
-    var s3 = el('section', {}, [el('div', { class: 'sh' }, [el('h2', { text: '재정자립도' }), el('small', { text: '높을수록 좋음 · %' })])]);
-    if (fi) s3.appendChild(rankList(fi, pick, hl)); else s3.appendChild(el('div', { class: 'empty', text: '자료 없음' }));
+    s2.appendChild(colChart(names.map(function (n) { return [n, (am[n].own || 0) / 1e8]; }), pick, hl, 0));
+    view.appendChild(s2);
+    // 오른쪽: 예산 구성(원형) + 재정자립도(세로 막대)
+    var s3 = el('section', { style: 'display:grid;grid-template-rows:auto minmax(0,0.9fr) auto minmax(0,1.1fr);gap:10px' }, [
+      el('div', { class: 'sh' }, [el('h2', { text: '예산 구성 · ' + full }), el('small', { text: '억 원' })]),
+      donut([['자체수입 ' + eok(sel.own) + '억', sel.own, '#2E9C6A'], ['의존재원 등 ' + eok(dep) + '억', dep, '#C9D3E0']], eok(sel.budget) + '억', '예산 규모'),
+      el('div', { class: 'sh' }, [el('h2', { text: '재정자립도' }), el('small', { text: '높을수록 좋음 · %' })])
+    ]);
+    if (fi) s3.appendChild(colChart(fi.ranking.map(function (r) { return [r.name, r.value]; }), pick, hl, 1));
+    else s3.appendChild(el('div', { class: 'empty', text: '자료 없음' }));
     view.appendChild(s3);
   }
 
