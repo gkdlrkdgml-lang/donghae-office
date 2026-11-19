@@ -341,10 +341,19 @@ function startApp() {
     var right = el('div', { style: 'display:grid;grid-template-rows:auto auto 1fr;gap:16px;min-height:0' });
     var k = el('div', { class: 'kpis', style: 'grid-template-columns:repeat(2,minmax(0,1fr))' });
     function kpi(l, v, u, n) { k.appendChild(el('div', { class: 'kpi' }, [el('div', { class: 'l', text: l }), el('div', { class: 'v' }, [v, el('small', { text: u })]), el('div', { class: 'n', text: n })])); }
-    kpi(sel.name + ' 재정자립도', fmt(sel.value, 1), '%', '도내 ' + sel.rank + '위 · ' + judgeLabel(sel.judge));
-    kpi('도내 평균', fmt(avg, 1), '%', sel.name + '와 차이 ' + (sel.value - avg >= 0 ? '+' : '') + fmt(sel.value - avg, 1) + '%p');
-    kpi('도내 중앙값', fmt(median, 1), '%', '중간 순위로 올라가려면 ' + (median - me.value > 0 ? '+' + fmt(median - me.value, 1) + '%p' : '이미 도달'));
-    kpi('1위', fmt(f.ranking[0].value, 1), '%', f.ranking[0].name);
+    var AM = ((D.finance || {}).amounts || {}), amI = AM.initial || {}, amF = AM.final || {};
+    var ly = Object.keys(amI).sort().pop(), am = ly ? amI[ly] : {};
+    function eok(v) { return fmt(v / 1e8, 0); }
+    function arank(n, fld) { var arr = Object.keys(am).map(function (x) { return am[x][fld]; }).sort(function (p, q) { return q - p; }); return arr.indexOf(am[n][fld]) + 1; }
+    kpi(sel.name + ' 재정자립도', fmt(sel.value, 1), '%', '도내 ' + sel.rank + '위 · ' + judgeLabel(sel.judge) + ' · 도내 평균 ' + fmt(avg, 1) + '%');
+    if (am[sel.name]) {
+      kpi(ly + ' 당초 예산 규모', eok(am[sel.name].budget), '억 원', '도내 ' + arank(sel.name, 'budget') + '위 / ' + Object.keys(am).length + ' · 일반회계 세입');
+      kpi('자체수입', eok(am[sel.name].own), '억 원', '지방세 + 세외수입 · 도내 ' + arank(sel.name, 'own') + '위');
+    } else {
+      kpi('도내 중앙값', fmt(median, 1), '%', '');
+      kpi('도내 평균', fmt(avg, 1), '%', '');
+    }
+    kpi('도내 1위', fmt(f.ranking[0].value, 1), '%', f.ranking[0].name + ' · 동해와 차이 ' + fmt(f.ranking[0].value - me.value, 1) + '%p');
     right.appendChild(k);
     right.appendChild(el('section', {}, [el('div', { class: 'sh' }, [el('h2', { text: D.me + '시와 비교' })]),
       el('div', { class: 'note' }, [el('b', { text: sel.name === D.me ? '동해시를 선택했습니다. ' : sel.name + ' vs 동해 ' }),
@@ -359,7 +368,8 @@ function startApp() {
       var a = ini[cy][sel.name], b = fin[cy][sel.name], d = b - a;
       var dm = (fin[cy][D.me] != null && ini[cy][D.me] != null) ? fin[cy][D.me] - ini[cy][D.me] : null;
       var k2 = el('div', { class: 'kpis', style: 'grid-template-columns:repeat(3,minmax(0,1fr))' });
-      [[cy + ' 당초', fmt(a, 1), '%', '예산 편성 때'], [cy + ' 최종', fmt(b, 1), '%', '연말 추경 반영'],
+      var ba = (amI[cy] || {})[sel.name], bb = (amF[cy] || {})[sel.name];
+      [[cy + ' 당초', fmt(a, 1), '%', ba ? '예산 ' + eok(ba.budget) + '억 원' : '예산 편성 때'], [cy + ' 최종', fmt(b, 1), '%', bb ? '예산 ' + eok(bb.budget) + '억 원' + (ba ? ' (+' + eok(bb.budget - ba.budget) + '억)' : '') : '연말 추경 반영'],
        ['변화', (d >= 0 ? '+' : '') + fmt(d, 1), '%p', sel.name === D.me || dm == null ? '추경 때 의존재원이 늘면 낮아짐' : '동해시는 ' + (dm >= 0 ? '+' : '') + fmt(dm, 1) + '%p']].forEach(function (x) {
         k2.appendChild(el('div', { class: 'kpi' }, [el('div', { class: 'l', text: x[0] }), el('div', { class: 'v' }, [x[1], el('small', { text: x[2] })]), el('div', { class: 'n', text: x[3] })]));
       });

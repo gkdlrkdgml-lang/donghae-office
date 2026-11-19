@@ -345,6 +345,9 @@ def age(S, C, ym=None):
 
 
 # ---------------------------------------------------------------- 재정자립도 (당초·최종)
+AMOUNTS = {}  # 예산 규모·자체수입(원): {'finance'|'finance_final': {연도: {시군: {...}}}}
+
+
 def finance_years(S, C, key='finance'):
     """{연도: {시군: 값}} 전체를 돌려줍니다."""
     src = S['sources'][key]
@@ -377,6 +380,9 @@ def finance_years(S, C, key='finance'):
         y = pick(r, f['year'])
         if name and v is not None and y:
             by.setdefault(str(y)[:4], {})[name] = v
+            bud, own = to_num(r.get('pfa_amt2')), to_num(r.get('pfa_amt3'))
+            if bud:
+                AMOUNTS.setdefault(key, {}).setdefault(str(y)[:4], {})[name] = {'budget': bud, 'own': own}
     by = {y: d for y, d in by.items() if len(d) >= 15}
     if not by:
         raise RuntimeError('%s 응답에서 강원 시·군 값을 찾지 못함' % key)

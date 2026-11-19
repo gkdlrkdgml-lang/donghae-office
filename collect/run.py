@@ -115,6 +115,8 @@ def collect(state, S, C):
         ok(state, 'finance_final', '%s년까지' % max(state['finance']['final']))
     except Exception as e:  # noqa: BLE001
         fail(state, 'finance_final', e)
+    if sources.AMOUNTS:
+        state.setdefault('finance', {})['amounts'] = {'initial': sources.AMOUNTS.get('finance', {}), 'final': sources.AMOUNTS.get('finance_final', {})}
 
 
 def demo(state, S, C):
