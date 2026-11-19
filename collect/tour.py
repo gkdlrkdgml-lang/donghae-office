@@ -320,3 +320,43 @@ def events():
         keep.append(x)
     keep.sort(key=lambda x: x['start'])
     return keep
+
+
+# ---------------------------------------------------------------- 주차장(전국주차장정보표준데이터 → 강원 18개 시·군 집계)
+def parking(C):
+    from common import match_region
+    rows = _std_scan('tn_pubr_prkplce_info_api', '주차장 표준데이터', 60)
+    out = {}
+    for r in rows:
+        addr = ' '.join(str(r.get(k) or '') for k in ('rdnmadr', 'lnmadr', 'insttNm', 'institutionNm'))
+        if '강원' not in addr:
+            continue
+        nm = str(r.get('insttNm') or '').replace('강원특별자치도', '').replace('강원도', '').strip()
+        name = match_region(nm, C['regions'])
+        if not name:
+            continue
+        o = out.setdefault(name, {'lots': 0, 'spaces': 0, 'public': 0, 'public_sp': 0, 'private': 0, 'free': 0, 'paid': 0, '노상': 0, '노외': 0, '부설': 0, 'items': []})
+        sp = to_num(r.get('prkcmprt')) or 0
+        o['lots'] += 1
+        o['spaces'] += sp
+        if str(r.get('prkplceSe')) == '공영':
+            o['public'] += 1
+            o['public_sp'] += sp
+        else:
+            o['private'] += 1
+        if '무료' in str(r.get('parkingchrgeInfo')):
+            o['free'] += 1
+        elif r.get('parkingchrgeInfo'):
+            o['paid'] += 1
+        t = str(r.get('prkplceType') or '')
+        if t in o:
+            o[t] += 1
+        if name == C['me']:
+            o['items'].append({'name': r.get('prkplceNm'), 'type': t, 'se': r.get('prkplceSe'), 'sp': sp, 'fee': r.get('parkingchrgeInfo'),
+                               'lat': to_num(r.get('latitude')), 'lng': to_num(r.get('longitude')), 'ref': r.get('referenceDate')})
+    for k, o in out.items():
+        if k != C['me']:
+            o.pop('items')
+    if len(out) < 10:
+        raise RuntimeError('주차장: 강원 시·군 %d곳만 찾음' % len(out))
+    return out
