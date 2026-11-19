@@ -1,0 +1,25 @@
+name: API 점검(키 넣은 뒤 한 번)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: 각 API 한 번씩 호출
+        env:
+          TZ: Asia/Seoul
+          DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
+          LOFIN_KEY: ${{ secrets.LOFIN_KEY }}
+          KOSIS_KEY: ${{ secrets.KOSIS_KEY }}
+          SAFETY_DATA_KEY: ${{ secrets.SAFETY_DATA_KEY }}
+        run: python collect/probe.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: probe-result
+          path: probe_결과.txt

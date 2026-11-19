@@ -1,0 +1,54 @@
+name: 매일 수집 · 화면 갱신
+
+on:
+  schedule:
+    - cron: '7 21 * * *'   # 매일 06:07 (한국시간). 정각은 GitHub이 붐벼서 7분 뒤로.
+  workflow_dispatch:        # Actions 탭에서 "Run workflow"로 바로 실행
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: collect
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: 수집·계산
+        env:
+          TZ: Asia/Seoul
+          DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
+          LOFIN_KEY: ${{ secrets.LOFIN_KEY }}
+          KOSIS_KEY: ${{ secrets.KOSIS_KEY }}
+          SAFETY_DATA_KEY: ${{ secrets.SAFETY_DATA_KEY }}
+        run: |
+          # 키를 아직 안 넣었으면 시연용 값으로 화면만 띄웁니다(키를 넣으면 자동으로 실제 수집).
+          if [ -z "$DATA_GO_KR_KEY" ]; then python collect/run.py --demo; else python collect/run.py; fi
+      - name: 결과 저장(커밋)
+        run: |
+          git config user.name "donghae-office-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add web/data
+          git diff --cached --quiet || git commit -m "데이터 갱신 $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M')"
+          git push
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web
+
+  deploy:
+    needs: collect
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>동해시 디지털 집무실</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg: #0B1422; --panel: #111D30; --line: #22324B; --ink: #E8EEF7; --sub: #A9B7CC; --mute: #7C8BA5;
+    --blue: #5AB0FF; --blue2: #3C7DBF; --good: #8FE3B9; --goodbg: #173A2C; --warn: #FFC98A; --warnbg: #3A2A12;
+    --bad: #FF9B9B; --badbg: #4A1E1E; --me: #16304F;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  body { font-family: 'Noto Sans KR', 'Malgun Gothic', system-ui, sans-serif; color: var(--ink); font-variant-numeric: tabular-nums; }
+  #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; background: var(--bg);
+           display: grid; grid-template-rows: 64px minmax(0, 1fr); }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 28px; border-bottom: 1px solid var(--line); background: #0F1A2B; }
+  .brand { display: flex; align-items: center; gap: 12px; font-size: 20px; font-weight: 700; }
+  .brand i { width: 38px; height: 38px; border-radius: 8px; background: #1E3A5F; display: inline-block; }
+  nav { display: flex; gap: 4px; }
+  nav button { font: inherit; font-size: 16px; color: #C3CFE0; background: none; border: 0; padding: 8px 16px; border-radius: 6px; cursor: pointer; min-height: 40px; }
+  nav button[aria-current="page"] { background: #1E3A5F; color: #fff; font-weight: 700; }
+  .hright { display: flex; align-items: center; gap: 14px; font-size: 14px; color: var(--sub); }
+  .badge { padding: 5px 10px; border-radius: 999px; font-size: 13px; }
+  .badge.demo { background: var(--warnbg); color: var(--warn); border: 1px solid #6B4A1C; }
+  .badge.late { background: var(--badbg); color: var(--bad); border: 1px solid #7A3434; }
+  #clock { font-size: 18px; color: var(--ink); font-weight: 700; }
+  main { padding: 24px 28px 20px; min-height: 0; display: grid; gap: 16px; }
+  .title { grid-column: 1 / -1; display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+  .title h1 { margin: 0; font-size: 28px; }
+  .title span { font-size: 14px; color: var(--sub); }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px 20px; min-height: 0; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+  section h2 { margin: 0; font-size: 20px; }
+  .sh { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .sh small { font-size: 13px; color: var(--sub); }
+  .kpis { grid-column: 1 / -1; display: grid; gap: 12px; }
+  .kpi { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .kpi .l { font-size: 14px; color: var(--sub); }
+  .kpi .v { font-size: 34px; font-weight: 700; }
+  .kpi .v small { font-size: 16px; color: var(--sub); font-weight: 400; margin-left: 4px; }
+  .kpi .n { font-size: 13.5px; color: var(--sub); }
+  .rows { display: flex; flex-direction: column; justify-content: space-between; flex: 1 1 auto; min-height: 0; }
+  .row { display: grid; grid-template-columns: 28px 56px minmax(0, 1fr) 72px; gap: 10px; align-items: center; font-size: 16px; padding: 2px 6px; border-radius: 6px; cursor: pointer; }
+  .row.me { background: var(--me); font-weight: 700; }
+  .row.sel { outline: 2px solid var(--blue); }
+  .row .rk { color: var(--sub); text-align: right; font-weight: 400; }
+  .row .v { text-align: right; }
+  .bar { height: 14px; background: #0C1626; border-radius: 4px; overflow: hidden; }
+  .bar > div { height: 100%; border-radius: 4px; }
+  .tag { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 13px; }
+  .tag.strong { background: var(--goodbg); color: var(--good); }
+  .tag.weak { background: var(--badbg); color: var(--bad); }
+  .tag.middle { background: #2A2F3A; color: #C3CFE0; }
+  .tag.excluded { background: #232A36; color: var(--mute); }
+  .list { display: flex; flex-direction: column; gap: 8px; }
+  .item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; background: #0C1626; border-radius: 8px; padding: 12px 14px; font-size: 16px; }
+  .item b { font-size: 18px; }
+  .empty { color: var(--mute); font-size: 15px; padding: 8px 2px; }
+  .note { background: #1A2433; border: 1px solid #3A4A63; border-radius: 8px; padding: 10px 12px; font-size: 14px; line-height: 1.55; color: #D3DCE9; }
+  .note b { color: var(--warn); }
+  table { width: 100%; border-collapse: collapse; font-size: 15.5px; }
+  th { text-align: left; color: var(--sub); font-weight: 400; font-size: 13.5px; padding: 6px; border-bottom: 1px solid var(--line); }
+  td { padding: 7px 6px; border-bottom: 1px solid #1A2840; }
+  td.r, th.r { text-align: right; }
+  .cols { display: flex; align-items: flex-end; gap: 10px; flex: 1 1 auto; min-height: 0; }
+  .col { flex: 1 1 0; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 6px; }
+  .col .c { width: 100%; border-radius: 4px 4px 0 0; }
+  .col span { font-size: 13px; color: var(--sub); text-align: center; }
+  .col b { font-size: 15px; }
+  /* 한눈에 보기: 지표 기둥 */
+  .pillars { display: flex; gap: 18px; align-items: stretch; flex: 1 1 auto; min-height: 0; }
+  .pillar { flex: 1 1 0; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  .ptrack { flex: 1 1 auto; background: #0C1626; border-radius: 8px; position: relative; overflow: hidden; }
+  .ptrack .fill { position: absolute; left: 0; right: 0; bottom: 0; border-radius: 8px 8px 0 0; }
+  .ptrack .lbl { position: absolute; left: 0; right: 0; top: 10px; text-align: center; font-size: 26px; font-weight: 700; }
+  .ptrack .lbl small { display: block; font-size: 14px; color: var(--sub); font-weight: 400; }
+  .ptrack .g25 { position: absolute; left: 0; right: 0; border-top: 1px dashed #3A5274; }
+  .pname { font-size: 15.5px; text-align: center; font-weight: 700; min-height: 44px; }
+  .pfield { font-size: 13px; text-align: center; color: var(--sub); }
+  /* 액자 */
+  .frame { grid-template-columns: 1fr; place-items: center; text-align: center; }
+  .fclock { font-size: 220px; font-weight: 700; letter-spacing: -4px; line-height: 1; }
+  .fdate { font-size: 40px; color: var(--sub); margin-top: 12px; }
+  .fcard { margin-top: 56px; min-width: 1100px; background: rgba(17, 29, 48, 0.8); border: 1px solid var(--line); border-radius: 20px; padding: 36px 48px; }
+  .fcard .k { font-size: 26px; color: var(--sub); }
+  .fcard .val { font-size: 76px; font-weight: 700; margin-top: 8px; }
+  .fcard .sub { font-size: 24px; color: #C3CFE0; margin-top: 6px; }
+  .fslogan { margin-top: 40px; font-size: 22px; color: var(--mute); }
+  #stage.framemode { grid-template-rows: minmax(0, 1fr); }
+  #stage.framemode header { display: none; }
+  .help { position: absolute; right: 20px; bottom: 12px; font-size: 13px; color: #4F5E77; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <header>
+    <div class="brand"><i aria-hidden="true"></i><span id="appTitle">동해시 디지털 집무실</span></div>
+    <nav id="nav" aria-label="화면 메뉴"></nav>
+    <div class="hright"><span id="badges"></span><span id="updated"></span><span id="clock"></span></div>
+  </header>
+  <main id="view"></main>
+</div>
+<div class="help">← → 화면 넘김 · F 액자 · 숫자키 메뉴</div>
+<script>
+function startApp() {
+  'use strict';
+  var D = window.DONGHAE_DATA;
+  var stage = document.getElementById('stage');
+  var view = document.getElementById('view');
+
+  // ---------- 화면 크기에 맞춰 1920×1080을 늘리거나 줄임 ----------
+  function fit() {
+    var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+    stage.style.transform = 'translate(' + (window.innerWidth - 1920 * s) / 2 + 'px,' + (window.innerHeight - 1080 * s) / 2 + 'px) scale(' + s + ')';
+  }
+  window.addEventListener('resize', fit); fit();
+
+  // ---------- 작은 도우미 ----------
+  function el(tag, attrs, kids) {
+    var e = document.createElement(tag);
+    if (attrs) Object.keys(attrs).forEach(function (k) {
+      if (k === 'style') e.style.cssText = attrs[k];
+      else if (k === 'text') e.textContent = attrs[k];
+      else if (k.slice(0, 2) === 'on') e.addEventListener(k.slice(2), attrs[k]);
+      else e.setAttribute(k, attrs[k]);
+    });
+    (kids || []).forEach(function (c) { if (c != null) e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
+    return e;
+  }
+  function fmt(v, d) { return v == null ? '–' : Number(v).toLocaleString('ko-KR', { minimumFractionDigits: d, maximumFractionDigits: d }); }
+  function judgeLabel(j) { return { strong: '강점', weak: '개선 필요', middle: '중간', excluded: '판정 제외' }[j] || ''; }
+  function judgeColor(j) { return { strong: '#3FA77A', weak: '#C0605F', middle: '#3C7DBF', excluded: '#4F5E77' }[j] || '#3C7DBF'; }
+  function ind(id) { return (D.indicators || []).filter(function (i) { return i.id === id; })[0]; }
+  function ymLabel(ym) { return ym ? ym.slice(0, 4) + '년 ' + Number(ym.slice(4)) + '월' : ''; }
+
+  if (!D) {
+    setTimeout(function () { location.reload(); }, 30 * 60 * 1000);
+    view.appendChild(el('div', { class: 'empty', style: 'font-size:28px;padding:80px', text: '데이터 파일을 받지 못했습니다. 인터넷 연결을 확인해 주세요. 30분 뒤 자동으로 다시 시도합니다.' }));
+    return;
+  }
+
+  document.getElementById('appTitle').textContent = D.title;
+  var badges = document.getElementById('badges');
+  if (D.demo) badges.appendChild(el('span', { class: 'badge demo', text: '시연용 가짜 값' }));
+  var gen = new Date(D.generated_at.replace(' ', 'T') + ':00+09:00');
+  if ((Date.now() - gen.getTime()) > 36 * 3600 * 1000) badges.appendChild(el('span', { class: 'badge late', text: '갱신 지연' }));
+  document.getElementById('updated').textContent = '최종 갱신 ' + D.generated_at;
+
+  // ---------- 메뉴 ----------
+  var nav = document.getElementById('nav');
+  var order = D.menu.map(function (m) { return m.id; });
+  var current = (location.hash || '#' + order[0]).slice(1);
+  if (order.indexOf(current) < 0) current = order[0];
+  D.menu.forEach(function (m, i) {
+    nav.appendChild(el('button', { type: 'button', 'data-id': m.id, text: (i + 1) + ' ' + m.label, onclick: function () { go(m.id); } }));
+  });
+  function go(id) { current = id; if (location.hash !== '#' + id) location.hash = id; render(); }
+  window.addEventListener('hashchange', function () {
+    var h = location.hash.slice(1);
+    if (h !== current && order.indexOf(h) >= 0) { current = h; render(); }
+  });
+
+  // ---------- 순위 막대 목록 ----------
+  function rankList(i, onPick, selected) {
+    var max = Math.max.apply(null, i.ranking.map(function (r) { return Math.abs(r.value); })) || 1;
+    var rows = el('div', { class: 'rows' });
+    i.ranking.forEach(function (r) {
+      var me = r.name === D.me;
+      var w = Math.abs(r.value) / max * 100;
+      var row = el('div', { class: 'row' + (me ? ' me' : '') + (selected === r.name ? ' sel' : ''), role: onPick ? 'button' : null, tabindex: onPick ? '0' : null,
+        onclick: onPick ? function () { onPick(r.name); } : null }, [
+        el('span', { class: 'rk', text: String(r.rank) }),
+        el('span', { text: r.name }),
+        el('div', { class: 'bar' }, [el('div', { style: 'width:' + w.toFixed(1) + '%;background:' + (me ? '#5AB0FF' : (r.judge === 'weak' ? '#8A5A2E' : r.judge === 'strong' ? '#2F6B57' : '#3E4D66')) })]),
+        el('span', { class: 'v', text: fmt(r.value, i.digits) })
+      ]);
+      if (!onPick) { row.removeAttribute('role'); row.removeAttribute('tabindex'); row.style.cursor = 'default'; }
+      rows.appendChild(row);
+    });
+    return rows;
+  }
+
+  // ---------- 1. 한눈에 보기 ----------
+  function screenMain() {
+    var list = D.indicators;
+    view.style.gridTemplateColumns = 'minmax(0, 1.6fr) minmax(0, 1fr)';
+    view.style.gridTemplateRows = '44px minmax(0, 1fr)';
+    view.appendChild(el('div', { class: 'title' }, [
+      el('h1', { text: '강원 ' + D.regions.length + '개 시·군 중 ' + D.me + '시의 위치' }),
+      el('span', { text: '핵심지표 ' + list.length + '개 · 막대 높이 = 도내 백분위 · 점선 = 상·하위 25%' })
+    ]));
+    var pillars = el('div', { class: 'pillars' });
+    list.forEach(function (i) {
+      var m = i.me || {};
+      var h = m.pct == null ? 0 : Math.max(4, m.pct);
+      pillars.appendChild(el('div', { class: 'pillar' }, [
+        el('div', { class: 'pfield', text: i.field }),
+        el('div', { class: 'ptrack' }, [
+          el('div', { class: 'g25', style: 'bottom:75%' }), el('div', { class: 'g25', style: 'bottom:25%' }),
+          el('div', { class: 'fill', style: 'height:' + h + '%;background:' + judgeColor(m.judge) }),
+          el('div', { class: 'lbl' }, [m.rank ? m.rank + '위' : '–', el('small', { text: '/ ' + i.n + ' · ' + fmt(m.value, i.digits) + i.unit })])
+        ]),
+        el('div', { class: 'pname', text: i.name }),
+        el('div', { style: 'text-align:center' }, [el('span', { class: 'tag ' + (m.judge || 'middle'), text: judgeLabel(m.judge) })])
+      ]));
+    });
+    view.appendChild(el('section', {}, [
+      el('div', { class: 'sh' }, [el('h2', { text: '지표별 도내 순위' }), el('small', { text: '실제 데이터가 붙은 지표만 표시' })]),
+      pillars
+    ]));
+    function group(j, title) {
+      var items = list.filter(function (i) { return i.me && i.me.judge === j; });
+      var box = el('div', { class: 'list' });
+      if (!items.length) box.appendChild(el('div', { class: 'empty', text: '해당 지표 없음' }));
+      items.forEach(function (i) {
+        box.appendChild(el('div', { class: 'item' }, [
+          el('div', {}, [el('b', { text: i.name }), el('div', { style: 'font-size:13.5px;color:#A9B7CC', text: i.source + ' · ' + i.basis })]),
+          el('span', { class: 'tag ' + j, text: i.me.rank + '위 / ' + i.n })
+        ]));
+      });
+      return el('section', {}, [el('div', { class: 'sh' }, [el('h2', { text: title })]), box]);
+    }
+    var right = el('div', { style: 'display:grid;grid-template-rows:auto auto 1fr;gap:16px;min-height:0' }, [
+      group('strong', '강점 · 도내 상위 ' + D.judge.strong_pct + '%'),
+      group('weak', '개선 필요 · 도내 하위 ' + D.judge.weak_pct + '%'),
+      group('excluded', '판정 제외')
+    ]);
+    view.appendChild(right);
+  }
+
+  // ---------- 2. 행정 ----------
+  function screenAdmin() {
+    var A = D.admin, me = A.regions[D.me] || {};
+    var pc = ind('pop_change'), wa = ind('working_age'), el65 = ind('elderly');
+    view.style.gridTemplateColumns = 'minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.9fr)';
+    view.style.gridTemplateRows = '44px auto minmax(0, 1fr)';
+    var diff = me.prev ? me.total - me.prev : null;
+    view.appendChild(el('div', { class: 'title' }, [
+      el('h1', { text: D.me + '시 인구 ' + fmt(me.total, 0) + '명' + (diff != null ? ' · 1년 새 ' + (diff >= 0 ? '+' : '') + fmt(diff, 0) + '명' : '') }),
+      el('span', { text: '행정안전부 주민등록 인구 · ' + ymLabel(A.ym) + ' 기준' })
+    ]));
+    var k = el('div', { class: 'kpis', style: 'grid-template-columns:repeat(5,minmax(0,1fr))' });
+    function kpi(l, v, u, n) { k.appendChild(el('div', { class: 'kpi' }, [el('div', { class: 'l', text: l }), el('div', { class: 'v' }, [v, el('small', { text: u })]), el('div', { class: 'n', text: n })])); }
+    kpi('총인구', fmt(me.total, 0), '명', me.prev ? '전년 같은 달 ' + fmt(me.prev, 0) + '명' : '');
+    kpi('인구 증감률', pc && pc.me ? fmt(pc.me.value, 2) : '–', '%', pc && pc.me ? '도내 ' + pc.me.rank + '위 / ' + pc.n : '');
+    kpi('세대수', fmt(me.hh, 0), '세대', me.hh ? '세대당 ' + fmt(me.total / me.hh, 2) + '명' : '');
+    kpi('생산연령인구 비율', wa && wa.me ? fmt(wa.me.value, 1) : '–', '%', wa && wa.me ? '도내 ' + wa.me.rank + '위 / ' + wa.n : '연령 자료 연결 전');
+    kpi('고령인구 비율', el65 && el65.me ? fmt(el65.me.value, 1) : '–', '%', el65 && el65.me ? '도내 ' + el65.me.rank + '위 · 판정 제외' : '연령 자료 연결 전');
+    view.appendChild(k);
+
+    var s1 = el('section', {}, [el('div', { class: 'sh' }, [el('h2', { text: '인구 증감률 · 강원 18개 시·군' }), el('small', { text: '전년 같은 달 대비 %' })])]);
+    if (pc) s1.appendChild(rankList(pc)); else s1.appendChild(el('div', { class: 'empty', text: '자료 없음' }));
+    view.appendChild(s1);
+
+    var s2 = el('section', {}, [el('div', { class: 'sh' }, [el('h2', { text: '연령대별 인구' }), el('small', { text: '10세 단위 · 명' })])]);
+    var b = A.age_bands;
+    if (b) {
+      var keys = ['0', '10', '20', '30', '40', '50', '60', '70', '80', '90', '100'];
+      var mx = Math.max.apply(null, keys.map(function (x) { return b[x] || 0; })) || 1;
+      var cols = el('div', { class: 'cols' });
+      keys.forEach(function (x) {
+        cols.appendChild(el('div', { class: 'col' }, [el('b', { text: fmt(b[x], 0) }),
+          el('div', { class: 'c', style: 'height:' + ((b[x] || 0) / mx * 85).toFixed(1) + '%;background:' + (Number(x) >= 70 ? '#C98A4B' : '#3C7DBF') }),
+          el('span', { text: x === '100' ? '100+' : x + '대' })]));
+      });
+      s2.appendChild(cols);
+      s2.appendChild(el('div', { class: 'note' }, [el('b', { text: '기준 ' }), '생산연령 = 만 15~64세, 고령 = 만 65세 이상. 주민등록 연령별 인구로 정확히 셈한 값입니다.']));
+    } else s2.appendChild(el('div', { class: 'empty', text: '연령 자료 연결 전입니다(점검 스크립트 결과로 설정).' }));
+    view.appendChild(s2);
+
+    var s3 = el('section', {}, [el('div', { class: 'sh' }, [el('h2', { text: '동별 인구' }), el('small', { text: '많은 순' })])]);
+    var dongs = Object.keys(A.dongs || {}).map(function (n) { return [n, A.dongs[n]]; }).sort(function (a, c) { return c[1].total - a[1].total; });
+    var tot = dongs.reduce(function (s, d) { return s + d[1].total; }, 0) || 1;
+    var tb = el('tbody');
+    dongs.slice(0, 16).forEach(function (d) {
+      tb.appendChild(el('tr', {}, [el('td', { text: d[0] }), el('td', { class: 'r', text: fmt(d[1].total, 0) }), el('td', { class: 'r', text: fmt(d[1].hh, 0) }), el('td', { class: 'r', text: (d[1].total / tot * 100).toFixed(1) + '%' })]));
+    });
+    s3.appendChild(el('table', {}, [el('thead', {}, [el('tr', {}, [el('th', { text: '동' }), el('th', { class: 'r', text: '인구' }), el('th', { class: 'r', text: '세대' }), el('th', { class: 'r', text: '비중' })])]), tb]));
+    if (!dongs.length) s3.appendChild(el('div', { class: 'empty', text: '자료 없음' }));
+    view.appendChild(s3);
+  }
+
+  // ---------- 3. 재정 ----------
+  var finSel = null;
+  function screenFinance() {
+    var f = ind('fin_indep');
+    finSel = finSel || D.me;
+    view.style.gridTemplateColumns = 'minmax(0, 1.3fr) minmax(0, 1fr)';
+    view.style.gridTemplateRows = '44px minmax(0, 1fr)';
+    var me = f.me || {};
+    var vals = f.ranking.map(function (r) { return r.value; });
+    var avg = vals.reduce(function (s, v) { return s + v; }, 0) / vals.length;
+    var sorted = vals.slice().sort(function (a, b) { return a - b; });
+    var median = sorted.length % 2 ? sorted[(sorted.length - 1) / 2] : (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2;
+    view.appendChild(el('div', { class: 'title' }, [
+      el('h1', { text: '재정자립도 ' + fmt(me.value, 1) + '% · 도내 ' + me.rank + '위 / ' + f.n }),
+      el('span', { text: f.source + ' · ' + f.basis + ' · 시·군을 누르면 오른쪽이 바뀝니다' })
+    ]));
+    var s1 = el('section', {}, [el('div', { class: 'sh' }, [el('h2', { text: '재정자립도 · 강원 18개 시·군' }), el('small', { text: '높을수록 좋음 · %' })])]);
+    s1.appendChild(rankList(f, function (n) { finSel = n; render(); }, finSel));
+    view.appendChild(s1);
+    var sel = f.ranking.filter(function (r) { return r.name === finSel; })[0] || me;
+    var right = el('div', { style: 'display:grid;grid-template-rows:auto auto 1fr;gap:16px;min-height:0' });
+    var k = el('div', { class: 'kpis', style: 'grid-template-columns:repeat(2,minmax(0,1fr))' });
+    function kpi(l, v, u, n) { k.appendChild(el('div', { class: 'kpi' }, [el('div', { class: 'l', text: l }), el('div', { class: 'v' }, [v, el('small', { text: u })]), el('div', { class: 'n', text: n })])); }
+    kpi(sel.name + ' 재정자립도', fmt(sel.value, 1), '%', '도내 ' + sel.rank + '위 · ' + judgeLabel(sel.judge));
+    kpi('도내 평균', fmt(avg, 1), '%', sel.name + '와 차이 ' + (sel.value - avg >= 0 ? '+' : '') + fmt(sel.value - avg, 1) + '%p');
+    kpi('도내 중앙값', fmt(median, 1), '%', '중간 순위로 올라가려면 ' + (median - me.value > 0 ? '+' + fmt(median - me.value, 1) + '%p' : '이미 도달'));
+    kpi('1위', fmt(f.ranking[0].value, 1), '%', f.ranking[0].name);
+    right.appendChild(k);
+    right.appendChild(el('section', {}, [el('div', { class: 'sh' }, [el('h2', { text: D.me + '시와 비교' })]),
+      el('div', { class: 'note' }, [el('b', { text: sel.name === D.me ? '동해시를 선택했습니다. ' : sel.name + ' vs 동해 ' }),
+        sel.name === D.me ? '왼쪽 목록에서 다른 시·군을 누르면 동해시와의 차이가 여기에 나옵니다.'
+          : sel.name + '는 ' + fmt(sel.value, 1) + '%로 동해시보다 ' + fmt(Math.abs(sel.value - me.value), 1) + '%p ' + (sel.value > me.value ? '높습니다.' : '낮습니다.')])]));
+    // 당초 vs 최종: 같은 해끼리만 비교합니다(최종은 연말이 지나야 나오므로 보통 작년).
+    var F = D.finance || {}, ini = F.initial || {}, fin = F.final || {};
+    var both = Object.keys(fin).filter(function (y) { return ini[y]; }).sort();
+    var cy = both[both.length - 1];
+    var s3 = el('section', {}, [el('div', { class: 'sh' }, [el('h2', { text: '당초 → 최종 · ' + sel.name }), el('small', { text: cy ? cy + '년 · 연말 추경 반영 후 변화' : '' })])]);
+    if (cy && ini[cy][sel.name] != null && fin[cy][sel.name] != null) {
+      var a = ini[cy][sel.name], b = fin[cy][sel.name], d = b - a;
+      var dm = (fin[cy][D.me] != null && ini[cy][D.me] != null) ? fin[cy][D.me] - ini[cy][D.me] : null;
+      var k2 = el('div', { class: 'kpis', style: 'grid-template-columns:repeat(3,minmax(0,1fr))' });
+      [[cy + ' 당초', fmt(a, 1), '%', '예산 편성 때'], [cy + ' 최종', fmt(b, 1), '%', '연말 추경 반영'],
+       ['변화', (d >= 0 ? '+' : '') + fmt(d, 1), '%p', sel.name === D.me || dm == null ? '추경 때 의존재원이 늘면 낮아짐' : '동해시는 ' + (dm >= 0 ? '+' : '') + fmt(dm, 1) + '%p']].forEach(function (x) {
+        k2.appendChild(el('div', { class: 'kpi' }, [el('div', { class: 'l', text: x[0] }), el('div', { class: 'v' }, [x[1], el('small', { text: x[2] })]), el('div', { class: 'n', text: x[3] })]));
+      });
+      s3.appendChild(k2);
+      // 18개 시·군 변화 폭
+      var ch = Object.keys(fin[cy]).filter(function (n) { return ini[cy][n] != null; }).map(function (n) { return [n, fin[cy][n] - ini[cy][n]]; }).sort(function (x, y) { return x[1] - y[1]; });
+      var mx = Math.max.apply(null, ch.map(function (c) { return Math.abs(c[1]); })) || 1;
+      var cols = el('div', { class: 'cols', style: 'gap:6px' });
+      ch.forEach(function (c) {
+        var me2 = c[0] === D.me;
+        cols.appendChild(el('div', { class: 'col' }, [el('b', { text: (c[1] >= 0 ? '+' : '') + c[1].toFixed(1), style: 'font-size:12px' }),
+          el('div', { class: 'c', style: 'height:' + (Math.abs(c[1]) / mx * 70).toFixed(1) + '%;background:' + (me2 ? '#5AB0FF' : c[1] < 0 ? '#8A5A2E' : '#2F6B57') }),
+          el('span', { text: c[0], style: 'font-size:12px;' + (me2 ? 'color:#fff;font-weight:700' : '') })]));
+      });
+      s3.appendChild(cols);
+    } else {
+      s3.appendChild(el('div', { class: 'empty', text: '최종 재정자립도 자료가 연결되면 같은 해 당초와 비교해 보여 줍니다.' }));
+    }
+    s3.appendChild(el('div', { class: 'note' }, [el('b', { text: '읽는 법 ' }), '순위는 올해 당초예산 기준입니다. 최종은 연말이 지나야 나오므로 작년 당초와 작년 최종을 비교합니다.']));
+    right.appendChild(s3);
+    view.appendChild(right);
+  }
+
+  // ---------- 4. 액자 ----------
+  var frameIdx = 0, frameTimer = null;
+  function frameCards() {
+    var cards = [];
+    var A = D.admin;
+    if (A && A.regions[D.me]) {
+      var m = A.regions[D.me];
+      cards.push({ k: D.me + '시 인구', v: fmt(m.total, 0) + '명', s: ymLabel(A.ym) + ' 주민등록 기준 · ' + fmt(m.hh, 0) + '세대' });
+    }
+    D.indicators.forEach(function (i) {
+      if (i.me && i.me.judge === 'strong') cards.push({ k: '강원 18개 시·군 중', v: i.name + ' ' + i.me.rank + '위', s: fmt(i.me.value, i.digits) + i.unit + ' · ' + i.basis });
+    });
+    var f = ind('fin_indep');
+    if (f && f.me) cards.push({ k: '재정자립도', v: fmt(f.me.value, 1) + '%', s: '도내 ' + f.me.rank + '위 · ' + f.basis });
+    return cards.length ? cards : [{ k: D.title, v: D.me + '시', s: '' }];
+  }
+  function screenFrame() {
+    view.className = 'frame';
+    view.style.gridTemplateColumns = '1fr';
+    view.style.gridTemplateRows = '1fr';
+    var cards = frameCards();
+    var c = cards[frameIdx % cards.length];
+    var now = new Date();
+    var days = ['일', '월', '화', '수', '목', '금', '토'];
+    view.appendChild(el('div', {}, [
+      el('div', { class: 'fclock', id: 'fclock', text: now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false }) }),
+      el('div', { class: 'fdate', text: now.getFullYear() + '년 ' + (now.getMonth() + 1) + '월 ' + now.getDate() + '일 ' + days[now.getDay()] + '요일' }),
+      el('div', { class: 'fcard' }, [el('div', { class: 'k', text: c.k }), el('div', { class: 'val', text: c.v }), el('div', { class: 'sub', text: c.s })]),
+      el('div', { class: 'fslogan', text: (D.frame && D.frame.slogan) || '' })
+    ]));
+    clearTimeout(frameTimer);
+    frameTimer = setTimeout(function () { frameIdx++; if (current === 'frame') render(); }, ((D.frame && D.frame.rotate_sec) || 20) * 1000);
+  }
+
+  // ---------- 그리기 ----------
+  var SCREENS = { main: screenMain, admin: screenAdmin, finance: screenFinance, frame: screenFrame };
+  function render() {
+    view.textContent = '';
+    view.className = '';
+    stage.className = current === 'frame' ? 'framemode' : '';
+    Array.prototype.forEach.call(nav.children, function (b) {
+      if (b.getAttribute('data-id') === current) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+    });
+    try { (SCREENS[current] || screenMain)(); }
+    catch (e) { view.textContent = ''; view.appendChild(el('div', { class: 'empty', style: 'font-size:24px;padding:60px', text: '이 화면을 그리지 못했습니다: ' + e.message })); }
+  }
+
+  // ---------- 리모컨(무선 키보드) ----------
+  document.addEventListener('keydown', function (e) {
+    var i = order.indexOf(current);
+    if (e.key === 'ArrowRight') go(order[(i + 1) % order.length]);
+    else if (e.key === 'ArrowLeft') go(order[(i - 1 + order.length) % order.length]);
+    else if (e.key === 'f' || e.key === 'F') { if (order.indexOf('frame') >= 0) go('frame'); }
+    else if (/^[1-9]$/.test(e.key) && order[Number(e.key) - 1]) go(order[Number(e.key) - 1]);
+  });
+
+  // ---------- 시계, 자동 새로고침 ----------
+  function tick() {
+    var t = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
+    document.getElementById('clock').textContent = t;
+    var fc = document.getElementById('fclock'); if (fc) fc.textContent = t;
+  }
+  setInterval(tick, 10000); tick();
+  // 30분마다 새 데이터 파일을 다시 읽습니다(지금 보고 있던 화면 유지).
+  setTimeout(function () { location.reload(); }, 30 * 60 * 1000);
+
+  render();
+}
+
+// 데이터 파일은 매번 새로 받습니다(주소 뒤 ?t=…로 브라우저 캐시를 피함). 못 받으면 오프라인 캐시를 씁니다.
+(function () {
+  if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  }
+  var s = document.createElement('script');
+  s.src = 'data/data.js?t=' + Date.now();
+  s.onload = startApp;
+  s.onerror = startApp;
+  document.head.appendChild(s);
+})();
+</script>
+</body>
+</html>

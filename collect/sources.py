@@ -1,0 +1,279 @@
+"""원천별 수집기. 각 함수는 성공하면 결과 dict, 실패하면 예외를 냅니다.
+
+결과는 언제나 18개 시·군 이름({'동해': 값, ...})을 기준으로 맞춰 돌려줍니다.
+"""
+import os
+
+from common import (http_get, parse_body, find_items, check_error, pick, to_num,
+                    match_region, read_manual, save_raw, ym_shift, now, log)
+
+
+def _call(src, extra, raw_name):
+    key = os.environ.get(src['key_env'], '')
+    if not key:
+        raise RuntimeError('%s 키가 없습니다(GitHub Secrets에 넣어 주세요)' % src['key_env'])
+    if not src.get('url'):
+        raise RuntimeError('요청 주소가 settings.json에 아직 없습니다')
+    params = dict(src.get('params', {}))
+    params.update(extra)
+    params[src.get('key_param', 'serviceKey')] = key
+    rows = []
+    page = 1
+    size = int(params.get('numOfRows', 100))
+    while True:
+        if 'numOfRows' in params:
+            params['pageNo'] = str(page)
+        text = http_get(src['url'], params)
+        obj = parse_body(text)
+        err = check_error(obj)
+        if isinstance(obj, dict) and obj.get('err'):
+            err = 'KOSIS 오류 %s %s' % (obj.get('err'), obj.get('errMsg', ''))
+        if err:
+            save_raw(raw_name + '_error', text)
+            raise RuntimeError('API 오류 응답: %s' % err)
+        items = find_items(obj)
+        rows.extend(items)
+        if page == 1:
+            save_raw(raw_name, text)
+        if 'numOfRows' not in params or len(items) < size or page >= 20:
+            break
+        page += 1
+    return rows
+
+
+# ---------------------------------------------------------------- 주민등록 인구(시·군)
+def population_month(S, C, ym):
+    src = S['sources']['population']
+    rows = _call(src, {'stdgCd': C['sido']['stdg'], 'srchFrYm': ym, 'srchToYm': ym}, 'population_%s' % ym)
+    f = src['fields']
+    out = {}
+    for r in rows:
+        name = match_region(pick(r, f['sgg_name']), C['regions'])
+        if not name:
+            continue
+        tot = to_num(pick(r, f['total']))
+        if tot is None:
+            continue
+        # 같은 시·군이 여러 줄(읍면동)로 오면 더합니다.
+        cur = out.setdefault(name, {'total': 0, 'hh': 0, 'male': 0, 'female': 0})
+        cur['total'] += tot
+        for k in ('hh', 'male', 'female'):
+            v = to_num(pick(r, f[k]))
+            if v is not None:
+                cur[k] += v
+    return out
+
+
+def population(S, C):
+    """가장 최근 공표 달과 그 1년 전 달의 시·군 인구를 가져옵니다."""
+    today = now()
+    base = '%04d%02d' % (today.year, today.month)
+    last_err = None
+    for back in (1, 2, 3):
+        ym = ym_shift(base, -back)
+        try:
+            cur = population_month(S, C, ym)
+        except Exception as e:  # noqa: BLE001
+            last_err = e
+            continue
+        if len(cur) >= 15:
+            prev = population_month(S, C, ym_shift(ym, -12))
+            return {'ym': ym, 'prev_ym': ym_shift(ym, -12), 'cur': cur, 'prev': prev}
+        last_err = RuntimeError('%s 응답에서 시·군을 %d곳만 찾음' % (ym, len(cur)))
+    raise last_err or RuntimeError('인구 자료 없음')
+
+
+def dong_population(S, C, ym):
+    src = S['sources']['dong_population']
+    me = [r for r in C['regions'] if r['name'] == C['me']][0]
+    rows = _call(src, {'stdgCd': me['stdg'], 'srchFrYm': ym, 'srchToYm': ym}, 'dong_%s' % ym)
+    f = src['fields']
+    out = {}
+    for r in rows:
+        name = pick(r, f['dong_name'])
+        tot = to_num(pick(r, f['total']))
+        if not name or tot is None:
+            continue
+        cur = out.setdefault(str(name), {'total': 0, 'hh': 0})
+        cur['total'] += tot
+        hh = to_num(pick(r, f['hh']))
+        if hh is not None:
+            cur['hh'] += hh
+    return out
+
+
+# ---------------------------------------------------------------- 성·연령별 인구 (정확한 값)
+import re as _re
+
+_RANGE = _re.compile(r'(\d+)\s*[-~]\s*(\d+)\s*세')
+_OVER = _re.compile(r'(\d+)\s*세\s*이상')
+_ONE = _re.compile(r'^(\d+)세(남자|여자)?$')
+
+
+def _age_lower(label):
+    """'15 - 19세' → (15, 19), '100세 이상' → (100, None), '계'·'합계' → None"""
+    t = str(label)
+    m = _RANGE.search(t)
+    if m:
+        return int(m.group(1)), int(m.group(2))
+    m = _OVER.search(t)
+    if m:
+        return int(m.group(1)), None
+    return None
+
+
+def _disjoint(groups):
+    """'15~64세' 같은 묶음 칸이 5세 칸과 같이 오면 겹치므로, 좁은 칸부터 골라 겹치지 않게 만듭니다."""
+    def width(g):
+        return (g[1] if g[1] is not None else 999) - g[0]
+    chosen = []
+    for g in sorted(groups, key=width):
+        hi = g[1] if g[1] is not None else 999
+        if all(hi < c[0] or g[0] > (c[1] if c[1] is not None else 999) for c in chosen):
+            chosen.append(g)
+    return sorted(chosen)
+
+
+def _ratios(groups):
+    """groups: [(하한, 상한, 인원)] → 총인구, 15~64세, 65세 이상. 경계가 칸 사이에 정확히 걸릴 때만 계산합니다."""
+    groups = _disjoint(groups)
+    total = sum(g[2] for g in groups)
+    working = elderly = 0.0
+    for lo, hi, n in groups:
+        top = hi if hi is not None else 200
+        if lo >= 15 and top <= 64:
+            working += n
+        elif lo >= 65:
+            elderly += n
+        elif lo < 15 and top < 15:
+            pass
+        else:
+            raise RuntimeError('연령 칸 %s~%s세가 15세·65세 경계에 걸쳐 있어 정확히 계산할 수 없습니다' % (lo, hi))
+    if not total:
+        raise RuntimeError('연령 인구 합계가 0')
+    return total, working / total * 100, elderly / total * 100
+
+
+def age_kosis(S, C):
+    src = S['sources']['age']['kosis']
+    rows = _call(src, {}, 'age_kosis')
+    prefixes = tuple(src.get('region_code_prefix', []))
+    # 총인구 항목만 씁니다(남·여 항목 제외).
+    items = {}
+    for r in rows:
+        items.setdefault(r.get('ITM_ID'), r.get('ITM_NM', ''))
+    pick_itm = None
+    for k, v in items.items():
+        if '총' in v or v.strip() in ('계', '인구수', '총인구수'):
+            pick_itm = k
+            break
+    if pick_itm is None and items:
+        pick_itm = list(items)[0]
+    by = {}
+    ym = None
+    for r in rows:
+        if r.get('ITM_ID') != pick_itm:
+            continue
+        code = str(r.get('C1', ''))
+        if prefixes and not code.startswith(prefixes):
+            continue
+        name = match_region(r.get('C1_NM'), C['regions'])
+        if not name:
+            continue
+        rng = _age_lower(r.get('C2_NM', ''))
+        v = to_num(r.get('DT'))
+        if rng is None or v is None:
+            continue
+        ym = r.get('PRD_DE') or ym
+        by.setdefault(name, []).append((rng[0], rng[1], v))
+    return by, ym
+
+
+def age_mois(S, C):
+    src = S['sources']['age']['mois']
+    rows = _call(src, {}, 'age_mois')
+    f = src['fields']
+    by = {}
+    for r in rows:
+        sido = str(pick(r, f['sido_name']) or '')
+        if sido and '강원' not in sido:
+            continue
+        name = match_region(pick(r, f['sgg_name']), C['regions'])
+        if not name:
+            continue
+        acc = by.setdefault(name, {})
+        for k, v in r.items():
+            m = _ONE.match(str(k).replace(' ', ''))
+            n = to_num(v)
+            if n is None:
+                continue
+            if m:
+                a = int(m.group(1))
+            elif str(k).startswith('100세이상'):
+                a = 100
+            else:
+                continue
+            acc[a] = acc.get(a, 0) + n
+    out = {}
+    for name, acc in by.items():
+        out[name] = [(a, a if a < 100 else None, n) for a, n in acc.items()]
+    return out, None
+
+
+def age(S, C, ym=None):
+    """생산연령(15~64)·고령(65+) 비율. 정확한 연령 경계로만 계산하고, 추정은 하지 않습니다."""
+    cfg = S['sources']['age']
+    order = [cfg.get('mode', 'kosis')] + [m for m in ('kosis', 'mois') if m != cfg.get('mode', 'kosis')]
+    errors = []
+    for mode in order:
+        try:
+            by, basis = (age_kosis if mode == 'kosis' else age_mois)(S, C)
+            if len(by) < 15:
+                raise RuntimeError('시·군을 %d곳만 찾음' % len(by))
+            res = {}
+            for name, groups in by.items():
+                total, w, e = _ratios(groups)
+                bands = {}
+                for lo, hi, n in _disjoint(groups):
+                    b = str(min(lo // 10 * 10, 100))
+                    bands[b] = bands.get(b, 0) + n
+                res[name] = {'total': total, 'working_age': w, 'elderly': e, 'bands': bands}
+            return res, basis, mode
+        except Exception as e:  # noqa: BLE001
+            errors.append('%s: %s' % (mode, e))
+    raise RuntimeError(' / '.join(errors))
+
+
+# ---------------------------------------------------------------- 재정자립도 (당초·최종)
+def finance_years(S, C, key='finance'):
+    """{연도: {시군: 값}} 전체를 돌려줍니다."""
+    src = S['sources'][key]
+    if not src.get('url'):
+        raise RuntimeError('%s 요청 주소가 settings.json에 아직 없습니다' % key)
+    rows = _call(src, {}, key)
+    f = src['fields']
+    by = {}
+    for r in rows:
+        name = match_region(pick(r, f['region_name']), C['regions'])
+        v = to_num(pick(r, f['fin_indep']))
+        y = pick(r, f['year'])
+        if name and v is not None and y:
+            by.setdefault(str(y)[:4], {})[name] = v
+    by = {y: d for y, d in by.items() if len(d) >= 15}
+    if not by:
+        raise RuntimeError('%s 응답에서 강원 시·군 값을 찾지 못함' % key)
+    return by
+
+
+def finance(S, C):
+    """순위용: 가장 최근 연도의 당초 재정자립도. API가 안 되면 manual/fin_indep.csv."""
+    manual, basis = read_manual('fin_indep')
+    try:
+        by = finance_years(S, C, 'finance')
+        y = max(by)
+        return {'values': by[y], 'basis': '%s년 당초예산' % y, 'from': 'api', 'by_year': by}
+    except Exception as e:  # noqa: BLE001
+        if manual:
+            log('재정 API 대신 수기 입력값을 씁니다(%s)' % e)
+            return {'values': manual, 'basis': basis or '수기 입력', 'from': 'manual', 'by_year': {}}
+        raise

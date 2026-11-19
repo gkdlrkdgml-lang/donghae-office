@@ -1,0 +1,5 @@
+.env
+raw/
+logs/
+probe_결과.txt
+__pycache__/
