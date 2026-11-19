@@ -126,21 +126,23 @@ def main():
             say('[신규 %s] 됨: %s' % (nm, t[:1500].replace('\n', ' ')))
         except Exception as e:  # noqa: BLE001
             say('[신규 %s] 안 됨: %s' % (nm, str(e)[-300:]))
-    import urllib.request as _ur
-    for u in ('https://livebus.dhits.kr/',):
+    from urllib.parse import unquote as _uq5
+    kk = _uq5(os.environ.get('DATA_GO_KR_KEY', '').strip())
+    for nm in ('prkplce_info', 'public_prkplce', 'public_traffic_light', 'public_trfcsign', 'public_crosswalk', 'public_unmanned_traffic_camera', 'public_child_safety_zone',
+               'public_child_safe_zone', 'public_crosswalks', 'public_tfcsgnl', 'public_bus_stop', 'public_taxi_stand'):
         try:
-            rq = _ur.Request(u, headers={'User-Agent': 'Mozilla/5.0'})
-            import ssl as _ssl
-            _cx = _ssl.create_default_context(); _cx.check_hostname = False; _cx.verify_mode = _ssl.CERT_NONE  # 헤더 확인용(읽기만)
-            with _ur.urlopen(rq, timeout=20, context=_cx) as r:
-                say('[버스] %s %s' % (r.status, ' | '.join('%s: %s' % (k, v) for k, v in r.headers.items())))
-                body = r.read().decode('utf-8', 'replace')
-                import re as _re4
-                say('[버스 본문] ' + body[:1500].replace('\n', ' '))
-                say('[버스 스크립트] ' + ' '.join(_re4.findall(r'(?:src|href)="([^"]+)"', body)[:30]))
-                say('[버스 주소들] ' + ' '.join(sorted(set(_re4.findall(r'(?:https?:)?//[\w.-]+(?:/[\w./?=&-]*)?|/api/[\w./?=&-]*', body)))[:40]))
+            t = http_get('https://api.data.go.kr/openapi/tn_pubr_%s_api' % nm, {'serviceKey': kk, 'type': 'json', 'numOfRows': '2', 'pageNo': '1'}, tries=1)
+            say('[교통표준 %s] %s' % (nm, t[:400].replace('\n', ' ')))
         except Exception as e:  # noqa: BLE001
-            say('[버스] 실패 %s' % e)
+            say('[교통표준 %s] %s' % (nm, str(e)[-160:].replace('\n', ' ')))
+    kk0 = os.environ.get('KOSIS_KEY', '')
+    for q in ('택시', '버스 운수업체', '시내버스', '주차장 시군', '주차장 확보율', '교통사고 시군구', '주정차 위반', '과태료', '신호등', '교통안전시설', '여객자동차', '도로 현황 시군'):
+        try:
+            t = http_get('https://kosis.kr/openapi/statisticsSearch.do', {'method': 'getList', 'apiKey': kk0, 'searchNm': q, 'format': 'json', 'jsonVD': 'Y', 'resultCount': '15'})
+            j = json.loads(t)
+            say('[검색] %s → %s' % (q, ' | '.join('%s/%s %s(%s~%s)' % (x.get('ORG_ID'), x.get('TBL_ID'), x.get('TBL_NM'), x.get('STRT_PRD_DE'), x.get('END_PRD_DE')) for x in j) if isinstance(j, list) else str(j)[:200]))
+        except Exception as e:  # noqa: BLE001
+            say('[검색] %s 실패 %s' % (q, e))
     if os.environ.get('PROBE_FULL') != '1':
         return
     probe('admm_population', {'url': 'https://apis.data.go.kr/1741000/admmPpltnHhStus/selectAdmmPpltnHhStus', 'key_env': 'DATA_GO_KR_KEY',
