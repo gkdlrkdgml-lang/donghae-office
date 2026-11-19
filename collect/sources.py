@@ -81,7 +81,11 @@ def population(S, C):
             continue
         if len(cur) >= 15:
             prev = population_month(S, C, ym_shift(ym, -12))
-            return {'ym': ym, 'prev_ym': ym_shift(ym, -12), 'cur': cur, 'prev': prev}
+            try:
+                prev_m = population_month(S, C, ym_shift(ym, -1))
+            except Exception:  # noqa: BLE001
+                prev_m = {}
+            return {'ym': ym, 'prev_ym': ym_shift(ym, -12), 'prevm_ym': ym_shift(ym, -1), 'cur': cur, 'prev': prev, 'prev_m': prev_m}
         last_err = RuntimeError('%s 응답에서 시·군을 %d곳만 찾음' % (ym, len(cur)))
     raise last_err or RuntimeError('인구 자료 없음')
 

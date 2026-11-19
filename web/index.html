@@ -6,36 +6,36 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   :root {
-    --bg: #0B1422; --panel: #111D30; --line: #22324B; --ink: #E8EEF7; --sub: #A9B7CC; --mute: #7C8BA5;
-    --blue: #5AB0FF; --blue2: #3C7DBF; --good: #8FE3B9; --goodbg: #173A2C; --warn: #FFC98A; --warnbg: #3A2A12;
-    --bad: #FF9B9B; --badbg: #4A1E1E; --me: #16304F;
+    --bg: #F4F6F9; --panel: #FFFFFF; --line: #DCE2EA; --ink: #17202C; --sub: #556274; --mute: #8693A4;
+    --blue: #1F6FD1; --blue2: #6B8FBF; --good: #1B7A4B; --goodbg: #E2F3E9; --warn: #8A5300; --warnbg: #FFF1D9;
+    --bad: #B42318; --badbg: #FDE7E4; --me: #E4EEFB; --track: #EDF1F6;
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  html, body { margin: 0; height: 100%; background: #E9EDF2; overflow: hidden; }
   body { font-family: 'Noto Sans KR', 'Malgun Gothic', system-ui, sans-serif; color: var(--ink); font-variant-numeric: tabular-nums; }
   #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; background: var(--bg);
            display: grid; grid-template-rows: 64px minmax(0, 1fr); }
-  header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 28px; border-bottom: 1px solid var(--line); background: #0F1A2B; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 28px; border-bottom: 1px solid var(--line); background: #FFFFFF; }
   .brand { display: flex; align-items: center; gap: 12px; font-size: 20px; font-weight: 700; }
-  .brand i { width: 38px; height: 38px; border-radius: 8px; background: #1E3A5F; display: inline-block; }
+  .brand i { width: 38px; height: 38px; border-radius: 8px; background: var(--blue); display: inline-block; }
   nav { display: flex; gap: 4px; }
-  nav button { font: inherit; font-size: 16px; color: #C3CFE0; background: none; border: 0; padding: 8px 16px; border-radius: 6px; cursor: pointer; min-height: 40px; }
-  nav button[aria-current="page"] { background: #1E3A5F; color: #fff; font-weight: 700; }
+  nav button { font: inherit; font-size: 16px; color: var(--sub); background: none; border: 0; padding: 8px 16px; border-radius: 6px; cursor: pointer; min-height: 40px; }
+  nav button[aria-current="page"] { background: var(--blue); color: #fff; font-weight: 700; }
   .hright { display: flex; align-items: center; gap: 14px; font-size: 14px; color: var(--sub); }
   .badge { padding: 5px 10px; border-radius: 999px; font-size: 13px; }
-  .badge.demo { background: var(--warnbg); color: var(--warn); border: 1px solid #6B4A1C; }
-  .badge.late { background: var(--badbg); color: var(--bad); border: 1px solid #7A3434; }
+  .badge.demo { background: var(--warnbg); color: var(--warn); border: 1px solid #F0C98A; }
+  .badge.late { background: var(--badbg); color: var(--bad); border: 1px solid #F2B3AC; }
   #clock { font-size: 18px; color: var(--ink); font-weight: 700; }
   main { padding: 24px 28px 20px; min-height: 0; display: grid; gap: 16px; }
   .title { grid-column: 1 / -1; display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
   .title h1 { margin: 0; font-size: 28px; }
   .title span { font-size: 14px; color: var(--sub); }
-  section { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px 20px; min-height: 0; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+  section { background: var(--panel); border: 1px solid var(--line); box-shadow: 0 1px 2px rgba(20,30,50,.05); border-radius: 12px; padding: 16px 20px; min-height: 0; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
   section h2 { margin: 0; font-size: 20px; }
   .sh { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
   .sh small { font-size: 13px; color: var(--sub); }
   .kpis { grid-column: 1 / -1; display: grid; gap: 12px; }
-  .kpi { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .kpi { background: var(--panel); border: 1px solid var(--line); box-shadow: 0 1px 2px rgba(20,30,50,.05); border-radius: 12px; padding: 14px 18px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
   .kpi .l { font-size: 14px; color: var(--sub); }
   .kpi .v { font-size: 34px; font-weight: 700; }
   .kpi .v small { font-size: 16px; color: var(--sub); font-weight: 400; margin-left: 4px; }
@@ -46,22 +46,22 @@
   .row.sel { outline: 2px solid var(--blue); }
   .row .rk { color: var(--sub); text-align: right; font-weight: 400; }
   .row .v { text-align: right; }
-  .bar { height: 14px; background: #0C1626; border-radius: 4px; overflow: hidden; }
+  .bar { height: 14px; background: var(--track); border-radius: 4px; overflow: hidden; }
   .bar > div { height: 100%; border-radius: 4px; }
   .tag { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 13px; }
   .tag.strong { background: var(--goodbg); color: var(--good); }
   .tag.weak { background: var(--badbg); color: var(--bad); }
-  .tag.middle { background: #2A2F3A; color: #C3CFE0; }
-  .tag.excluded { background: #232A36; color: var(--mute); }
+  .tag.middle { background: #EAF0F8; color: #3D5677; }
+  .tag.excluded { background: #EFF1F4; color: var(--mute); }
   .list { display: flex; flex-direction: column; gap: 8px; }
-  .item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; background: #0C1626; border-radius: 8px; padding: 12px 14px; font-size: 16px; }
+  .item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; background: #F6F8FB; border: 1px solid #E6EBF1; border-radius: 8px; padding: 12px 14px; font-size: 16px; }
   .item b { font-size: 18px; }
   .empty { color: var(--mute); font-size: 15px; padding: 8px 2px; }
-  .note { background: #1A2433; border: 1px solid #3A4A63; border-radius: 8px; padding: 10px 12px; font-size: 14px; line-height: 1.55; color: #D3DCE9; }
+  .note { background: #FFF8EC; border: 1px solid #F1D9AE; border-radius: 8px; padding: 10px 12px; font-size: 14px; line-height: 1.55; color: #3C4656; }
   .note b { color: var(--warn); }
   table { width: 100%; border-collapse: collapse; font-size: 15.5px; }
   th { text-align: left; color: var(--sub); font-weight: 400; font-size: 13.5px; padding: 6px; border-bottom: 1px solid var(--line); }
-  td { padding: 7px 6px; border-bottom: 1px solid #1A2840; }
+  td { padding: 7px 6px; border-bottom: 1px solid #EDF1F6; }
   td.r, th.r { text-align: right; }
   .cols { display: flex; align-items: flex-end; gap: 10px; flex: 1 1 auto; min-height: 0; }
   .col { flex: 1 1 0; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 6px; }
@@ -71,25 +71,25 @@
   /* 한눈에 보기: 지표 기둥 */
   .pillars { display: flex; gap: 18px; align-items: stretch; flex: 1 1 auto; min-height: 0; }
   .pillar { flex: 1 1 0; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-  .ptrack { flex: 1 1 auto; background: #0C1626; border-radius: 8px; position: relative; overflow: hidden; }
+  .ptrack { flex: 1 1 auto; background: var(--track); border-radius: 8px; position: relative; overflow: hidden; }
   .ptrack .fill { position: absolute; left: 0; right: 0; bottom: 0; border-radius: 8px 8px 0 0; }
   .ptrack .lbl { position: absolute; left: 0; right: 0; top: 10px; text-align: center; font-size: 26px; font-weight: 700; }
   .ptrack .lbl small { display: block; font-size: 14px; color: var(--sub); font-weight: 400; }
-  .ptrack .g25 { position: absolute; left: 0; right: 0; border-top: 1px dashed #3A5274; }
+  .ptrack .g25 { position: absolute; left: 0; right: 0; border-top: 1px dashed #A9B6C8; }
   .pname { font-size: 15.5px; text-align: center; font-weight: 700; min-height: 44px; }
   .pfield { font-size: 13px; text-align: center; color: var(--sub); }
   /* 액자 */
   .frame { grid-template-columns: 1fr; place-items: center; text-align: center; }
   .fclock { font-size: 220px; font-weight: 700; letter-spacing: -4px; line-height: 1; }
   .fdate { font-size: 40px; color: var(--sub); margin-top: 12px; }
-  .fcard { margin-top: 56px; min-width: 1100px; background: rgba(17, 29, 48, 0.8); border: 1px solid var(--line); border-radius: 20px; padding: 36px 48px; }
+  .fcard { margin-top: 56px; min-width: 1100px; background: #FFFFFF; box-shadow: 0 2px 10px rgba(20,30,50,.06); border: 1px solid var(--line); border-radius: 20px; padding: 36px 48px; }
   .fcard .k { font-size: 26px; color: var(--sub); }
   .fcard .val { font-size: 76px; font-weight: 700; margin-top: 8px; }
-  .fcard .sub { font-size: 24px; color: #C3CFE0; margin-top: 6px; }
+  .fcard .sub { font-size: 24px; color: var(--sub); margin-top: 6px; }
   .fslogan { margin-top: 40px; font-size: 22px; color: var(--mute); }
   #stage.framemode { grid-template-rows: minmax(0, 1fr); }
   #stage.framemode header { display: none; }
-  .help { position: absolute; right: 20px; bottom: 12px; font-size: 13px; color: #4F5E77; }
+  .help { position: absolute; right: 20px; bottom: 12px; font-size: 13px; color: #9AA6B6; }
 </style>
 </head>
 <body>
@@ -130,7 +130,7 @@ function startApp() {
   }
   function fmt(v, d) { return v == null ? '–' : Number(v).toLocaleString('ko-KR', { minimumFractionDigits: d, maximumFractionDigits: d }); }
   function judgeLabel(j) { return { strong: '강점', weak: '개선 필요', middle: '중간', excluded: '판정 제외' }[j] || ''; }
-  function judgeColor(j) { return { strong: '#3FA77A', weak: '#C0605F', middle: '#3C7DBF', excluded: '#4F5E77' }[j] || '#3C7DBF'; }
+  function judgeColor(j) { return { strong: '#2E9C6A', weak: '#D9822B', middle: '#6B8FBF', excluded: '#B3BDCB' }[j] || '#6B8FBF'; }
   function ind(id) { return (D.indicators || []).filter(function (i) { return i.id === id; })[0]; }
   function ymLabel(ym) { return ym ? ym.slice(0, 4) + '년 ' + Number(ym.slice(4)) + '월' : ''; }
 
@@ -172,7 +172,7 @@ function startApp() {
         onclick: onPick ? function () { onPick(r.name); } : null }, [
         el('span', { class: 'rk', text: String(r.rank) }),
         el('span', { text: r.name }),
-        el('div', { class: 'bar' }, [el('div', { style: 'width:' + w.toFixed(1) + '%;background:' + (me ? '#5AB0FF' : (r.judge === 'weak' ? '#8A5A2E' : r.judge === 'strong' ? '#2F6B57' : '#3E4D66')) })]),
+        el('div', { class: 'bar' }, [el('div', { style: 'width:' + w.toFixed(1) + '%;background:' + (me ? '#1F6FD1' : (r.judge === 'weak' ? '#E8A867' : r.judge === 'strong' ? '#5DB88E' : '#B8C4D4')) })]),
         el('span', { class: 'v', text: fmt(r.value, i.digits) })
       ]);
       if (!onPick) { row.removeAttribute('role'); row.removeAttribute('tabindex'); row.style.cursor = 'default'; }
@@ -215,7 +215,7 @@ function startApp() {
       if (!items.length) box.appendChild(el('div', { class: 'empty', text: '해당 지표 없음' }));
       items.forEach(function (i) {
         box.appendChild(el('div', { class: 'item' }, [
-          el('div', {}, [el('b', { text: i.name }), el('div', { style: 'font-size:13.5px;color:#A9B7CC', text: i.source + ' · ' + i.basis })]),
+          el('div', {}, [el('b', { text: i.name }), el('div', { style: 'font-size:13.5px;color:#556274', text: i.source + ' · ' + i.basis })]),
           el('span', { class: 'tag ' + j, text: i.me.rank + '위 / ' + i.n })
         ]));
       });
@@ -236,15 +236,17 @@ function startApp() {
     view.style.gridTemplateColumns = 'minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.9fr)';
     view.style.gridTemplateRows = '44px auto minmax(0, 1fr)';
     var diff = me.prev ? me.total - me.prev : null;
+    var dm = me.prev_m ? me.total - me.prev_m : null;
+    function sgn(v) { return (v >= 0 ? '+' : '') + fmt(v, 0); }
     view.appendChild(el('div', { class: 'title' }, [
-      el('h1', { text: D.me + '시 인구 ' + fmt(me.total, 0) + '명' + (diff != null ? ' · 1년 새 ' + (diff >= 0 ? '+' : '') + fmt(diff, 0) + '명' : '') }),
+      el('h1', { text: D.me + '시 인구 ' + fmt(me.total, 0) + '명' + (dm != null ? ' · 지난달보다 ' + sgn(dm) + '명' : '') + (diff != null ? ' · 1년 새 ' + sgn(diff) + '명' : '') }),
       el('span', { text: '행정안전부 주민등록 인구 · ' + ymLabel(A.ym) + ' 기준' })
     ]));
     var k = el('div', { class: 'kpis', style: 'grid-template-columns:repeat(5,minmax(0,1fr))' });
     function kpi(l, v, u, n) { k.appendChild(el('div', { class: 'kpi' }, [el('div', { class: 'l', text: l }), el('div', { class: 'v' }, [v, el('small', { text: u })]), el('div', { class: 'n', text: n })])); }
-    kpi('총인구', fmt(me.total, 0), '명', me.prev ? '전년 같은 달 ' + fmt(me.prev, 0) + '명' : '');
+    kpi('총인구', fmt(me.total, 0), '명', dm != null ? '전월 대비 ' + sgn(dm) + '명 · 전년 대비 ' + sgn(diff) + '명' : (me.prev ? '전년 같은 달 ' + fmt(me.prev, 0) + '명' : ''));
     kpi('인구 증감률', pc && pc.me ? fmt(pc.me.value, 2) : '–', '%', pc && pc.me ? '도내 ' + pc.me.rank + '위 / ' + pc.n : '');
-    kpi('세대수', fmt(me.hh, 0), '세대', me.hh ? '세대당 ' + fmt(me.total / me.hh, 2) + '명' : '');
+    kpi('세대수', fmt(me.hh, 0), '세대', me.hh ? (me.prev_m_hh ? '전월 대비 ' + sgn(me.hh - me.prev_m_hh) + '세대 · ' : '') + '세대당 ' + fmt(me.total / me.hh, 2) + '명' : '');
     kpi('생산연령인구 비율', wa && wa.me ? fmt(wa.me.value, 1) : '–', '%', wa && wa.me ? '도내 ' + wa.me.rank + '위 / ' + wa.n : '연령 자료 연결 전');
     kpi('고령인구 비율', el65 && el65.me ? fmt(el65.me.value, 1) : '–', '%', el65 && el65.me ? '도내 ' + el65.me.rank + '위 · 판정 제외' : '연령 자료 연결 전');
     view.appendChild(k);
@@ -261,7 +263,7 @@ function startApp() {
       var cols = el('div', { class: 'cols' });
       keys.forEach(function (x) {
         cols.appendChild(el('div', { class: 'col' }, [el('b', { text: fmt(b[x], 0) }),
-          el('div', { class: 'c', style: 'height:' + ((b[x] || 0) / mx * 85).toFixed(1) + '%;background:' + (Number(x) >= 70 ? '#C98A4B' : '#3C7DBF') }),
+          el('div', { class: 'c', style: 'height:' + ((b[x] || 0) / mx * 85).toFixed(1) + '%;background:' + (Number(x) >= 70 ? '#E8A867' : '#6B9BD8') }),
           el('span', { text: x === '100' ? '100+' : x + '대' })]));
       });
       s2.appendChild(cols);
@@ -334,8 +336,8 @@ function startApp() {
       ch.forEach(function (c) {
         var me2 = c[0] === D.me;
         cols.appendChild(el('div', { class: 'col' }, [el('b', { text: (c[1] >= 0 ? '+' : '') + c[1].toFixed(1), style: 'font-size:12px' }),
-          el('div', { class: 'c', style: 'height:' + (Math.abs(c[1]) / mx * 70).toFixed(1) + '%;background:' + (me2 ? '#5AB0FF' : c[1] < 0 ? '#8A5A2E' : '#2F6B57') }),
-          el('span', { text: c[0], style: 'font-size:12px;' + (me2 ? 'color:#fff;font-weight:700' : '') })]));
+          el('div', { class: 'c', style: 'height:' + (Math.abs(c[1]) / mx * 70).toFixed(1) + '%;background:' + (me2 ? '#1F6FD1' : c[1] < 0 ? '#E8A867' : '#5DB88E') }),
+          el('span', { text: c[0], style: 'font-size:12px;' + (me2 ? 'color:#1F6FD1;font-weight:700' : '') })]));
       });
       s3.appendChild(cols);
     } else {
@@ -353,7 +355,8 @@ function startApp() {
     var A = D.admin;
     if (A && A.regions[D.me]) {
       var m = A.regions[D.me];
-      cards.push({ k: D.me + '시 인구', v: fmt(m.total, 0) + '명', s: ymLabel(A.ym) + ' 주민등록 기준 · ' + fmt(m.hh, 0) + '세대' });
+      var dmm = m.prev_m ? m.total - m.prev_m : null;
+      cards.push({ k: D.me + '시 인구', v: fmt(m.total, 0) + '명', s: ymLabel(A.ym) + ' 주민등록 기준' + (dmm != null ? ' · 지난달보다 ' + (dmm >= 0 ? '+' : '') + fmt(dmm, 0) + '명' : '') + ' · ' + fmt(m.hh, 0) + '세대' });
     }
     D.indicators.forEach(function (i) {
       if (i.me && i.me.judge === 'strong') cards.push({ k: '강원 18개 시·군 중', v: i.name + ' ' + i.me.rank + '위', s: fmt(i.me.value, i.digits) + i.unit + ' · ' + i.basis });

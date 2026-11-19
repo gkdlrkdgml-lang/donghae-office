@@ -61,9 +61,11 @@ def collect(state, S, C):
         try:
             dongs = sources.dong_population(S, C, pop['ym'])
             state['admin'] = {
-                'ym': pop['ym'], 'prev_ym': pop['prev_ym'],
+                'ym': pop['ym'], 'prev_ym': pop['prev_ym'], 'prevm_ym': pop.get('prevm_ym'),
                 'regions': {k: {'total': v['total'], 'hh': v['hh'], 'male': v['male'], 'female': v['female'],
-                                'prev': pop['prev'].get(k, {}).get('total')} for k, v in pop['cur'].items()},
+                                'prev': pop['prev'].get(k, {}).get('total'),
+                                'prev_m': pop.get('prev_m', {}).get(k, {}).get('total'),
+                                'prev_m_hh': pop.get('prev_m', {}).get(k, {}).get('hh')} for k, v in pop['cur'].items()},
                 'dongs': dongs,
             }
             ok(state, 'dong_population', '%d개 동' % len(dongs))
@@ -130,7 +132,7 @@ def demo(state, S, C):
             '고성': 26800, '양양': 28000}
     pc = state['indicators']['pop_change']['values']
     regions = {k: {'total': v, 'hh': int(v / 2.05), 'male': int(v * 0.5), 'female': v - int(v * 0.5),
-                   'prev': round(v / (1 + pc[k] / 100))} for k, v in pops.items()}
+                   'prev': round(v / (1 + pc[k] / 100)), 'prev_m': v + 97, 'prev_m_hh': int(v / 2.05) - 12} for k, v in pops.items()}
     dongs = {'천곡동': [17600, 8900], '송정동': [6200, 3100], '북삼동': [10400, 4600], '부곡동': [4800, 2500], '동호동': [5900, 3000],
              '발한동': [3900, 2100], '묵호동': [6800, 3500], '북평동': [7300, 3400], '망상동': [2400, 1300], '삼화동': [4100, 2000],
              '동해시 기타': [18600, 8700]}
