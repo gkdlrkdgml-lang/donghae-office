@@ -100,7 +100,7 @@ def main():
     for nm, url in (('death', 'https://apis.data.go.kr/1741000/admmSexdAgeErsr/selectAdmmSexdAgeErsr'),
                     ('hsmb', 'https://apis.data.go.kr/1741000/admmHsmbHh/selectAdmmHsmbHh'),
                     ('birth', 'https://apis.data.go.kr/1741000/admmSexdBrthReg/selectAdmmSexdBrthReg')):
-        for lv in ('2', '3'):
+        for lv in ():
             try:
                 from urllib.parse import unquote as _uq; key = _uq(os.environ.get('DATA_GO_KR_KEY', '').strip())
                 t = http_get(url, {'serviceKey': key, 'type': 'JSON', 'numOfRows': '30', 'pageNo': '1', 'lv': lv, 'regSeCd': '1', 'admmCd': me['stdg'], 'srchFrYm': ym, 'srchToYm': ym})
@@ -110,6 +110,17 @@ def main():
                     say('   ' + json.dumps({k: v for k, v in it.items() if not _re2.match(r'^(male|feml)\d+Age', k)}, ensure_ascii=False)[:600])
             except Exception as e:  # noqa: BLE001
                 say('[%s lv%s] 실패 %s' % (nm, lv, str(e)[:400]))
+    for nm, url, pr in (('hira', 'https://apis.data.go.kr/B551182/hospInfoServicev2/getHospBasisList', {'sidoCd': '320000', 'numOfRows': '3', 'pageNo': '1', '_type': 'json'}),
+                        ('air', 'https://apis.data.go.kr/B552584/ArpltnInforInqireSvc/getCtprvnRltmMesureDnsty', {'sidoName': '강원', 'returnType': 'json', 'numOfRows': '3', 'pageNo': '1', 'ver': '1.0'}),
+                        ('ev', 'https://apis.data.go.kr/B552584/EvCharger/getChargerInfo', {'zcode': '51', 'dataType': 'JSON', 'numOfRows': '3', 'pageNo': '1'}),
+                        ('visit', 'https://apis.data.go.kr/B551011/DataLabService/locgoRegnVisitrDDList', {'MobileOS': 'ETC', 'MobileApp': 'donghae', '_type': 'json', 'startYmd': '20261101', 'endYmd': '20261101', 'numOfRows': '3', 'pageNo': '1'})):
+        try:
+            from urllib.parse import unquote as _uq2
+            q = dict(pr); q['serviceKey'] = _uq2(os.environ.get('DATA_GO_KR_KEY', '').strip())
+            t = http_get(url, q, tries=1)
+            say('[2단계 %s] 됨: %s' % (nm, t[:160].replace('\n', ' ')))
+        except Exception as e:  # noqa: BLE001
+            say('[2단계 %s] 안 됨: %s' % (nm, str(e)[-220:]))
     probe('admm_population', {'url': 'https://apis.data.go.kr/1741000/admmPpltnHhStus/selectAdmmPpltnHhStus', 'key_env': 'DATA_GO_KR_KEY',
                                'params': {'type': 'JSON', 'numOfRows': '100', 'pageNo': '1', 'lv': '3', 'regSeCd': '1'}},
           {'admmCd': me['stdg'], 'srchFrYm': ym, 'srchToYm': ym})
