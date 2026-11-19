@@ -205,15 +205,31 @@ def collect(state, S, C):
         last = max(L['demand'])
         set_ind(state, 'tour_exp', {k: v.get('22') for k, v in L['demand'][last].items() if k != '강원' and v.get('22') is not None},
                 '%s년 %d월 관광소비강도(한국관광공사)' % (last[:4], int(last[4:])))
+    if stale('events', 3) or not (L.get('events') or {}).get('items') or '--force-life' in sys.argv:
+        try:
+            L['events'] = {'at': now().strftime('%Y-%m-%d'), 'items': tour.events()}
+            ok(state, 'events', '%d건' % len(L['events']['items']))
+        except Exception as e:  # noqa: BLE001
+            fail(state, 'events', e)
     # 시가 직접 적는 행사(config/events.json)를 축제 목록에 합칩니다
     try:
         with open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config', 'events.json'), encoding='utf-8') as fp:
             extra = json.load(fp).get('items', [])
         F = L.setdefault('festivals', {'at': now().strftime('%Y-%m-%d'), 'items': []})
         F['items'] = [x for x in F['items'] if not x.get('manual')]
-        have = {(x.get('title', '').replace(' ', ''), x.get('start')) for x in F['items']}
+        import re as _re0
+
+        def _nk(t):
+            return _re0.sub(r'\s|동해시|동해|제\d+회|\d{4}년?|축제$', '', str(t or ''))
+        have = {(_nk(x.get('title')), x.get('start')) for x in F['items']}
+        for i, e in enumerate((L.get('events') or {}).get('items', [])):
+            k = (_nk(e['title']), e['start'])
+            if k not in have:
+                have.add(k)
+                F['items'].append({'id': 'e%d' % i, 'type': '15', 'title': e['title'], 'start': e['start'], 'end': e.get('end') or e['start'],
+                                   'place': e.get('place', ''), 'addr': '', 'lat': e.get('lat'), 'lng': e.get('lng'), 'manual': True, 'kind': e.get('kind'), 'src': e.get('src')})
         for i, e in enumerate(extra):
-            if (e['title'].replace(' ', ''), e['start']) not in have:
+            if (_nk(e['title']), e['start']) not in have:
                 F['items'].append({'id': 'm%d' % i, 'type': '15', 'title': e['title'], 'start': e['start'], 'end': e.get('end') or e['start'],
                                    'place': e.get('place', ''), 'addr': '', 'lat': None, 'lng': None, 'manual': True})
         F['items'].sort(key=lambda x: x.get('start') or '0')

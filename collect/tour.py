@@ -218,3 +218,95 @@ def demand(C, cache=None, n_months=25):
             cache[ym] = got
     keep = sorted(cache)[-n_months:]
     return {k: cache[k] for k in keep}, names
+
+
+# ---------------------------------------------------------------- 행사 일정(표준데이터 2종 + 문화정보원)
+import re as _re
+
+STD = 'https://api.data.go.kr/openapi/'
+
+
+def _ymd(s):
+    s = _re.sub(r'\D', '', str(s or ''))
+    return s[:8] if len(s) >= 8 else ''
+
+
+def _is_me(*xs):
+    t = ' '.join(str(x or '') for x in xs)
+    return '동해시' in t and ('강원' in t or '동해시' in t)
+
+
+def _std_scan(path, name, max_pages=60):
+    import json as _json
+    from common import http_get
+    from urllib.parse import unquote
+    import os
+    key = unquote(os.environ.get(KEY, '').strip())
+    out, page = [], 1
+    while page <= max_pages:
+        t = http_get(STD + path, {'serviceKey': key, 'type': 'json', 'numOfRows': '1000', 'pageNo': str(page)})
+        j = _json.loads(t)
+        body = (j.get('response') or j).get('body') or {}
+        items = (body.get('items') or {})
+        items = items.get('item', items) if isinstance(items, dict) else items
+        if isinstance(items, dict):
+            items = [items]
+        if not items:
+            break
+        out.extend(items)
+        total = int(body.get('totalCount') or 0)
+        if page * 1000 >= total:
+            break
+        page += 1
+    log('%s: 전국 %d건 확인' % (name, len(out)))
+    return out
+
+
+def events():
+    res = []
+    try:
+        for r in _std_scan('tn_pubr_public_cltur_fstvl_api', '축제 표준데이터', 10):
+            if _is_me(r.get('rdnmadr'), r.get('lnmadr'), r.get('mnnstNm'), r.get('auspcInsttNm')):
+                res.append({'title': r.get('fstvlNm'), 'start': _ymd(r.get('fstvlStartDate')), 'end': _ymd(r.get('fstvlEndDate')),
+                            'place': r.get('opar') or '', 'kind': '축제', 'desc': str(r.get('fstvlCo') or '').replace('+', ', ')[:120],
+                            'lat': to_num(r.get('latitude')), 'lng': to_num(r.get('longitude')), 'src': '전국문화축제표준데이터'})
+    except Exception as e:  # noqa: BLE001
+        log('축제 표준데이터 실패: %s' % e)
+    try:
+        for r in _std_scan('tn_pubr_public_pblprfr_event_info_api', '공연행사 표준데이터', 80):
+            if _is_me(r.get('rdnmadr'), r.get('lnmadr'), r.get('insttNm')):
+                res.append({'title': r.get('eventNm'), 'start': _ymd(r.get('eventStartDate')), 'end': _ymd(r.get('eventEndDate')),
+                            'place': r.get('opar') or '', 'kind': '공연·행사', 'desc': str(r.get('eventCo') or '')[:120],
+                            'lat': to_num(r.get('latitude')), 'lng': to_num(r.get('longitude')), 'src': '전국공연행사정보표준데이터'})
+    except Exception as e:  # noqa: BLE001
+        log('공연행사 표준데이터 실패: %s' % e)
+    try:
+        frm = '%04d0101' % (now().year - 3)
+        to = (now() + _dt.timedelta(days=200)).strftime('%Y%m%d')
+        rows = []
+        for pg in range(1, 15):
+            got = _call(_src('https://apis.data.go.kr/B553457/cultureinfo/area2', {'numOfrows': '500', 'PageNo': str(pg), 'sido': '강원', 'gugun': '동해시', 'from': frm, 'to': to}), {}, 'culture')
+            rows.extend(got)
+            if len(got) < 500:
+                break
+        log('문화정보원 강원 %d건 확인' % len(rows))
+        for r in rows:
+            if str(r.get('sigungu') or '').strip() != '동해시':
+                continue
+            res.append({'title': r.get('title'), 'start': _ymd(r.get('startDate')), 'end': _ymd(r.get('endDate')), 'place': r.get('place') or '',
+                        'kind': r.get('realmName') or r.get('serviceName') or '공연·전시', 'desc': '', 'lat': to_num(r.get('gpsY')), 'lng': to_num(r.get('gpsX')),
+                        'src': '한국문화정보원'})
+    except Exception as e:  # noqa: BLE001
+        log('문화정보원 공연·전시 실패: %s' % e)
+    seen, out = set(), []
+    for x in res:
+        if not x['title'] or not x['start']:
+            continue
+        k = (_re.sub(r'\s', '', x['title']), x['start'])
+        if k in seen:
+            continue
+        seen.add(k)
+        x['title'] = str(x['title']).strip()
+        out.append(x)
+    out.sort(key=lambda x: x['start'])
+    return out

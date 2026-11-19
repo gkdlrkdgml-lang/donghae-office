@@ -1394,42 +1394,54 @@ function startApp() {
     });
     panel('세부 지표 · 동해 vs 강원', ymLabel(last) + ' · 점', el('table', { class: 'dt big' }, [el('thead', {}, [el('tr', {}, ['지표', D.me, '강원', '차이'].map(function (h, j) { return el('th', { class: j > 1 ? 'r' : '', text: h }); }))]), tb]));
   }
-  function festStats(f, VD) {
+  function festKey(t) { return String(t || '').replace(/\s|동해시|동해|제\d+회|\d{4}년?|축제$/g, ''); }
+  function festStats(f, VD, eds) {
     if (!f.start || !f.end || !VD[f.end]) return null;
     function avg(a, b, sh) { var t = 0, c = 0, fo = 0; for (var k = addDays(a, sh); k <= addDays(b, sh); k = addDays(k, 1)) if (VD[k]) { t += vday(VD[k]); fo += VD[k][2]; c++; } return c ? { avg: t / c, sum: t, n: c, fo: fo } : null; }
     var r = { fest: avg(f.start, f.end, 0), base: avg(addDays(f.start, -14), addDays(f.start, -1), 0) };
     r.up = r.fest && r.base ? (r.fest.avg / r.base.avg - 1) * 100 : null;
-    r.prev = [-364, -728].map(function (sh) { var a = avg(f.start, f.end, sh), b = avg(addDays(f.start, -14), addDays(f.start, -1), sh); return a ? { sh: sh, sum: a.sum, avg: a.avg, up: b ? (a.avg / b.avg - 1) * 100 : null } : null; });
+    // 같은 축제의 지난 회차가 있으면 실제 날짜로, 없으면 1·2년 전 같은 요일로 비교
+    r.prev = [1, 2].map(function (n) {
+      var e = (eds || [])[n - 1];
+      var a = e ? avg(e.start, e.end, 0) : avg(f.start, f.end, -364 * n), b = e ? avg(addDays(e.start, -14), addDays(e.start, -1), 0) : avg(addDays(f.start, -14), addDays(f.start, -1), -364 * n);
+      return a ? { real: !!e, ed: e, sh: e ? null : -364 * n, sum: a.sum, avg: a.avg, up: b ? (a.avg / b.avg - 1) * 100 : null } : null;
+    });
     return r;
   }
   function screenFest() {
-    var L = D.life || {}, VD = L.visit_days || {}, F = ((L.festivals || {}).items || []).filter(function (f) { return f.start; });
+    var L = D.life || {}, VD = L.visit_days || {}, F = ((L.festivals || {}).items || []).filter(function (f) { return f.start; }).sort(function (a, b) { return a.start < b.start ? -1 : a.start > b.start ? 1 : 0; });
     var today = dateYmd(new Date());
-    F.forEach(function (f) { f.st = festStats(f, VD); f.state = f.end < today ? '종료' : f.start <= today ? '진행 중' : '예정'; });
+    F.forEach(function (f) {
+      f.eds = F.filter(function (g) { return g !== f && festKey(g.title) === festKey(f.title) && g.start < f.start; }).sort(function (a, b) { return a.start < b.start ? 1 : -1; });
+      f.st = festStats(f, VD, f.eds); f.state = f.end < today ? '종료' : f.start <= today ? '진행 중' : '예정';
+    });
     var done = F.filter(function (f) { return f.st && f.st.fest; });
-    if (!festSel || !F.some(function (f) { return f.id === festSel; })) festSel = (done[done.length - 1] || F[0] || {}).id;
+    F.forEach(function (f, i) { if (!f.id) f.id = 'x' + i; });
+    var big = done.filter(function (f) { return !f.kind || f.kind === '축제'; });
+    if (!festSel || !F.some(function (f) { return f.id === festSel; })) festSel = ((big.length ? big : done)[(big.length ? big : done).length - 1] || F[0] || {}).id;
     var S = F.filter(function (f) { return f.id === festSel; })[0];
     var next = F.filter(function (f) { return f.start > today; })[0];
     view.style.gridTemplateColumns = 'minmax(0, .9fr) minmax(0, 1.6fr)';
     view.style.gridTemplateRows = '44px auto minmax(0, 1fr)';
-    view.appendChild(el('div', { class: 'title' }, [el('h1', { text: D.me + '시 행사·축제 분석' }), el('span', { class: 'basis', text: '행사 일정: 한국관광공사 국문 관광정보 + 시 행사 목록 · 방문자: 데이터랩 일별' })]));
+    view.appendChild(el('div', { class: 'title' }, [el('h1', { text: D.me + '시 행사·축제 분석' }), el('span', { class: 'basis', text: '행사: 관광공사·문화축제/공연행사 표준데이터·문화정보원 · 방문자: 데이터랩 일별' })]));
     var st = S && S.st;
     var cards = [
       { l: '등록된 행사·축제', ic: 'camera', v: fmt(F.length, 0), u: '건', chips: [['진행 중 ' + F.filter(function (f) { return f.state === '진행 중'; }).length, 'good'], ['예정 ' + F.filter(function (f) { return f.state === '예정'; }).length, 'navy']] },
       { l: '다가오는 행사', sub: next ? mdw(next.start) : '', ic: 'pin', col: '#C0602B', bg: '#FDEBDD', v: next ? next.title : '없음', u: '', small: true },
       { l: '축제 기간 하루 평균', sub: S ? S.title : '', ic: 'people', col: '#1F6FD1', bg: '#E4EEFB', v: st && st.fest ? fmtK(st.fest.avg) : '–', u: '명', chips: [st && st.up != null ? ['평시(직전 2주)보다 ' + (st.up >= 0 ? '+' : '') + fmt(st.up, 1) + '%', st.up >= 0 ? 'good' : 'bad'] : null] },
-      { l: '축제 기간 방문자', sub: st && st.fest ? st.fest.n + '일 합계' : '', ic: 'trend', col: '#2E8B57', bg: '#E2F3E9', v: st && st.fest ? fmtK(st.fest.sum) : '–', u: '명', chips: [st && st.prev[0] ? ['전년 같은 기간보다 ' + ((st.fest.sum / st.prev[0].sum - 1) * 100 >= 0 ? '+' : '') + fmt((st.fest.sum / st.prev[0].sum - 1) * 100, 1) + '%', 'violet'] : null] }
+      { l: '축제 기간 방문자', sub: st && st.fest ? st.fest.n + '일 합계' : '', ic: 'trend', col: '#2E8B57', bg: '#E2F3E9', v: st && st.fest ? fmtK(st.fest.sum) : '–', u: '명', chips: [st && st.prev[0] ? [(st.prev[0].real ? '지난 회차보다 ' : '전년 같은 기간보다 ') + '' + ((st.fest.sum / st.prev[0].sum - 1) * 100 >= 0 ? '+' : '') + fmt((st.fest.sum / st.prev[0].sum - 1) * 100, 1) + '%', 'violet'] : null] }
     ];
     cardsRow(cards);
     var k = view.querySelector('.pr1');
     Array.prototype.forEach.call(k.querySelectorAll('.pv'), function (pv, i) { if (cards[i].small || cards[i].v.length > 6) pv.style.fontSize = '30px'; });
     // 목록
     var tb = el('tbody');
-    F.slice().reverse().forEach(function (f) {
+    var listF = F.filter(function (f) { return f.state !== '종료'; }).concat(F.filter(function (f) { return f.state === '종료'; }).reverse());
+    listF.forEach(function (f) {
       var tone = f.state === '진행 중' ? 'good' : f.state === '예정' ? 'navy' : '';
       tb.appendChild(el('tr', { class: f.id === festSel ? 'on' : '', onclick: function () { festSel = f.id; render(); } }, [
-        el('td', { html: '<b>' + f.title + '</b><br><small style="color:var(--sub)">' + (f.place || f.addr || '') + '</small>' }),
-        el('td', { text: mdLabel(f.start) + (f.end && f.end !== f.start ? '~' + mdLabel(f.end) : ''), style: 'white-space:nowrap' }),
+        el('td', { html: '<b>' + f.title + '</b><br><small style="color:var(--sub)">' + (f.kind ? '<span style="color:#C0602B;font-weight:700">' + f.kind + '</span> · ' : '') + (f.place || f.addr || '') + '</small>' }),
+        el('td', { html: mdLabel(f.start) + (f.end && f.end !== f.start ? '~' + mdLabel(f.end) : '') + '<br><small style="color:var(--sub)">' + f.start.slice(0, 4) + '</small>', style: 'white-space:nowrap' }),
         el('td', {}, [el('span', { class: 'chip ' + tone, text: f.state })]),
         el('td', { class: 'r', text: f.st && f.st.up != null ? (f.st.up >= 0 ? '+' : '') + fmt(f.st.up, 0) + '%' : '–' })]));
     });
@@ -1437,15 +1449,18 @@ function startApp() {
     // 전후 일별
     if (!S || !st || !st.fest) { panel(S ? S.title : '축제 분석', '', el('div', { class: 'empty', text: S && S.state !== '종료' ? '축제가 끝나고 방문자 자료가 나오면 분석합니다' : '방문자 자료가 없는 기간입니다' })); return; }
     var lab = [], cur = [], p1 = [], p2 = [], a = addDays(S.start, -14), b = addDays(S.end, 14), i0 = null, i1 = null;
-    for (var d = a, i = 0; d <= b; d = addDays(d, 1), i++) { lab.push(mdLabel(d)); cur.push(VD[d] ? vday(VD[d]) : null); p1.push(VD[addDays(d, -364)] ? vday(VD[addDays(d, -364)]) : null); p2.push(VD[addDays(d, -728)] ? vday(VD[addDays(d, -728)]) : null); if (d === S.start) i0 = i; if (d === S.end) i1 = i; }
+    var e1 = S.eds[0], e2 = S.eds[1];
+    function shOf(e, n) { return e ? Math.round((ymdDate(e.start) - ymdDate(S.start)) / 864e5) : -364 * n; }
+    var s1 = shOf(e1, 1), s2 = shOf(e2, 2);
+    for (var d = a, i = 0; d <= b; d = addDays(d, 1), i++) { lab.push(mdLabel(d)); cur.push(VD[d] ? vday(VD[d]) : null); p1.push(VD[addDays(d, s1)] ? vday(VD[addDays(d, s1)]) : null); p2.push(VD[addDays(d, s2)] ? vday(VD[addDays(d, s2)]) : null); if (d === S.start) i0 = i; if (d === S.end) i1 = i; }
     var y = +S.start.slice(0, 4);
     var lines = [{ name: y + '년', color: '#1F6FD1', values: cur, width: 3.5, area: true }];
-    if (p1.some(function (v) { return v != null; })) lines.push({ name: (y - 1) + '년 같은 요일', color: '#E8873F', values: p1, width: 2, dash: '6 4' });
-    if (p2.some(function (v) { return v != null; })) lines.push({ name: (y - 2) + '년 같은 요일', color: '#9AA8BA', values: p2, width: 2, dash: '3 4' });
+    if (p1.some(function (v) { return v != null; })) lines.push({ name: e1 ? e1.start.slice(0, 4) + '년 축제(실제 날짜)' : (y - 1) + '년 같은 요일', color: '#E8873F', values: p1, width: 2, dash: '6 4' });
+    if (p2.some(function (v) { return v != null; })) lines.push({ name: e2 ? e2.start.slice(0, 4) + '년 축제(실제 날짜)' : (y - 2) + '년 같은 요일', color: '#9AA8BA', values: p2, width: 2, dash: '3 4' });
     var peak = null; for (var j = i0; j <= i1; j++) if (cur[j] != null && (!peak || cur[j] > peak[1])) peak = [addDays(S.start, j - i0), cur[j]];
     var foR = st.fest.fo / st.fest.sum * 100, ins = [
       '<b>평시 대비</b> 축제 기간 하루 평균 ' + fmtK(st.fest.avg) + '명, 직전 2주 평균(' + fmtK(st.base ? st.base.avg : null) + '명)보다 <b>' + (st.up >= 0 ? '+' : '') + fmt(st.up, 1) + '%</b>',
-      st.prev[0] ? '<b>전년 비교</b> 작년 같은 요일 같은 기간 ' + fmtK(st.prev[0].sum) + '명 → 올해 ' + fmtK(st.fest.sum) + '명 (<b>' + ((st.fest.sum / st.prev[0].sum - 1) * 100 >= 0 ? '+' : '') + fmt((st.fest.sum / st.prev[0].sum - 1) * 100, 1) + '%</b>)' : '<b>전년 비교</b> 작년 같은 기간 자료 없음',
+      st.prev[0] ? '<b>' + (st.prev[0].real ? '지난 회차 비교' : '전년 비교') + '</b> ' + (st.prev[0].real ? st.prev[0].ed.start.slice(0, 4) + '년 축제(' + mdLabel(st.prev[0].ed.start) + '~' + mdLabel(st.prev[0].ed.end) + ')' : '작년 같은 요일 같은 기간') + ' ' + fmtK(st.prev[0].sum) + '명 → 올해 ' + fmtK(st.fest.sum) + '명 (<b>' + ((st.fest.sum / st.prev[0].sum - 1) * 100 >= 0 ? '+' : '') + fmt((st.fest.sum / st.prev[0].sum - 1) * 100, 1) + '%</b>)' : '<b>전년 비교</b> 작년 같은 기간 자료 없음',
       '<b>가장 붐빈 날</b> ' + mdw(peak[0]) + ' ' + fmtK(peak[1]) + '명' + (ymdDate(peak[0]).getDay() % 6 === 0 ? ' · 주말' : ' · 평일'),
       '<b>외국인</b> 축제 기간 방문자의 ' + fmt(foR, 1) + '% (' + fmtK(st.fest.fo) + '명)'
     ];
