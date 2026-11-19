@@ -80,8 +80,8 @@ def main():
         for (oid, onm), ms in objs.items():
             say('  분류 %s %s · %d개 · 예: %s' % (oid, onm, len(ms), ', '.join('%s=%s' % (x.get('ITM_ID'), x.get('ITM_NM')) for x in ms[:6])))
         say('  첫 메타 줄: ' + json.dumps(meta[0], ensure_ascii=False)[:400] if meta else '  메타 없음')
-        oid, codes = sources.kosis_region_codes(meta, C, tuple(src.get('region_code_prefix', [])))
-        say('  강원 시·군 코드(%s): %s' % (oid, codes))
+        oid, rcodes = sources.kosis_region_codes(meta, C, tuple(src.get('region_code_prefix', [])))
+        say('  강원 시·군 코드(%s): %s' % (oid, rcodes))
         ages, basis = sources.age_kosis(S, C)
         say('  연령 자료: %d개 시·군, 기준 %s, 동해 칸: %s' % (len(ages), basis, sorted(ages.get('동해', []))[:30]))
     except Exception as e:  # noqa: BLE001
