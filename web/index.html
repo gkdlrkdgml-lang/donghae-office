@@ -114,6 +114,15 @@
   .dr b { font-size: 19px; } .dr .dn { font-size: 20px; font-weight: 800; text-align: right; color: var(--navy); }
   .dr .dl { text-align: right; font-size: 16px; } .dr .de { grid-column: 2 / 4; text-align: right; font-size: 12.5px; color: var(--sub); }
   section.dongs .note { margin: 10px 16px 14px; }
+  .subtabs { display: flex; gap: 6px; margin-left: 18px; margin-right: auto; }
+  .subtabs button { font: inherit; font-size: 16px; font-weight: 700; padding: 6px 16px; border-radius: 999px; border: 1.5px solid #C9D8EE; background: #fff; color: var(--sub); cursor: pointer; }
+  .subtabs button.on { background: var(--navy); border-color: var(--navy); color: #fff; }
+  .pc.click, section.click { position: relative; cursor: pointer; }
+  .pc .more { position: absolute; right: 10px; top: 10px; font-size: 12.5px; font-weight: 800; color: #fff; background: #D9822B; border-radius: 999px; padding: 3px 10px; box-shadow: 0 2px 6px rgba(217,130,43,.35); animation: pulse 2.4s ease-in-out infinite; }
+  .pr1 .pc .more { top: auto; bottom: 8px; right: 8px; }
+  .band { position: relative; }
+  .more.inband { position: absolute; right: 12px; top: 50%; margin-top: -13px; font-size: 13px; font-weight: 800; color: #fff; background: #D9822B; border-radius: 999px; padding: 3px 12px; animation: pulse 2.4s ease-in-out infinite; }
+  .pc.click:hover, section.click:hover { box-shadow: 0 6px 18px rgba(31,111,209,.18); }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; }
   .chip { font-size: 13.5px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #EEF2F7; color: #3D4B5E; white-space: nowrap; }
   .chip.bad { background: #FDEBDD; color: #A4470F; } .chip.good { background: #E2F3E9; color: #1B7A4B; } .chip.navy { background: #E4EEFB; color: #1B3A6B; } .chip.violet { background: #EFE9FB; color: #5B3FA0; }
@@ -239,7 +248,7 @@ function startApp() {
   D.menu.forEach(function (m, i) {
     nav.appendChild(el('button', { type: 'button', 'data-id': m.id, text: (i + 1) + ' ' + m.label, onclick: function () { go(m.id); } }));
   });
-  function go(id) { current = id; zoomIdx = null; finDetail = null; if (location.hash !== '#' + id) location.hash = id; render(); }
+  function go(id) { current = id; zoomIdx = null; finDetail = null; admDetail = null; if (location.hash !== '#' + id) location.hash = id; render(); }
   window.addEventListener('hashchange', function () {
     var h = location.hash.slice(1);
     if (h !== current && order.indexOf(h) >= 0) { current = h; render(); }
@@ -377,7 +386,79 @@ function startApp() {
     return el('span', { class: 'dl ' + (v > 0 ? 'up' : 'down'), text: (v > 0 ? '▲ ' : '▼ ') + fmt(Math.abs(v), 0) + (unit || '명') });
   }
 
-  // ---------- 2. 행정(인구 현황) ----------
+  // ---------- 2. 행정: 아래 탭(인구 현황 / 인구 비교) ----------
+  var admTab = 'now', admDetail = null;
+  function subTabs() {
+    var t = el('div', { class: 'subtabs' });
+    [['now', '인구 현황'], ['compare', '인구 비교 · 18개 시·군']].forEach(function (x) {
+      t.appendChild(el('button', { type: 'button', class: admTab === x[0] ? 'on' : '', text: x[1], onclick: function () { admTab = x[0]; admDetail = null; render(); } }));
+    });
+    return t;
+  }
+  function screenAdminTabs() {
+    if (admTab === 'compare') screenCompare(); else screenAdmin();
+    var title = view.querySelector('.title');
+    if (title) title.insertBefore(subTabs(), title.children[1] || null);
+    if (admTab === 'now' && admDetail) admPopup(admDetail);
+  }
+  function popup(titleText, subText, body) {
+    function close() { admDetail = null; finDetail = null; render(); }
+    view.appendChild(el('div', { id: 'detailBack', onclick: close }));
+    view.appendChild(el('section', { class: 'detail' }, [
+      el('div', { class: 'sh' }, [el('h2', { text: titleText }), el('small', { text: subText || '' }), el('button', { class: 'zbtn', type: 'button', text: '✕ 닫기', onclick: close })]),
+      body]));
+  }
+  function admPopup(key) {
+    var A = D.admin, MG = A.migration || {};
+    if (key === 'pop') {
+      var pc = ind('pop_change'), b = A.age_bands, body = el('div', { class: 'detailBody', style: 'grid-template-columns:1fr 1fr' });
+      body.appendChild(el('div', { style: 'min-height:0;display:flex;flex-direction:column' }, [el('div', { class: 'odh', text: '인구 증감률 · 강원 18개 시·군 (전년 같은 달 대비 %)' }), pc ? rankList(pc) : el('div', { class: 'empty', text: '자료 없음' })]));
+      var keys = ['0', '10', '20', '30', '40', '50', '60', '70', '80', '90', '100'];
+      var colsBox = el('div', { style: 'min-height:0;display:flex;flex-direction:column;height:100%' }, [el('div', { class: 'odh', text: '동해시 연령대별 인구 (10세 단위 · 명)' })]);
+      if (b) {
+        var mx = Math.max.apply(null, keys.map(function (x) { return b[x] || 0; })) || 1, cols = el('div', { class: 'cols', style: 'min-height:420px' });
+        keys.forEach(function (x) { cols.appendChild(el('div', { class: 'col' }, [el('b', { text: fmt(b[x], 0) }), el('div', { class: 'c', style: 'height:' + ((b[x] || 0) / mx * 85).toFixed(1) + '%;background:' + (Number(x) >= 70 ? '#E8A867' : '#6B9BD8') }), el('span', { text: x === '100' ? '100+' : x + '대' })])); });
+        colsBox.appendChild(cols);
+      }
+      body.appendChild(colsBox);
+      popup('인구 세부 · 도내 증감률 순위와 연령 구조', ymLabel(A.ym) + ' 주민등록 기준', body);
+    } else if (key === 'age') {
+      var wa = ind('working_age'), elI = ind('elderly'), body2 = el('div', { class: 'detailBody', style: 'grid-template-columns:1fr 1fr' });
+      body2.appendChild(el('div', {}, [el('div', { class: 'odh', text: '생산연령인구 비율(만 15~64세) · 18개 시·군' }), wa ? rankList(wa) : el('div', { class: 'empty', text: '자료 없음' })]));
+      body2.appendChild(el('div', {}, [el('div', { class: 'odh', text: '고령인구 비율(만 65세 이상) · 18개 시·군' }), elI ? rankList(elI) : el('div', { class: 'empty', text: '자료 없음' })]));
+      popup('연령 세부 · 강원 18개 시·군 비교', '주민등록 연령별 인구(KOSIS) 기준', body2);
+    } else if (key === 'dong') {
+      var body3 = el('div', { class: 'detailBody', style: 'grid-template-columns:1fr 1.2fr' });
+      var adm = Object.keys(A.admm || {}).map(function (n) { return [n, A.admm[n]]; }).sort(function (a, c) { return c[1].total - a[1].total; });
+      var t1 = el('tbody'); adm.forEach(function (x) { t1.appendChild(el('tr', {}, [el('td', { text: x[0] }), el('td', { class: 'r', text: fmt(x[1].total, 0) }), el('td', { class: 'r', text: x[1].prev_total != null ? ((x[1].total - x[1].prev_total) > 0 ? '+' : '') + fmt(x[1].total - x[1].prev_total, 0) : '–' }), el('td', { class: 'r', text: fmt(x[1].working_age, 1) + '%' }), el('td', { class: 'r', text: fmt(x[1].elderly, 1) + '%' })])); });
+      body3.appendChild(el('div', {}, [el('div', { class: 'odh', text: '행정동 ' + adm.length + '곳' }), el('table', { class: 'dt big' }, [el('thead', {}, [el('tr', {}, ['행정동', '인구', '전월 대비', '생산연령', '고령'].map(function (h, j) { return el('th', { class: j ? 'r' : '', text: h }); }))]), t1])]));
+      var dg = Object.keys(A.dongs || {}).map(function (n) { return [n, A.dongs[n]]; }).sort(function (a, c) { return c[1].total - a[1].total; });
+      var t2 = el('tbody'); dg.forEach(function (x) { t2.appendChild(el('tr', {}, [el('td', { text: x[0] }), el('td', { class: 'r', text: fmt(x[1].total, 0) }), el('td', { class: 'r', text: fmt(x[1].hh, 0) })])); });
+      body3.appendChild(el('div', { style: 'min-height:0;overflow:auto;max-height:780px' }, [el('div', { class: 'odh', text: '법정동 ' + dg.length + '곳' }), el('table', { class: 'dt' }, [el('thead', {}, [el('tr', {}, ['법정동', '인구', '세대'].map(function (h, j) { return el('th', { class: j ? 'r' : '', text: h }); }))]), t2])]));
+      popup('동별 세부 · 행정동과 법정동', ymLabel(A.ym) + ' 기준', body3);
+    } else if (key === 'mig') {
+      var body4 = el('div', { class: 'detailBody', style: 'grid-template-columns:repeat(3, minmax(0,1fr))' });
+      function full(title, list, col) {
+        var mx = list.length ? list[0][1] : 1, box = el('div', { style: 'min-height:0;overflow:auto;max-height:800px' }, [el('div', { class: 'odh', style: 'color:' + col, text: title })]);
+        list.slice(0, 25).forEach(function (x, i) { box.appendChild(el('div', { class: 'odr', style: 'grid-template-columns:24px 150px minmax(0,1fr) 42px' }, [el('span', { text: String(i + 1), style: 'color:#8693A4' }), el('span', { class: 'odn', text: (x[3] && x[3].indexOf('강원') < 0 ? x[3].replace(/특별자치도|특별자치시|광역시|특별시/, '') + ' ' : '') + x[0] }), el('div', { class: 'odb' }, [el('i', { style: 'width:' + (x[1] / mx * 100).toFixed(1) + '%;background:' + col })]), el('b', { text: fmt(x[1], 0) })])); });
+        return box;
+      }
+      body4.appendChild(full('어디서 왔나 · 상위 25곳', MG.from_sgg || [], '#1F6FD1'));
+      body4.appendChild(full('어디로 갔나 · 상위 25곳', MG.to_sgg || [], '#7A4FC4'));
+      var sido = {}; (MG.from_sido || []).forEach(function (x) { sido[x[0]] = [x[1], 0]; }); (MG.to_sido || []).forEach(function (x) { (sido[x[0]] = sido[x[0]] || [0, 0])[1] = x[1]; });
+      var t5 = el('tbody'); Object.keys(sido).sort(function (a, c) { return (sido[c][0] + sido[c][1]) - (sido[a][0] + sido[a][1]); }).forEach(function (k) {
+        var n = sido[k][0] - sido[k][1]; t5.appendChild(el('tr', {}, [el('td', { text: k }), el('td', { class: 'r', text: fmt(sido[k][0], 0) }), el('td', { class: 'r', text: fmt(sido[k][1], 0) }), el('td', { class: 'r', style: 'font-weight:700;color:' + (n < 0 ? '#B4531B' : '#1B7A4B'), text: (n > 0 ? '+' : '') + fmt(n, 0) })])); });
+      body4.appendChild(el('div', {}, [el('div', { class: 'odh', text: '시·도별 전입·전출' }), el('table', { class: 'dt big' }, [el('thead', {}, [el('tr', {}, ['시·도', '전입', '전출', '순이동'].map(function (h, j) { return el('th', { class: j ? 'r' : '', text: h }); }))]), t5])]));
+      popup('인구 이동 세부 · ' + ymLabel(MG.ym), '통계청 국내인구이동(동해시 안 이동 제외)', body4);
+    }
+  }
+  function moreBadge(node, key) {
+    node.classList.add('click');
+    node.appendChild(el('span', { class: 'more', text: '👆 클릭 · 세부' }));
+    node.addEventListener('click', function () { admDetail = key; render(); });
+  }
+
+  // ---------- 2-1. 행정(인구 현황) ----------
   function screenAdmin() {
     var A = D.admin, me = A.regions[D.me] || {};
     var Y = A.youth || {}, MG = A.migration || {}, pcI = ind('pop_change'), elI = ind('elderly'), waI = ind('working_age');
@@ -462,6 +543,9 @@ function startApp() {
       r3.appendChild(od);
     } else r3.appendChild(el('div', { class: 'empty', text: '이동 자료 없음' }));
     L.appendChild(r3);
+    moreBadge(r1.children[0], 'pop'); moreBadge(r1.children[4], 'pop');
+    moreBadge(r2.children[0], 'age'); moreBadge(r2.children[1], 'age');
+    if (MG.ym) { var bb = r3.querySelector('.band'); r3.classList.add('click'); bb.appendChild(el('span', { class: 'more inband', text: '👆 클릭 · 세부' })); r3.addEventListener('click', function () { admDetail = 'mig'; render(); }); }
     view.appendChild(L);
     // 오른쪽: 동별 현황
     var R = el('section', { class: 'dongs' }, [el('div', { class: 'band', text: '동별 현황 (행정동)' })]);
@@ -473,6 +557,8 @@ function startApp() {
     });
     R.appendChild(tb);
     R.appendChild(el('div', { class: 'note', style: 'margin-top:auto' }, [el('b', { text: '기준 ' }), (A.admm_ym ? ymLabel(A.admm_ym) : '') + ' · 전월 대비 · 고령 = 65세 이상 비율']));
+    R.classList.add('click'); R.querySelector('.band').appendChild(el('span', { class: 'more inband', text: '👆 클릭 · 세부' }));
+    R.addEventListener('click', function () { admDetail = 'dong'; render(); });
     view.appendChild(R);
   }
 
@@ -691,7 +777,7 @@ function startApp() {
   }
 
   // ---------- 그리기 ----------
-  var SCREENS = { main: screenMain, admin: screenAdmin, compare: screenCompare, finance: screenFinance, frame: screenFrame };
+  var SCREENS = { main: screenMain, admin: screenAdminTabs, finance: screenFinance, frame: screenFrame };
   function render() {
     view.textContent = '';
     view.className = '';
@@ -725,7 +811,7 @@ function startApp() {
 
   // ---------- 리모컨(무선 키보드) ----------
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && (zoomIdx != null || finDetail)) { zoomIdx = null; finDetail = null; render(); return; }
+    if (e.key === 'Escape' && (zoomIdx != null || finDetail || admDetail)) { zoomIdx = null; finDetail = null; admDetail = null; render(); return; }
     var i = order.indexOf(current);
     if (e.key === 'ArrowRight') go(order[(i + 1) % order.length]);
     else if (e.key === 'ArrowLeft') go(order[(i - 1 + order.length) % order.length]);
