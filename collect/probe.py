@@ -128,20 +128,16 @@ def main():
             say('[신규 %s] 안 됨: %s' % (nm, str(e)[-300:]))
     from urllib.parse import unquote as _uq7
     kk = _uq7(os.environ.get('DATA_GO_KR_KEY', '').strip())
-    for nm, url, q in (('주차장', 'https://api.data.go.kr/openapi/tn_pubr_prkplce_info_api', {'type': 'json', 'numOfRows': '3', 'pageNo': '1'}),
-                       ('주차장동해', 'https://api.data.go.kr/openapi/tn_pubr_prkplce_info_api', {'type': 'json', 'numOfRows': '3', 'pageNo': '1', 'institutionNm': '강원특별자치도 동해시'}),
-                       ('보호구역', 'https://apis.data.go.kr/1320000/safetyzonedtlinfo', {'type': 'json', 'numOfRows': '3', 'pageNo': '1'})):
+    for nm, url in (('버스정류소', 'https://apis.data.go.kr/1613000/BusSttnInfoInqireService/getCtyCodeList'),
+                    ('버스도착', 'https://apis.data.go.kr/1613000/ArvlInfoInqireService/getCtyCodeList'),
+                    ('버스노선', 'https://apis.data.go.kr/1613000/BusRouteInfoInqireService/getCtyCodeList'),
+                    ('버스위치', 'https://apis.data.go.kr/1613000/BusLcInfoInqireService/getCtyCodeList'),
+                    ('열차', 'https://apis.data.go.kr/1613000/TrainInfoService/getCtyCodeList')):
         try:
-            t = http_get(url, dict(q, serviceKey=kk), tries=1)
-            say('[신청2 %s] %s' % (nm, t[:1500].replace('\n', ' ')))
+            t = http_get(url, {'serviceKey': kk, '_type': 'json', 'numOfRows': '300', 'pageNo': '1'}, tries=1)
+            say('[TAGO %s] 됨 %s' % (nm, ('동해 있음 ' + t[max(0, t.find('동해') - 60):t.find('동해') + 20]) if '동해' in t else t[:200]))
         except Exception as e:  # noqa: BLE001
-            say('[신청2 %s] %s' % (nm, str(e)[-300:].replace('\n', ' ')))
-    for op in ('getSafetyZoneDtlInfo', 'getSafetyzonedtlinfo', 'safetyZoneDtlInfo', 'getList', 'list', 'getSafetyZoneList', 'getSafetyZoneInfo', 'safetyzonedtlinfo'):
-        try:
-            t = http_get('https://apis.data.go.kr/1320000/safetyzonedtlinfo/' + op, {'serviceKey': kk, 'type': 'json', '_type': 'json', 'numOfRows': '3', 'pageNo': '1'}, tries=1)
-            say('[보호구역 %s] %s' % (op, t[:1200].replace('\n', ' ')))
-        except Exception as e:  # noqa: BLE001
-            say('[보호구역 %s] %s' % (op, str(e)[-200:].replace('\n', ' ')))
+            say('[TAGO %s] 안 됨 %s' % (nm, str(e)[-120:].replace('\n', ' ')))
     if os.environ.get('PROBE_FULL') != '1':
         return
     probe('admm_population', {'url': 'https://apis.data.go.kr/1741000/admmPpltnHhStus/selectAdmmPpltnHhStus', 'key_env': 'DATA_GO_KR_KEY',
