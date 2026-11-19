@@ -98,10 +98,11 @@ def main():
         say('  → 실패: %s' % e)
     import re as _re2
     for nm, url in (('death', 'https://apis.data.go.kr/1741000/admmSexdAgeErsr/selectAdmmSexdAgeErsr'),
-                    ('hsmb', 'https://apis.data.go.kr/1741000/admmHsmbHh/selectAdmmHsmbHh')):
+                    ('hsmb', 'https://apis.data.go.kr/1741000/admmHsmbHh/selectAdmmHsmbHh'),
+                    ('birth', 'https://apis.data.go.kr/1741000/admmSexdBrthReg/selectAdmmSexdBrthReg')):
         for lv in ('2', '3'):
             try:
-                key = urllib.parse.unquote(os.environ.get('DATA_GO_KR_KEY', '').strip())
+                from urllib.parse import unquote as _uq; key = _uq(os.environ.get('DATA_GO_KR_KEY', '').strip())
                 t = http_get(url, {'serviceKey': key, 'type': 'JSON', 'numOfRows': '30', 'pageNo': '1', 'lv': lv, 'regSeCd': '1', 'admmCd': me['stdg'], 'srchFrYm': ym, 'srchToYm': ym})
                 items = find_items(parse_body(t))
                 say('[%s lv%s] %d건' % (nm, lv, len(items)))
