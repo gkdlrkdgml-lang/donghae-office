@@ -200,7 +200,7 @@ function startApp() {
         onclick: onPick ? function () { onPick(r.name); } : null }, [
         el('span', { class: 'rk', text: String(r.rank) }),
         el('span', { text: r.name }),
-        el('div', { class: 'bar' }, [el('div', { style: 'width:' + w.toFixed(1) + '%;background:' + (me ? '#1F6FD1' : (r.judge === 'weak' ? '#E8A867' : r.judge === 'strong' ? '#5DB88E' : '#B8C4D4')) })]),
+        el('div', { class: 'bar' }, [el('div', { style: 'width:' + w.toFixed(1) + '%;background:' + (me ? '#1F6FD1' : (r.judge === 'weak' ? '#E8A867' : r.judge === 'strong' ? '#5DB88E' : r.judge === 'excluded' ? '#B8C4D4' : '#8FB2E0')) })]),
         el('span', { class: 'v', text: fmt(r.value, i.digits) })
       ]);
       if (!onPick) { row.removeAttribute('role'); row.removeAttribute('tabindex'); row.style.cursor = 'default'; }
@@ -214,12 +214,14 @@ function startApp() {
     series = series.slice().sort(function (a, b) { return b[1] - a[1]; });
     var mx = Math.max.apply(null, series.map(function (c) { return Math.abs(c[1]); })) || 1;
     var cols = el('div', { class: 'cols tight', style: 'gap:5px' });
-    series.forEach(function (c) {
+    var cut = Math.ceil(series.length * (D.judge.strong_pct || 25) / 100);
+    series.forEach(function (c, i) {
       var m = c[0] === D.me, p = c[0] === selected && !m;
+      var base = i < cut ? '#5DB88E' : i >= series.length - cut ? '#E8A867' : '#8FB2E0';
       cols.appendChild(el('div', { class: 'col', style: onPick ? 'cursor:pointer' : '', onclick: onPick ? function () { onPick(c[0]); } : null }, [
-        el('b', { text: fmt(c[1], digits || 0), style: 'font-size:11.5px' + (m ? ';color:#1F6FD1' : p ? ';color:#A4470F' : '') }),
-        el('div', { class: 'c', style: 'height:' + (Math.abs(c[1]) / mx * 82).toFixed(1) + '%;background:' + (m ? '#1F6FD1' : p ? '#D9822B' : '#B8C4D4') + (p ? ';outline:2px solid #D9822B' : '') }),
-        el('span', { text: c[0], style: 'font-size:12px;' + (m ? 'color:#1F6FD1;font-weight:700' : p ? 'color:#A4470F;font-weight:700' : '') })]));
+        el('b', { text: fmt(c[1], digits || 0), style: 'font-size:11.5px' + (m ? ';color:#1F6FD1' : p ? ';color:#1B3A6B' : '') }),
+        el('div', { class: 'c', style: 'height:' + (Math.abs(c[1]) / mx * 82).toFixed(1) + '%;background:' + (m ? '#1F6FD1' : p ? '#1B3A6B' : base) }),
+        el('span', { text: c[0], style: 'font-size:12px;' + (m ? 'color:#1F6FD1;font-weight:700' : p ? 'color:#1B3A6B;font-weight:800;text-decoration:underline' : '') })]));
     });
     return cols;
   }
@@ -387,7 +389,8 @@ function startApp() {
     function mkRank(fld) {
       var arr = names.map(function (n) { return { name: n, value: (fld === 'dep' ? am[n].budget - (am[n].own || 0) : am[n][fld]) / 1e8 }; })
         .sort(function (x, y) { return y.value - x.value; });
-      arr.forEach(function (r, i) { r.rank = i + 1; r.judge = 'middle'; });
+      var cut = Math.ceil(arr.length * (D.judge.strong_pct || 25) / 100);
+      arr.forEach(function (r, i) { r.rank = i + 1; r.judge = i < cut ? 'strong' : i >= arr.length - cut ? 'weak' : 'middle'; });
       return { ranking: arr, digits: 0, n: arr.length };
     }
     var rb = mkRank('budget'), ro = mkRank('own');
@@ -432,7 +435,7 @@ function startApp() {
     // 오른쪽: 예산 구성(원형) + 재정자립도(세로 막대)
     var s3 = el('section', { style: 'display:grid;grid-template-rows:auto minmax(0,0.9fr) auto minmax(0,1.1fr);gap:10px' }, [
       el('div', { class: 'sh' }, [el('h2', { text: '예산 구성 · ' + full }), el('small', { text: '억 원' })]),
-      donut([['자체수입 ' + eok(sel.own) + '억', sel.own, '#2E9C6A'], ['의존재원 등 ' + eok(dep) + '억', dep, '#C9D3E0']], eok(sel.budget) + '억', '예산 규모'),
+      donut([['자체수입 ' + eok(sel.own) + '억', sel.own, '#2E9C6A'], ['의존재원 등 ' + eok(dep) + '억', dep, '#8FB2E0']], eok(sel.budget) + '억', '예산 규모'),
       el('div', { class: 'sh' }, [el('h2', { text: '재정자립도' }), el('small', { text: '높을수록 좋음 · %' })])
     ]);
     if (fi) s3.appendChild(colChart(fi.ranking.map(function (r) { return [r.name, r.value]; }), pick, hl, 1));
