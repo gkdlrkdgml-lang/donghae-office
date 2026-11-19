@@ -128,20 +128,16 @@ def main():
             say('[신규 %s] 안 됨: %s' % (nm, str(e)[-300:]))
     from urllib.parse import unquote as _uq3
     kk = _uq3(os.environ.get('DATA_GO_KR_KEY', '').strip())
-    base = 'https://apis.data.go.kr/B551011/AreaTarDemDsService/'
-    for ym in ('202610', '202607', '202606', '202512', '202509'):
-        for ac, sc in (('51', '51170'), ('32', '32040'), ('42', '42170'), ('51', None), ('32', None)):
-            q = {'serviceKey': kk, 'MobileOS': 'ETC', 'MobileApp': 'donghae', '_type': 'json', 'baseYm': ym, 'areaCd': ac, 'numOfRows': '300', 'pageNo': '1', 'tarExpDsIxCd': '22'}
-            if sc:
-                q['signguCd'] = sc
-            try:
-                t = http_get(base + 'areaTarExpDsList', q, tries=1)
-                say('[수요2 %s %s %s] %s' % (ym, ac, sc, t[:700].replace('\n', ' ')))
-                if '동해' in t:
-                    import re as _re
-                    say('[수요2 동해] ' + ' || '.join(m for m in _re.findall(r'\{[^{}]*동해[^{}]*\}', t)[:8]))
-            except Exception as e:  # noqa: BLE001
-                say('[수요2 %s %s %s] 안 됨 %s' % (ym, ac, sc, str(e)[-150:]))
+    for nm, url, q in (('축제표준', 'https://api.data.go.kr/openapi/tn_pubr_public_cltur_fstvl_api', {'type': 'json', 'numOfRows': '100', 'pageNo': '1', 'rdnmadr': '동해시'}),
+                       ('축제표준2', 'https://api.data.go.kr/openapi/tn_pubr_public_cltur_fstvl_api', {'type': 'json', 'numOfRows': '5', 'pageNo': '1'}),
+                       ('공연행사표준', 'https://api.data.go.kr/openapi/tn_pubr_public_pblprfr_event_info_api', {'type': 'json', 'numOfRows': '5', 'pageNo': '1'}),
+                       ('문화정보원', 'https://apis.data.go.kr/B553457/cultureinfo/area2', {'numOfrows': '20', 'PageNo': '1', 'sido': '강원', 'gugun': '동해시', 'from': '20260101', 'to': '20261231'}),
+                       ('지역축제', 'https://apis.data.go.kr/B553457/cultureinfo/period2', {'numOfrows': '5', 'PageNo': '1', 'from': '20261101', 'to': '20261231'})):
+        try:
+            t = http_get(url, dict(q, serviceKey=kk), tries=1)
+            say('[행사 %s] %s' % (nm, t[:1500].replace('\n', ' ')))
+        except Exception as e:  # noqa: BLE001
+            say('[행사 %s] 안 됨 %s' % (nm, str(e)[-250:]))
     if os.environ.get('PROBE_FULL') != '1':
         return
     probe('admm_population', {'url': 'https://apis.data.go.kr/1741000/admmPpltnHhStus/selectAdmmPpltnHhStus', 'key_env': 'DATA_GO_KR_KEY',
