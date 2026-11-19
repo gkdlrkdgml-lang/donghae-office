@@ -368,6 +368,52 @@ def migration(S, C, code='51170'):
     return res
 
 
+def youth_elderly(S, C):
+    """KOSIS 1세별 주민등록인구(DT_1B04006): 우리 시 청년(19~34세)·고령(65세+) 정확한 인원, 최근 2개월."""
+    src = {'key_env': 'KOSIS_KEY', 'meta_url': 'https://kosis.kr/openapi/statisticsData.do', 'params': {'orgId': '101', 'tblId': 'DT_1B04006'}}
+    meta = kosis_meta(src)
+    full = [r['full'] for r in C['regions'] if r['name'] == C['me']][0]
+    reg = [m for m in meta if str(m.get('ITM_NM', '')).strip() == full and str(m.get('ITM_ID', ''))[:2] in ('51', '32', '42')]
+    if not reg:
+        raise RuntimeError('1세별 표에서 %s 코드를 찾지 못함' % full)
+    robj, rcode = reg[0]['OBJ_ID'], str(reg[0]['ITM_ID'])
+    order = []
+    for m in meta:
+        if m.get('OBJ_ID') and m['OBJ_ID'] != 'ITEM' and m['OBJ_ID'] not in order:
+            order.append(m['OBJ_ID'])
+    extra = {'newEstPrdCnt': '2'}
+    for i, oid in enumerate(order[:8]):
+        extra['objL%d' % (i + 1)] = rcode + '+' if oid == robj else 'ALL'
+    itm = [m for m in meta if m.get('OBJ_ID') == 'ITEM' and '총' in str(m.get('ITM_NM', ''))]
+    if itm:
+        extra['itmId'] = str(itm[0]['ITM_ID']) + '+'
+    rows = _kosis_rows('DT_1B04006', extra, 'age_1y')
+    by = {}
+    for r in rows:
+        if itm and r.get('ITM_ID') != str(itm[0]['ITM_ID']):
+            continue
+        lab = ''
+        for k in ('C2_NM', 'C3_NM', 'C4_NM'):
+            if _re.search(r'\d+\s*세', str(r.get(k, ''))):
+                lab = str(r.get(k)).strip()
+                break
+        m1 = _re.match(r'^(\d+)\s*세$', lab)
+        m2 = _OVER.search(lab)
+        v = to_num(r.get('DT'))
+        if v is None or not (m1 or m2):
+            continue  # 1세 칸과 'N세 이상'만(합계·묶음 제외)
+        by.setdefault(r.get('PRD_DE'), {})[int((m1 or m2).group(1))] = v
+    if not by:
+        raise RuntimeError('1세별 응답이 비었음')
+    out = {}
+    for pd, ages in by.items():
+        out[pd] = {'youth': round(sum(v for k, v in ages.items() if 19 <= k <= 34)),
+                   'elderly': round(sum(v for k, v in ages.items() if k >= 65)), 'total': round(sum(ages.values()))}
+    ym = max(out)
+    pv = max([p for p in out if p != ym] or [None])
+    return {'ym': ym, 'prev_ym': pv, 'cur': out[ym], 'prev': out.get(pv)}
+
+
 def age_mois(S, C):
     src = S['sources']['age']['mois']
     rows = _call(src, {}, 'age_mois')
