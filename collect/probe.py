@@ -88,8 +88,15 @@ def main():
         say('  강원 시·군 코드(%s): %s' % (oid, rcodes))
         ages, basis = sources.age_kosis(S, C)
         say('  연령 자료: %d개 시·군, 기준 %s, 동해 칸: %s' % (len(ages), basis, sorted(ages.get('동해', []))[:30]))
+        dh = rcodes.get('동해', '')
+        kids = [m for m in meta if m.get('OBJ_ID') == oid and str(m.get('ITM_ID', '')).startswith(dh) and str(m.get('ITM_ID')) != dh]
+        say('  동해 하위 코드 %d개: %s' % (len(kids), ', '.join('%s=%s(up %s)' % (x.get('ITM_ID'), x.get('ITM_NM'), x.get('UP_ITM_ID')) for x in kids)))
+        say('  연령 분류 이름: %s' % ', '.join('%s=%s' % (m.get('ITM_ID'), m.get('ITM_NM')) for m in meta if m.get('OBJ_ID') not in (oid, 'ITEM')))
     except Exception as e:  # noqa: BLE001
         say('  → 실패: %s' % e)
+    probe('admm_population', {'url': 'https://apis.data.go.kr/1741000/admmPpltnHhStus/selectAdmmPpltnHhStus', 'key_env': 'DATA_GO_KR_KEY',
+                               'params': {'type': 'JSON', 'numOfRows': '100', 'pageNo': '1', 'lv': '3', 'regSeCd': '1'}},
+          {'admmCd': me['stdg'], 'srchFrYm': ym, 'srchToYm': ym})
     probe('age_mois', S['sources']['age']['mois'], {})
     probe('finance', S['sources']['finance'], {})
     probe('finance_final', S['sources']['finance_final'], {})
