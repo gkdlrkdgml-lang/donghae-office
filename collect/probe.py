@@ -129,14 +129,19 @@ def main():
     from urllib.parse import unquote as _uq3
     kk = _uq3(os.environ.get('DATA_GO_KR_KEY', '').strip())
     base = 'https://apis.data.go.kr/B551011/AreaTarDemDsService/'
-    for op in ('areaTarExpDsList', 'areaTarSjrnDsList', 'areaTarExpDsList1', 'areaTarExpDsInfo', 'getAreaTarExpDsList', 'areaTarDemDsList'):
-        for ym in ('202609', '202608'):
+    for ym in ('202610', '202607', '202606', '202512', '202509'):
+        for ac, sc in (('51', '51170'), ('32', '32040'), ('42', '42170'), ('51', None), ('32', None)):
+            q = {'serviceKey': kk, 'MobileOS': 'ETC', 'MobileApp': 'donghae', '_type': 'json', 'baseYm': ym, 'areaCd': ac, 'numOfRows': '300', 'pageNo': '1', 'tarExpDsIxCd': '22'}
+            if sc:
+                q['signguCd'] = sc
             try:
-                t = http_get(base + op, {'serviceKey': kk, 'MobileOS': 'ETC', 'MobileApp': 'donghae', '_type': 'json', 'baseYm': ym, 'areaCd': '51', 'signguCd': '51170', 'numOfRows': '50', 'pageNo': '1'}, tries=1)
-                say('[수요 %s %s] %s' % (op, ym, t[:1800].replace('\n', ' ')))
-                break
+                t = http_get(base + 'areaTarExpDsList', q, tries=1)
+                say('[수요2 %s %s %s] %s' % (ym, ac, sc, t[:700].replace('\n', ' ')))
+                if '동해' in t:
+                    import re as _re
+                    say('[수요2 동해] ' + ' || '.join(m for m in _re.findall(r'\{[^{}]*동해[^{}]*\}', t)[:8]))
             except Exception as e:  # noqa: BLE001
-                say('[수요 %s %s] 안 됨 %s' % (op, ym, str(e)[-200:]))
+                say('[수요2 %s %s %s] 안 됨 %s' % (ym, ac, sc, str(e)[-150:]))
     if os.environ.get('PROBE_FULL') != '1':
         return
     probe('admm_population', {'url': 'https://apis.data.go.kr/1741000/admmPpltnHhStus/selectAdmmPpltnHhStus', 'key_env': 'DATA_GO_KR_KEY',
