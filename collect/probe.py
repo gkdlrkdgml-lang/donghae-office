@@ -117,7 +117,7 @@ def main():
             say('[주기] %s: %s' % (tb, t[:300]))
         except Exception as e:  # noqa: BLE001
             say('[메타] %s 실패 %s' % (tb, e))
-    for q in ():
+    for q in ('1세별 주민등록인구', '각세별 주민등록인구'):
         try:
             t = http_get('https://kosis.kr/openapi/statisticsSearch.do', {'method': 'getList', 'apiKey': kk, 'searchNm': q, 'format': 'json', 'jsonVD': 'Y', 'resultCount': '15'})
             j = json.loads(t)
