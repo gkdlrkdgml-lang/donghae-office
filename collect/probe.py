@@ -113,7 +113,7 @@ def main():
     from datetime import timedelta as _td
     _t = now() - _td(hours=3)
     _bd = _t.strftime('%Y%m%d')
-    for nm, url, pr in (('cnctr', 'https://apis.data.go.kr/B551011/TatsCnctrRateService/tatsCnctrRatedList', {'areaCd': '51', 'signguCd': '51170', 'MobileOS': 'ETC', 'MobileApp': 'donghae', '_type': 'json', 'numOfRows': '5', 'pageNo': '1'}),
+    for nm, url, pr in () and (('cnctr', 'https://apis.data.go.kr/B551011/TatsCnctrRateService/tatsCnctrRatedList', {'areaCd': '51', 'signguCd': '51170', 'MobileOS': 'ETC', 'MobileApp': 'donghae', '_type': 'json', 'numOfRows': '5', 'pageNo': '1'}),
                         ('festival', 'https://apis.data.go.kr/B551011/KorService2/searchFestival2', {'eventStartDate': '20240101', 'areaCode': '32', 'sigunguCode': '3', 'MobileOS': 'ETC', 'MobileApp': 'donghae', '_type': 'json', 'numOfRows': '5', 'pageNo': '1', 'arrange': 'A'}),
                         ('festival_ld', 'https://apis.data.go.kr/B551011/KorService2/searchFestival2', {'eventStartDate': '20240101', 'lDongRegnCd': '51', 'lDongSignguCd': '170', 'MobileOS': 'ETC', 'MobileApp': 'donghae', '_type': 'json', 'numOfRows': '5', 'pageNo': '1', 'arrange': 'A'}),
                         ('spots', 'https://apis.data.go.kr/B551011/KorService2/areaBasedList2', {'areaCode': '32', 'sigunguCode': '3', 'contentTypeId': '12', 'MobileOS': 'ETC', 'MobileApp': 'donghae', '_type': 'json', 'numOfRows': '3', 'pageNo': '1', 'arrange': 'Q'}),
@@ -126,6 +126,14 @@ def main():
             say('[신규 %s] 됨: %s' % (nm, t[:1500].replace('\n', ' ')))
         except Exception as e:  # noqa: BLE001
             say('[신규 %s] 안 됨: %s' % (nm, str(e)[-300:]))
+    kk0 = os.environ.get('KOSIS_KEY', '')
+    for q in ('자동차 등록현황', '연료별 자동차', '시군구별 자동차', '자동차등록대수'):
+        try:
+            t = http_get('https://kosis.kr/openapi/statisticsSearch.do', {'method': 'getList', 'apiKey': kk0, 'searchNm': q, 'format': 'json', 'jsonVD': 'Y', 'resultCount': '20'})
+            j = json.loads(t)
+            say('[검색] %s → %s' % (q, ' | '.join('%s/%s %s(%s~%s %s)' % (x.get('ORG_ID'), x.get('TBL_ID'), x.get('TBL_NM'), x.get('STRT_PRD_DE'), x.get('END_PRD_DE'), x.get('PRD_SE', '')) for x in j) if isinstance(j, list) else str(j)[:300]))
+        except Exception as e:  # noqa: BLE001
+            say('[검색] %s 실패 %s' % (q, e))
     if os.environ.get('PROBE_FULL') != '1':
         return
     probe('admm_population', {'url': 'https://apis.data.go.kr/1741000/admmPpltnHhStus/selectAdmmPpltnHhStus', 'key_env': 'DATA_GO_KR_KEY',
