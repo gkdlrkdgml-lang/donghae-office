@@ -3,13 +3,16 @@
 결과는 언제나 18개 시·군 이름({'동해': 값, ...})을 기준으로 맞춰 돌려줍니다.
 """
 import os
+import urllib.parse
 
 from common import (http_get, parse_body, find_items, check_error, pick, to_num,
                     match_region, read_manual, save_raw, ym_shift, now, log)
 
 
 def _call(src, extra, raw_name):
-    key = os.environ.get(src['key_env'], '')
+    key = os.environ.get(src['key_env'], '').strip()
+    if '%' in key:  # Encoding 키를 넣었어도 동작하도록 한 번 풀어 줍니다.
+        key = urllib.parse.unquote(key)
     if not key:
         raise RuntimeError('%s 키가 없습니다(GitHub Secrets에 넣어 주세요)' % src['key_env'])
     if not src.get('url'):

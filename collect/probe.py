@@ -26,7 +26,11 @@ def say(s=''):
 def probe(name, src, extra):
     say('=' * 70)
     say('[%s] %s' % (name, src.get('url') or '(주소 없음)'))
-    key = os.environ.get(src.get('key_env', ''), '')
+    key = os.environ.get(src.get('key_env', ''), '').strip()
+    say('  키 형태: 길이 %d, %%포함=%s, 끝이 ==: %s' % (len(key), '%' in key, key.endswith('==')))
+    if '%' in key:
+        import urllib.parse
+        key = urllib.parse.unquote(key)
     if not key:
         say('  → .env에 %s 가 없습니다' % src.get('key_env'))
         return
