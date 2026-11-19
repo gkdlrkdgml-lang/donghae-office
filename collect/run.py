@@ -194,6 +194,20 @@ def collect(state, S, C):
             ok(state, 'festivals', '%d건' % len(L['festivals']['items']))
         except Exception as e:  # noqa: BLE001
             fail(state, 'festivals', e)
+    # 시가 직접 적는 행사(config/events.json)를 축제 목록에 합칩니다
+    try:
+        with open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config', 'events.json'), encoding='utf-8') as fp:
+            extra = json.load(fp).get('items', [])
+        F = L.setdefault('festivals', {'at': now().strftime('%Y-%m-%d'), 'items': []})
+        F['items'] = [x for x in F['items'] if not x.get('manual')]
+        have = {(x.get('title', '').replace(' ', ''), x.get('start')) for x in F['items']}
+        for i, e in enumerate(extra):
+            if (e['title'].replace(' ', ''), e['start']) not in have:
+                F['items'].append({'id': 'm%d' % i, 'type': '15', 'title': e['title'], 'start': e['start'], 'end': e.get('end') or e['start'],
+                                   'place': e.get('place', ''), 'addr': '', 'lat': None, 'lng': None, 'manual': True})
+        F['items'].sort(key=lambda x: x.get('start') or '0')
+    except Exception as e:  # noqa: BLE001
+        log('행사 파일 읽기 실패: %s' % e)
     vm = L.get('visit_months') or {}
     if len(vm) >= 12:
         last12 = sorted(vm)[-12:]

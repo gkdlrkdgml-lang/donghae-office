@@ -1206,9 +1206,10 @@ function startApp() {
       lines.forEach(function (l) {
         var d = '', pen = false;
         l.values.forEach(function (v, i) { if (v == null) { pen = false; return; } d += (pen ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(v).toFixed(1); pen = true; });
-        if (l.area) svg.appendChild(svgEl('path', { d: d + 'L' + X(n - 1) + ' ' + Y(lo) + 'L' + X(0) + ' ' + Y(lo) + 'Z', fill: l.color, opacity: .1 }));
+        var fi = l.values.findIndex(function (v) { return v != null; }), li = n - 1; while (li > 0 && l.values[li] == null) li--;
+        if (l.area) svg.appendChild(svgEl('path', { d: d + 'L' + X(li) + ' ' + Y(lo) + 'L' + X(fi) + ' ' + Y(lo) + 'Z', fill: l.color, opacity: .1 }));
         svg.appendChild(svgEl('path', { d: d, fill: 'none', stroke: l.color, 'stroke-width': l.width || 2.5, 'stroke-dasharray': l.dash || '', 'stroke-linejoin': 'round' }));
-        if (n <= 45 && !l.dash) l.values.forEach(function (v, i) { if (v != null) { svg.appendChild(svgEl('circle', { cx: X(i), cy: Y(v), r: 3, fill: '#fff', stroke: l.color, 'stroke-width': 2 })); if (opts.vals) svg.appendChild(svgEl('text', { x: X(i), y: Y(v) - 9, 'text-anchor': 'middle', 'font-size': 14, 'font-weight': 700, fill: l.color }, fmt(v, 0) + (opts.unit || ''))); } });
+        if (n <= 45 && !l.dash && !l.nodot) l.values.forEach(function (v, i) { if (v != null) { svg.appendChild(svgEl('circle', { cx: X(i), cy: Y(v), r: 3, fill: '#fff', stroke: l.color, 'stroke-width': 2 })); if (opts.vals || l.labels) svg.appendChild(svgEl('text', { x: X(i), y: Y(v) - 10, 'text-anchor': 'middle', 'font-size': 14, 'font-weight': 800, fill: l.color }, opts.fit ? fmt(v, 0) + (opts.unit || '') : fmtK(v))); } });
       });
       box.appendChild(svg);
       if (lines.length > 1 || lines[0].name) box.appendChild(el('div', { class: 'lleg' }, lines.map(function (l) { return el('span', {}, [el('i', { style: 'background:' + l.color + (l.dash ? ';opacity:.6' : '') }), document.createTextNode(l.name)]); })));
@@ -1347,8 +1348,16 @@ function startApp() {
     var mon = {};
     ks.forEach(function (k) { var m = k.slice(0, 6); mon[m] = (mon[m] || 0) + vday(VD[k]); });
     var series = yrs.map(function (y, i) { return { name: y + '년', color: cols[i], values: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(function (m) { var key = y + ('0' + m).slice(-2); return key <= full && mon[key] != null && key >= ks[0].slice(0, 6) && !(key === ks[0].slice(0, 6) && ks[0].slice(6) !== '01') ? mon[key] : null; }) }; });
-    var lastYrVals = series[1].values, pk = lastYrVals.indexOf(Math.max.apply(null, lastYrVals.filter(function (v) { return v != null; })));
-    var sec = panel('연도별 같은 달 비교', '월 방문자(외지인+외국인) · 명 · 진한 글씨 = ' + (yE - 1) + '년 최다 달', groupCols(['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'], series, pk));
+    var M12 = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
+    var lines = series.map(function (sr, i) { return { name: sr.name, color: ['#9AA8BA', '#F0A04B', '#1F6FD1'][i], values: sr.values, width: i === 2 ? 4 : 2.5, area: i === 2, labels: i === 2, dash: i === 0 ? '6 4' : '' }; });
+    var tbl = el('table', { class: 'dt', style: 'margin-top:8px;font-size:15px' });
+    var th = el('tr', {}, [el('th', { text: '' })].concat(M12.map(function (m) { return el('th', { class: 'r', text: m }); })));
+    tbl.appendChild(el('thead', {}, [th]));
+    var tb = el('tbody');
+    series.forEach(function (sr, i) { tb.appendChild(el('tr', {}, [el('td', { html: '<i style="display:inline-block;width:12px;height:12px;border-radius:3px;background:' + lines[i].color + ';margin-right:6px"></i><b>' + sr.name + '</b>' })].concat(sr.values.map(function (v) { return el('td', { class: 'r', text: v == null ? '' : fmtK(v) }); })))); });
+    tb.appendChild(el('tr', {}, [el('td', { html: '<b>전년 대비</b>' })].concat(series[2].values.map(function (v, j) { var p = series[1].values[j]; if (v == null || !p) return el('td', {}); var c = (v / p - 1) * 100; return el('td', { class: 'r', html: '<b style="color:' + (c >= 0 ? '#1B7A4B' : '#C0392B') + '">' + (c >= 0 ? '+' : '') + fmt(c, 1) + '%</b>' }); }))));
+    tbl.appendChild(tb);
+    var sec = panel('연도별 같은 달 비교', '월 방문자(외지인+외국인) · 명 · 굵은 파란 선 = ' + yE + '년', [lineChart(M12, lines, { step: 1 }), tbl]);
     sec.style.gridColumn = 'span 2';
     // 요일별
     panel('요일별 하루 평균', '최근 1년 · 명', colChart([1, 2, 3, 4, 5, 6, 0].map(function (w) { return [WD[w], dow[w][1] ? dow[w][0] / dow[w][1] : 0]; }), null, null, 0, null, true, { plain: true, avgLabel: '평균' }));
@@ -1371,7 +1380,7 @@ function startApp() {
     var next = F.filter(function (f) { return f.start > today; })[0];
     view.style.gridTemplateColumns = 'minmax(0, .9fr) minmax(0, 1.6fr)';
     view.style.gridTemplateRows = '44px auto minmax(0, 1fr)';
-    view.appendChild(el('div', { class: 'title' }, [el('h1', { text: D.me + '시 행사·축제 분석' }), el('span', { class: 'basis', text: '행사 일정: 한국관광공사 국문 관광정보 · 방문자: 데이터랩 일별' })]));
+    view.appendChild(el('div', { class: 'title' }, [el('h1', { text: D.me + '시 행사·축제 분석' }), el('span', { class: 'basis', text: '행사 일정: 한국관광공사 국문 관광정보 + 시 행사 목록 · 방문자: 데이터랩 일별' })]));
     var st = S && S.st;
     var cards = [
       { l: '등록된 행사·축제', ic: 'camera', v: fmt(F.length, 0), u: '건', chips: [['진행 중 ' + F.filter(function (f) { return f.state === '진행 중'; }).length, 'good'], ['예정 ' + F.filter(function (f) { return f.state === '예정'; }).length, 'navy']] },
