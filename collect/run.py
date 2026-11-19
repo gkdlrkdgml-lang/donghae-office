@@ -65,7 +65,9 @@ def collect(state, S, C):
                 'regions': {k: {'total': v['total'], 'hh': v['hh'], 'male': v['male'], 'female': v['female'],
                                 'prev': pop['prev'].get(k, {}).get('total'),
                                 'prev_m': pop.get('prev_m', {}).get(k, {}).get('total'),
-                                'prev_m_hh': pop.get('prev_m', {}).get(k, {}).get('hh')} for k, v in pop['cur'].items()},
+                                'prev_m_hh': pop.get('prev_m', {}).get(k, {}).get('hh'),
+                                'prev_m_male': pop.get('prev_m', {}).get(k, {}).get('male'),
+                                'prev_m_female': pop.get('prev_m', {}).get(k, {}).get('female')} for k, v in pop['cur'].items()},
                 'dongs': dongs,
             }
             ok(state, 'dong_population', '%d개 동' % len(dongs))
@@ -93,9 +95,10 @@ def collect(state, S, C):
         ok(state, 'age', '%s · %d개 시·군' % (mode, len(ages)))
         if mode == 'kosis' and state.get('admin'):
             try:
-                admm, aym = sources.admm_kosis(S, C)
+                admm, aym, cityg = sources.admm_kosis(S, C)
                 state['admin']['admm'] = admm
                 state['admin']['admm_ym'] = aym
+                state['admin']['groups'] = cityg
             except Exception as e2:  # noqa: BLE001
                 state['admin'].pop('admm', None)
                 print('행정동 인구 실패:', e2)
@@ -105,6 +108,19 @@ def collect(state, S, C):
             man, mb = read_manual(iid)
             if man:
                 set_ind(state, iid, man, mb or '수기 입력', 'manual')
+
+    # 3-2) 전입·전출(KOSIS 국내인구이동), 청년·고령 인원(1세별)
+    if state.get('admin'):
+        try:
+            state['admin']['youth'] = sources.youth_elderly(S, C)
+            ok(state, 'youth', state['admin']['youth']['ym'])
+        except Exception as e:  # noqa: BLE001
+            fail(state, 'youth', e)
+        try:
+            state['admin']['migration'] = sources.migration(S, C)
+            ok(state, 'migration', state['admin']['migration']['ym'])
+        except Exception as e:  # noqa: BLE001
+            fail(state, 'migration', e)
 
     # 4) 재정자립도 → 11번 (순위는 당초, 최종은 같은 해 비교용)
     try:

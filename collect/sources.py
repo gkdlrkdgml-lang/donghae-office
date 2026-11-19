@@ -264,29 +264,148 @@ def admm_kosis(S, C):
         oid = m.get('OBJ_ID')
         if oid and oid != 'ITEM' and oid not in order:
             order.append(oid)
-    extra = {}
+    extra = {'newEstPrdCnt': '2'}
+    kids_all = dict(kids)
+    kids_all[mine] = '__city__'
     for i, oid in enumerate(order[:8]):
-        extra['objL%d' % (i + 1)] = '+'.join(kids) + '+' if oid == obj_id else 'ALL'
+        extra['objL%d' % (i + 1)] = '+'.join(kids_all) + '+' if oid == obj_id else 'ALL'
     itm = [m for m in meta if m.get('OBJ_ID') == 'ITEM' and ('총' in str(m.get('ITM_NM', '')) or str(m.get('ITM_NM', '')).strip() in ('계', '인구수'))]
     if itm:
         extra['itmId'] = str(itm[0].get('ITM_ID')) + '+'
     rows = _call(src, extra, 'admm_kosis')
-    groups, ym = {}, None
+    groups, periods = {}, set()
     for r in rows:
         if itm and r.get('ITM_ID') != str(itm[0].get('ITM_ID')):
             continue
-        name = kids.get(str(r.get('C1', '')))
+        name = kids_all.get(str(r.get('C1', '')))
         rng = _age_lower(r.get('C2_NM', ''))
         v = to_num(r.get('DT'))
-        if not name or rng is None or v is None:
+        pd = r.get('PRD_DE')
+        if not name or rng is None or v is None or not pd:
             continue
-        ym = r.get('PRD_DE') or ym
-        groups.setdefault(name, []).append((rng[0], rng[1], v))
-    out = {}
-    for name, g in groups.items():
+        periods.add(pd)
+        groups.setdefault((pd, name), []).append((rng[0], rng[1], v))
+    if not periods:
+        raise RuntimeError('KOSIS 행정동 응답이 비었음')
+    ym = max(periods)
+    pv = max([p for p in periods if p != ym] or [None]) if len(periods) > 1 else None
+    out, city = {}, {}
+    for (pd, name), g in groups.items():
         total, w, e = _ratios(g)
-        out[name] = {'total': round(total), 'working_age': w, 'elderly': e}
-    return out, ym
+        if name == '__city__':
+            city[pd] = {'total': round(total), 'g': g}
+            continue
+        if pd == ym:
+            out.setdefault(name, {}).update({'total': round(total), 'working_age': w, 'elderly': e})
+        elif pd == pv:
+            out.setdefault(name, {})['prev_total'] = round(total)
+    out = {k: v for k, v in out.items() if 'total' in v}
+
+    def cnt(g, lo, hi):  # lo~hi세 인구(5세 칸이 경계에 걸치면 None)
+        t = 0
+        for a, b, v in g:
+            if b is None:
+                b = 999
+            if a >= lo and b <= hi:
+                t += v
+            elif a <= hi and b >= lo:
+                return None
+        return round(t)
+    cm = {}
+    for pd, c in city.items():
+        cm[pd] = {'elderly': cnt(c['g'], 65, 999), 'youth20_34': cnt(c['g'], 20, 34)}
+    return out, ym, {'ym': ym, 'prev_ym': pv, 'cur': cm.get(ym), 'prev': cm.get(pv)}
+
+
+def _kosis_rows(tbl, extra, raw):
+    src = {'key_env': 'KOSIS_KEY', 'key_param': 'apiKey', 'url': 'https://kosis.kr/openapi/Param/statisticsParameterData.do',
+           'params': {'method': 'getList', 'format': 'json', 'jsonVD': 'Y', 'orgId': '101', 'tblId': tbl, 'prdSe': 'M'}}
+    return _call(src, extra, raw)
+
+
+def migration(S, C, code='51170'):
+    """KOSIS 국내인구이동: 우리 시 총전입·총전출·순이동(최근 2개월)과 어디서 와서 어디로 갔는지(최근 1개월)."""
+    rows = _kosis_rows('DT_1B26001_A01', {'objL1': code + '+', 'itmId': 'T10+T20+T25+', 'newEstPrdCnt': '2'}, 'migration_total')
+    tot = {}
+    for r in rows:
+        tot.setdefault(r.get('PRD_DE'), {})[{'T10': 'in', 'T20': 'out', 'T25': 'net'}.get(r.get('ITM_ID'))] = to_num(r.get('DT'))
+    if not tot:
+        raise RuntimeError('이동자수 응답이 비었음')
+    ym = max(tot)
+    pv = max([p for p in tot if p != ym] or [None])
+
+    def od(direction):
+        if direction == 'in':   # 어디서 왔나: 전출지 ALL → 전입지 우리 시
+            ex = {'objL1': 'ALL', 'objL2': code + '+', 'objL3': '0+', 'itmId': 'T70+', 'startPrdDe': ym, 'endPrdDe': ym}
+            key = 'C1'
+        else:                   # 어디로 갔나: 전출지 우리 시 → 전입지 ALL
+            ex = {'objL1': code + '+', 'objL2': 'ALL', 'objL3': '0+', 'itmId': 'T70+', 'startPrdDe': ym, 'endPrdDe': ym}
+            key = 'C2'
+        rr = _kosis_rows('DT_1B26003_A02', ex, 'migration_od_' + direction)
+        sgg, sido = [], []
+        for r in rr:
+            c = str(r.get(key, '')); nm = str(r.get(key + '_NM', '')).strip(); v = to_num(r.get('DT'))
+            if not v or c in ('00', code):
+                continue
+            up = c[:2]
+            if len(c) == 2:
+                sido.append([nm, v])
+            elif len(c) == 5 and c[2:] != '000':
+                sido_nm = {x.get(key): x.get(key + '_NM') for x in rr}.get(up, '')
+                sgg.append([nm, v, c])
+        return sgg, sido
+    sin, din = od('in')
+    sout, dout = od('out')
+    names = {}
+    return {'ym': ym, 'prev_ym': pv, 'cur': tot.get(ym), 'prev': tot.get(pv),
+            'from_sgg': sorted(sin, key=lambda x: -x[1]), 'to_sgg': sorted(sout, key=lambda x: -x[1]),
+            'from_sido': sorted(din, key=lambda x: -x[1]), 'to_sido': sorted(dout, key=lambda x: -x[1])}
+
+
+def youth_elderly(S, C):
+    """KOSIS 1세별 주민등록인구(DT_1B04006): 우리 시 청년(19~34세)·고령(65세+) 정확한 인원, 최근 2개월."""
+    src = {'key_env': 'KOSIS_KEY', 'meta_url': 'https://kosis.kr/openapi/statisticsData.do', 'params': {'orgId': '101', 'tblId': 'DT_1B04006'}}
+    meta = kosis_meta(src)
+    full = [r['full'] for r in C['regions'] if r['name'] == C['me']][0]
+    reg = [m for m in meta if str(m.get('ITM_NM', '')).strip() == full and str(m.get('ITM_ID', ''))[:2] in ('51', '32', '42')]
+    if not reg:
+        raise RuntimeError('1세별 표에서 %s 코드를 찾지 못함' % full)
+    robj, rcode = reg[0]['OBJ_ID'], str(reg[0]['ITM_ID'])
+    order = []
+    for m in meta:
+        if m.get('OBJ_ID') and m['OBJ_ID'] != 'ITEM' and m['OBJ_ID'] not in order:
+            order.append(m['OBJ_ID'])
+    extra = {'newEstPrdCnt': '2'}
+    for i, oid in enumerate(order[:8]):
+        extra['objL%d' % (i + 1)] = rcode + '+' if oid == robj else 'ALL'
+    itm = [m for m in meta if m.get('OBJ_ID') == 'ITEM' and '총' in str(m.get('ITM_NM', ''))]
+    if itm:
+        extra['itmId'] = str(itm[0]['ITM_ID']) + '+'
+    rows = _kosis_rows('DT_1B04006', extra, 'age_1y')
+    by = {}
+    for r in rows:
+        if itm and r.get('ITM_ID') != str(itm[0]['ITM_ID']):
+            continue
+        lab = ''
+        for k in ('C2_NM', 'C3_NM', 'C4_NM'):
+            if _re.search(r'\d+\s*세', str(r.get(k, ''))):
+                lab = str(r.get(k)).strip()
+                break
+        m1 = _re.match(r'^(\d+)\s*세$', lab)
+        m2 = _OVER.search(lab)
+        v = to_num(r.get('DT'))
+        if v is None or not (m1 or m2):
+            continue  # 1세 칸과 'N세 이상'만(합계·묶음 제외)
+        by.setdefault(r.get('PRD_DE'), {})[int((m1 or m2).group(1))] = v
+    if not by:
+        raise RuntimeError('1세별 응답이 비었음')
+    out = {}
+    for pd, ages in by.items():
+        out[pd] = {'youth': round(sum(v for k, v in ages.items() if 19 <= k <= 34)),
+                   'elderly': round(sum(v for k, v in ages.items() if k >= 65)), 'total': round(sum(ages.values()))}
+    ym = max(out)
+    pv = max([p for p in out if p != ym] or [None])
+    return {'ym': ym, 'prev_ym': pv, 'cur': out[ym], 'prev': out.get(pv)}
 
 
 def age_mois(S, C):
