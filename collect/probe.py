@@ -133,9 +133,10 @@ def main():
         with _ur.urlopen(rq, timeout=25, context=_cx) as r:
             return r.status, dict(r.headers), r.read().decode('utf-8', 'replace'), r.geturl()
     seen = set()
-    for u in ('https://www.dh.go.kr/tour/', 'https://www.dh.go.kr/tour/main.do'):
+    for u in ('https://www.gangwon.to/page/gwtour2022/images/map/tourmap_04.pdf', 'https://www.gangwon.to/', 'https://www.ktourmap.com/mapDetails.jsp?num=6'):
         try:
             st, hd, body, fu = _get(u)
+            say('[관광 유형] %s %s %s' % (u, hd.get('Content-Type'), hd.get('Content-Length')))
             say('[관광 %s] %s → %s | XFO=%s CSP=%s' % (u, st, fu, hd.get('X-Frame-Options'), (hd.get('Content-Security-Policy') or '')[:200]))
             links = _re6.findall(r'<a[^>]+href="([^"#]+)"[^>]*>(.*?)</a>', body, _re6.S)
             hits = []
