@@ -573,7 +573,15 @@ CAR_USE = {'T1': 'gov', 'T2': 'own', 'T3': 'biz', 'T4': 'all'}
 
 def vehicles(S, C):
     """강원 시·군 자동차 등록대수: 최근 13개월(차종×용도) + 동해 37개월 총계 추이."""
-    rows = _kosis_rows(CAR_TBL, {'orgId': '116', 'objL1': CAR_GW + '+', 'objL2': 'ALL', 'objL3': 'ALL', 'itmId': 'ALL', 'newEstPrdCnt': '13'}, 'cars')
+    base = {'orgId': '116', 'objL1': CAR_GW + '+', 'objL2': 'ALL', 'objL3': 'ALL', 'itmId': 'ALL'}
+    rows = _kosis_rows(CAR_TBL, dict(base, newEstPrdCnt='2'), 'cars')
+    last = max((str(r.get('PRD_DE')) for r in rows), default=None)
+    if last:
+        ya = ym_shift(last, -12)
+        try:
+            rows += _kosis_rows(CAR_TBL, dict(base, startPrdDe=ya, endPrdDe=ya), 'cars_year')
+        except Exception as e:  # noqa: BLE001
+            log('자동차 1년 전 실패: %s' % e)
     by = {}
     me_code = None
     for r in rows:
@@ -593,9 +601,10 @@ def vehicles(S, C):
     ym = yms[-1]
     if len(by[ym]) < 15:
         raise RuntimeError('자동차 등록 %s: 시·군 %d곳만 있음' % (ym, len(by[ym])))
-    res = {'ym': ym, 'prev_ym': yms[-2] if len(yms) > 1 else None, 'year_ym': yms[0] if len(yms) >= 13 else None,
-           'regions': by[ym], 'prev': {k: v.get('total', {}).get('all') for k, v in by.get(yms[-2], {}).items()} if len(yms) > 1 else {},
-           'year': {k: v.get('total', {}).get('all') for k, v in by.get(yms[0], {}).items()} if len(yms) >= 13 else {}}
+    pm, ya = ym_shift(ym, -1), ym_shift(ym, -12)
+    res = {'ym': ym, 'prev_ym': pm, 'year_ym': ya, 'regions': by[ym],
+           'prev': {k: v.get('total', {}).get('all') for k, v in by.get(pm, {}).items()},
+           'year': {k: v.get('total', {}).get('all') for k, v in by.get(ya, {}).items()}}
     if me_code:
         try:
             tr = _kosis_rows(CAR_TBL, {'orgId': '116', 'objL1': CAR_GW + '+', 'objL2': me_code + '+', 'objL3': 'ALL', 'itmId': 'T4+', 'newEstPrdCnt': '37'}, 'cars_trend')

@@ -111,6 +111,40 @@ GRID = ('97', '127')  # 동해시 천곡동 격자
 KEEP = ('TMP', 'SKY', 'PTY', 'POP', 'PCP', 'WSD', 'REH', 'TMN', 'TMX', 'WAV')
 
 
+import math
+
+# 행정동 중심(근사) → 기상청 격자
+DONG_LL = {'망상동': (37.588, 129.088), '묵호동': (37.557, 129.125), '발한동': (37.547, 129.106), '부곡동': (37.534, 129.092), '동호동': (37.531, 129.123),
+           '천곡동': (37.522, 129.112), '송정동': (37.498, 129.124), '북삼동': (37.497, 129.083), '북평동': (37.472, 129.138), '삼화동': (37.466, 129.038)}
+
+
+def kma_grid(lat, lon):
+    RE, GRID, S1, S2, OLON, OLAT, XO, YO = 6371.00877, 5.0, 30.0, 60.0, 126.0, 38.0, 43, 136
+    d = math.pi / 180.0
+    re = RE / GRID
+    s1, s2, olon, olat = S1 * d, S2 * d, OLON * d, OLAT * d
+    sn = math.log(math.cos(s1) / math.cos(s2)) / math.log(math.tan(math.pi * 0.25 + s2 * 0.5) / math.tan(math.pi * 0.25 + s1 * 0.5))
+    sf = math.pow(math.tan(math.pi * 0.25 + s1 * 0.5), sn) * math.cos(s1) / sn
+    ro = re * sf / math.pow(math.tan(math.pi * 0.25 + olat * 0.5), sn)
+    ra = re * sf / math.pow(math.tan(math.pi * 0.25 + lat * d * 0.5), sn)
+    th = lon * d - olon
+    th = (th + 2 * math.pi) if th < -math.pi else (th - 2 * math.pi) if th > math.pi else th
+    th *= sn
+    return int(math.floor(ra * math.sin(th) + XO + 0.5)), int(math.floor(ro - ra * math.cos(th) + YO + 0.5))
+
+
+def _fcst(bd, bt, nx, ny, name):
+    rows = _call(_src(FCST_URL, {'dataType': 'JSON', 'base_date': bd, 'base_time': bt, 'nx': str(nx), 'ny': str(ny), 'numOfRows': '1000', 'pageNo': '1'}), {}, name)
+    slots = {}
+    for r in rows:
+        c = r.get('category')
+        if c not in KEEP:
+            continue
+        k = '%s%s' % (r.get('fcstDate'), r.get('fcstTime'))
+        slots.setdefault(k, {})[c] = r.get('fcstValue')
+    return dict(sorted(slots.items()))
+
+
 def weather():
     t = now() - _dt.timedelta(minutes=15)
     bases = [2, 5, 8, 11, 14, 17, 20, 23]
@@ -119,14 +153,21 @@ def weather():
         t -= _dt.timedelta(days=1)
         h = 23
     bd, bt = t.strftime('%Y%m%d'), '%02d00' % h
-    rows = _call(_src(FCST_URL, {'dataType': 'JSON', 'base_date': bd, 'base_time': bt, 'nx': GRID[0], 'ny': GRID[1], 'numOfRows': '1000', 'pageNo': '1'}), {}, 'weather')
-    slots = {}
-    for r in rows:
-        c = r.get('category')
-        if c not in KEEP:
-            continue
-        k = '%s%s' % (r.get('fcstDate'), r.get('fcstTime'))
-        slots.setdefault(k, {})[c] = r.get('fcstValue')
+    slots = _fcst(bd, bt, GRID[0], GRID[1], 'weather')
     if not slots:
         raise RuntimeError('단기예보 응답이 비어 있음')
-    return {'base': bd + bt, 'slots': dict(sorted(slots.items()))}
+    out = {'base': bd + bt, 'slots': slots, 'dongs': {}, 'grids': {}}
+    main = '%s,%s' % GRID
+    for dong, (la, lo) in DONG_LL.items():
+        nx, ny = kma_grid(la, lo)
+        key = '%d,%d' % (nx, ny)
+        out['dongs'][dong] = key
+        if key in out['grids'] or key == main:
+            continue
+        try:
+            g = _fcst(bd, bt, nx, ny, 'weather_%s' % key)
+            out['grids'][key] = {k: v for k, v in list(g.items())[:30]}  # 동별은 앞 30시간만
+        except Exception as e:  # noqa: BLE001
+            log('동별 예보 %s 실패: %s' % (dong, e))
+    out['grids'][main] = {k: v for k, v in list(slots.items())[:30]}
+    return out

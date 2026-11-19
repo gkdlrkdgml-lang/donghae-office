@@ -501,7 +501,7 @@ function startApp() {
     if (admTab === 'now' && admDetail) admPopup(admDetail);
   }
   function popup(titleText, subText, body) {
-    function close() { admDetail = null; finDetail = null; render(); }
+    function close() { admDetail = null; finDetail = null; envDetail = null; render(); }
     view.appendChild(el('div', { id: 'detailBack', onclick: close }));
     view.appendChild(el('section', { class: 'detail' }, [
       el('div', { class: 'sh' }, [el('h2', { text: titleText }), el('small', { text: subText || '' }), el('button', { class: 'zbtn', type: 'button', text: '✕ 닫기', onclick: close })]),
@@ -1071,6 +1071,7 @@ function startApp() {
   }
 
   // ---------- 환경 ----------
+  var envDetail = null;
   function skyText(sl) { var p = +sl.PTY || 0, k = +sl.SKY || 1; return p === 1 ? '비' : p === 2 ? '비·눈' : p === 3 ? '눈' : p === 4 ? '소나기' : k === 4 ? '흐림' : k === 3 ? '구름많음' : '맑음'; }
   function screenEnv() {
     var A = (D.life || {}).air || {}, R = A.regions || {}, m = R[D.me] || {}, W = (D.life || {}).weather;
@@ -1105,13 +1106,35 @@ function startApp() {
       var sec = panel('날씨 예보', '기상청 단기예보 · 3시간 간격', [dayRow, weatherStrip(8),
         lineChart(fk.map(function (k) { return +k.slice(8, 10) + '시'; }), [{ name: '기온', color: '#E8873F', values: fk.map(function (k) { return +W.slots[k].TMP; }), area: true }], { fit: true, unit: '°', vals: true, step: 2 })]);
       sec.style.gridColumn = 'span 2';
+      if (W.dongs && W.grids) sec.querySelector('.sh small').after(el('button', { type: 'button', class: 'zbtn', style: 'margin-left:auto;margin-right:8px;background:#1F6FD1;color:#fff;border-color:#1F6FD1', text: '동별 자세히 ›', onclick: function () { envDetail = 'dong'; render(); } }));
     }
+    if (envDetail === 'dong' && W && W.dongs) envDongPopup(W, nowK);
     panel('초미세먼지 지금 · 강원 시·군', '㎍/㎥ · 낮을수록 좋음', colChart(vals.map(function (n) { return [n, R[n].pm25]; }), null, null, 0, null, false, { lower: true }));
     if (!W) {
       var tb = el('tbody');
       (A.mine || []).forEach(function (x) { tb.appendChild(el('tr', {}, [el('td', { text: x.station }), el('td', { class: 'r', text: fmt(x.pm25, 0) }), el('td', { class: 'r', text: fmt(x.pm10, 0) })])); });
       panel('동해시 측정소', A.time || '', el('table', { class: 'dt big' }, [el('thead', {}, [el('tr', {}, ['측정소', 'PM2.5', 'PM10'].map(function (h, j) { return el('th', { class: j ? 'r' : '', text: h }); }))]), tb]));
     }
+  }
+
+  function envDongPopup(W, nowK) {
+    var dongs = Object.keys(W.dongs), first = null;
+    var hdr = [], tb = el('tbody');
+    dongs.forEach(function (d) {
+      var g = W.grids[W.dongs[d]] || {}, ks = Object.keys(g).filter(function (k) { return k >= nowK.slice(0, 10) + '00' && g[k].TMP != null; });
+      if (!first) first = ks;
+      var c = g[ks[0]] || {}, t = ks.slice(0, 12).map(function (k) { return +g[k].TMP; }), today = ks.filter(function (k) { return k.slice(0, 8) === nowK.slice(0, 8); });
+      var pop = Math.max.apply(null, ks.slice(0, 12).map(function (k) { return +g[k].POP || 0; }).concat([0]));
+      var row = [el('td', { text: d, style: 'font-weight:800;color:var(--navy)' }), el('td', { html: '<span style="font-size:22px">' + wxIcon(c) + '</span> ' + skyText(c) }),
+        el('td', { class: 'r', html: '<b style="font-size:20px">' + (c.TMP != null ? c.TMP + '°' : '–') + '</b>' }),
+        el('td', { class: 'r', html: '<span style="color:#C0392B">' + Math.max.apply(null, t) + '°</span> / <span style="color:#1F6FD1">' + Math.min.apply(null, t) + '°</span>' }),
+        el('td', { class: 'r', text: pop + '%' }), el('td', { class: 'r', text: (c.WSD || '–') + 'm/s' }), el('td', { class: 'r', text: (c.REH || '–') + '%' })];
+      ks.slice(0, 8).forEach(function (k) { row.push(el('td', { class: 'r', style: 'white-space:nowrap', html: wxIcon(g[k]) + ' ' + g[k].TMP + '°' })); });
+      tb.appendChild(el('tr', {}, row));
+    });
+    hdr = ['행정동', '하늘', '지금', '12시간 최고/최저', '비 확률', '바람', '습도'].concat((first || []).slice(0, 8).map(function (k) { return (k.slice(0, 8) === nowK.slice(0, 8) ? '' : '내일 ') + +k.slice(8, 10) + '시'; }));
+    popup('행정동별 날씨', '기상청 단기예보 ' + +W.base.slice(8, 10) + '시 발표 · 5km 격자 기준(같은 격자에 든 동은 값이 같습니다)',
+      el('div', { class: 'detailBody', style: 'display:block;overflow:auto' }, [el('table', { class: 'dt big' }, [el('thead', {}, [el('tr', {}, hdr.map(function (h, j) { return el('th', { class: j > 1 ? 'r' : '', text: h }); }))]), tb])]));
   }
 
   // ---------- 관광 ----------
@@ -1452,7 +1475,7 @@ function startApp() {
 
   // ---------- 리모컨(무선 키보드) ----------
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && (zoomIdx != null || finDetail || admDetail)) { zoomIdx = null; finDetail = null; admDetail = null; render(); return; }
+    if (e.key === 'Escape' && (zoomIdx != null || finDetail || admDetail || envDetail)) { zoomIdx = null; finDetail = null; admDetail = null; envDetail = null; render(); return; }
     var i = order.indexOf(current);
     if (e.key === 'ArrowRight') go(order[(i + 1) % order.length]);
     else if (e.key === 'ArrowLeft') go(order[(i - 1 + order.length) % order.length]);

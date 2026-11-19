@@ -182,13 +182,13 @@ def collect(state, S, C):
             ok(state, key, L[key].get('at') or L[key].get('base'))
         except Exception as e:  # noqa: BLE001
             fail(state, key, e)
-    if stale('places', 6) or '--force-life' in sys.argv:
+    if stale('places', 6) or not (L.get('places') or {}).get('items') or '--force-life' in sys.argv:
         try:
             L['places'] = {'at': now().strftime('%Y-%m-%d'), 'items': tour.places()}
             ok(state, 'places', '%d곳' % len(L['places']['items']))
         except Exception as e:  # noqa: BLE001
             fail(state, 'places', e)
-    if stale('festivals', 6) or '--force-life' in sys.argv:
+    if stale('festivals', 6) or not (L.get('festivals') or {}).get('items') or '--force-life' in sys.argv:
         try:
             L['festivals'] = {'at': now().strftime('%Y-%m-%d'), 'items': tour.festivals()}
             ok(state, 'festivals', '%d건' % len(L['festivals']['items']))
