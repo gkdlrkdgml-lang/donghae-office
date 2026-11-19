@@ -338,7 +338,7 @@ def build(state, S, C):
     out = {
         'generated_at': now().strftime('%Y-%m-%d %H:%M'),
         'demo': any(v.get('from') == 'demo' for v in state['indicators'].values()),
-        'title': S['title'], 'slogan': S.get('slogan', ''), 'me': C['me'], 'menu': [m for m in S['menu'] if m.get('show', True)],
+        'title': S['title'], 'slogan': S.get('slogan', ''), 'map': {'vworld': (S.get('map') or {}).get('vworld_key', '')}, 'me': C['me'], 'menu': [m for m in S['menu'] if m.get('show', True)],
         'frame': S.get('frame', {}), 'judge': S['judge'],
         'regions': [r['name'] for r in C['regions']],
         'indicators': [], 'admin': state.get('admin'), 'status': state['status'],

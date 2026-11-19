@@ -204,6 +204,10 @@
   .m3bar .fr { top: 34px; } .m3bar .bk { top: 0; }
   .m3bar .lf, .m3bar .rt { top: 0; height: 34px; transform-origin: left; transform: rotateY(-90deg); }
   .m3bar .lf { left: 0; } .m3bar .rt { left: 34px; }
+  .m3bar.t3 { width: 26px; height: 26px; }
+  .m3bar.t3 .fr, .m3bar.t3 .bk { width: 26px; } .m3bar.t3 .fr { top: 26px; }
+  .m3bar.t3 .lf, .m3bar.t3 .rt { height: 26px; } .m3bar.t3 .rt { left: 26px; }
+  .m3bar.t3 .m3lb { left: 13px; bottom: 13px; }
   .m3bar .sh { position: absolute; left: -10px; top: -10px; width: 54px; height: 54px; border-radius: 50%; background: radial-gradient(#0003, #0000 70%); }
   .m3lb { position: absolute; left: 17px; bottom: 17px; width: 150px; margin-left: -75px; text-align: center; transform-origin: bottom center; pointer-events: none; white-space: nowrap; }
   .m3lb b { display: block; font-size: 22px; font-weight: 800; color: var(--navy); text-shadow: 0 0 4px #fff, 0 0 4px #fff; }
@@ -1063,7 +1067,7 @@ function startApp() {
     view.style.gridTemplateRows = '44px minmax(0, 1fr)';
     view.appendChild(el('div', { class: 'title' }, [el('h1', { text: D.me + '시 라이브 버스' }), el('span', { class: 'basis', text: '동해 LIVE BUS (livebus.dhits.kr) · 실시간 위치' })]));
     var fr = el('iframe', { src: 'https://livebus.dhits.kr/', title: '동해 라이브 버스', style: 'flex:1;width:100%;border:0;border-radius:10px;background:#EEF3F8', allow: 'geolocation' });
-    view.appendChild(el('section', { class: 'detail', style: 'grid-row:2;display:flex;flex-direction:column;padding:8px' }, [fr]));
+    view.appendChild(el('section', { class: 'nozoom', style: 'grid-row:2;grid-column:1;display:flex;flex-direction:column;padding:8px' }, [fr]));
   }
   function screenTSafe() {
     var T = (D.life || {}).tsafe || {}, A = (T.acc || {}).regions || {}, E = (T.enf || {}).regions || {}, RD = (T.road || {}).regions || {}, B = (T.biz || {}).regions || {};
@@ -1343,8 +1347,9 @@ function startApp() {
     if (L.visit_days && Object.keys(L.visit_days).length > 400) tabs.push(['past', '과거 3년 분석']);
     if (L.festivals && L.festivals.items && L.festivals.items.length) tabs.push(['fest', '행사·축제']);
     if (L.demand && Object.keys(L.demand).length) tabs.push(['dem', '소비·체류 강도']);
+    if (L.cnctr) tabs.splice(2, 0, ['t3d', '3D 관광지도']);
     if (!tabs.some(function (t) { return t[0] === tourTab; })) tourTab = 'now';
-    ({ now: screenTour, spots: screenSpots, past: screenTourPast, fest: screenFest, dem: screenTourDemand })[tourTab]();
+    ({ now: screenTour, spots: screenSpots, t3d: screenTour3D, past: screenTourPast, fest: screenFest, dem: screenTourDemand })[tourTab]();
     var title = view.querySelector('.title');
     if (title && tabs.length > 1) title.insertBefore(tabsBar(tabs, tourTab, function (k) { tourTab = k; }), title.children[1] || null);
   }
@@ -1506,6 +1511,90 @@ function startApp() {
     });
     panel('세부 지표 · ' + fullName(SN) + ' vs ' + gwN, ymLabel(last) + ' · 점', el('table', { class: 'dt big' }, [el('thead', {}, [el('tr', {}, ['지표', SN, gwN.replace(/시$/, ''), '차이'].map(function (h, j) { return el('th', { class: j > 1 ? 'r' : '', text: h }); }))]), tb]));
   }
+
+  // ---------- 관광: 3D 관광지도(브이월드 위성지도 + 집중률 막대) ----------
+  var t3Ang = -20, t3Spin = true, t3Raf = null, t3Day = 0, t3Sel = null;
+  function screenTour3D() {
+    var L = D.life || {}, SP = (L.cnctr || {}).spots || {}, names = Object.keys(SP);
+    var places = ((L.places || {}).items || []).filter(function (p) { return p.lat; });
+    function norm(t) { return String(t).replace(/\(.*?\)|\s|동해|해수욕장|해변/g, ''); }
+    function coord(n) { var k = norm(n); var hit = places.filter(function (p) { var t = norm(p.title); return t && k && (t === k || t.indexOf(k) >= 0 || k.indexOf(t) >= 0); })[0]; return hit ? [hit.lat, hit.lng] : null; }
+    var today = dateYmd(new Date());
+    var days = names.length ? SP[names[0]].map(function (x) { return x[0]; }).filter(function (d) { return d >= today; }) : [];
+    var wk = days.filter(function (d) { var w = ymdDate(d).getDay(); return w === 6 || w === 0; });
+    var choices = [[days[0], '오늘'], [days[1], '내일']].concat(wk.slice(0, 2).map(function (d) { return [d, '이번 ' + (ymdDate(d).getDay() === 6 ? '토' : '일')]; }));
+    choices = choices.filter(function (c, i) { return c[0] && choices.findIndex(function (o) { return o[0] === c[0]; }) === i; });
+    if (t3Day >= choices.length) t3Day = 0;
+    var day = (choices[t3Day] || [])[0];
+    function at(n) { var r = (SP[n] || []).filter(function (x) { return x[0] === day; })[0]; return r ? r[1] : null; }
+    var pts = names.map(function (n) { var c = coord(n); return c ? { name: n, lat: c[0], lng: c[1], v: at(n) } : null; }).filter(Boolean);
+    view.style.gridTemplateColumns = 'minmax(0, 1.6fr) minmax(0, 1fr)';
+    view.style.gridTemplateRows = '44px minmax(0, 1fr)';
+    view.appendChild(el('div', { class: 'title' }, [el('h1', { text: D.me + '시 3D 관광지도' }), el('span', { class: 'basis', text: '지도 © 국토교통부 브이월드 · 혼잡 예측 한국관광공사 관광지 집중률' })]));
+    var key = (D.map || {}).vworld, Z = 13, BOX = [37.455, 37.600, 129.000, 129.170];
+    function px(lat, lng) { var n = Math.pow(2, Z) * 256, r = lat * Math.PI / 180; return [(lng + 180) / 360 * n, (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * n]; }
+    var tl = px(BOX[1], BOX[2]), br = px(BOX[0], BOX[3]);
+    var tx0 = Math.floor(tl[0] / 256), ty0 = Math.floor(tl[1] / 256), tx1 = Math.floor(br[0] / 256), ty1 = Math.floor(br[1] / 256);
+    var ox = tl[0] - tx0 * 256, oy = tl[1] - ty0 * 256, PW = Math.round(br[0] - tl[0]), PH = Math.round(br[1] - tl[1]);
+    var wrap = el('div', { class: 'm3wrap' });
+    var plane = el('div', { class: 'm3plane', style: 'width:' + PW + 'px;height:' + PH + 'px;margin:' + (-PH / 2) + 'px 0 0 ' + (-PW / 2) + 'px' });
+    var map = el('div', { class: 'm3map' });
+    for (var tx = tx0; tx <= tx1; tx++) for (var ty = ty0; ty <= ty1; ty++) {
+      var src = key ? 'https://api.vworld.kr/req/wmts/1.0.0/' + key + '/Satellite/' + Z + '/' + ty + '/' + tx + '.jpeg' : 'https://' + 'abcd'[(tx + ty) % 4] + '.basemaps.cartocdn.com/rastertiles/voyager/' + Z + '/' + tx + '/' + ty + '@2x.png';
+      map.appendChild(el('img', { src: src, alt: '', style: 'left:' + ((tx - tx0) * 256 - ox) + 'px;top:' + ((ty - ty0) * 256 - oy) + 'px', onerror: function () { this.style.visibility = 'hidden'; } }));
+    }
+    plane.appendChild(map);
+    var labels = [];
+    function shade(hex, f) { var n = parseInt(hex.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255; function c(x) { return Math.max(0, Math.min(255, Math.round(x * f))); } return 'rgb(' + c(r) + ',' + c(g) + ',' + c(b) + ')'; }
+    pts.sort(function (a, b) { return b.lat - a.lat; }).forEach(function (p) {
+      var q = px(p.lat, p.lng), x = q[0] - tl[0] - 13, y = q[1] - tl[1] - 13;
+      if (x < 0 || y < 0 || x > PW || y > PH) return;
+      var v = p.v || 0, h = Math.max(8, Math.round(v * 2.6)), col = clv(v)[1], on = t3Sel === p.name;
+      var b = el('div', { class: 'm3bar t3', style: 'left:' + x + 'px;top:' + y + 'px', onclick: function () { t3Sel = t3Sel === p.name ? null : p.name; render(); } });
+      [['fr', .78], ['bk', .9], ['lf', .68], ['rt', .86]].forEach(function (f) {
+        b.appendChild(el('i', { class: f[0], style: 'background:' + shade(col, f[1]) + ';' + (f[0] === 'fr' || f[0] === 'bk' ? 'height:' + h + 'px' : 'width:' + h + 'px') }));
+      });
+      b.appendChild(el('i', { class: 'tp', style: 'background:' + shade(col, 1.1) + ';transform:translateZ(' + h + 'px);' + (on ? 'outline:4px solid #fff' : '') }));
+      var show = on || v >= 70;
+      var lb = el('div', { class: 'm3lb', style: show ? '' : 'opacity:.0' }, [el('b', { text: p.name, style: 'color:#fff;text-shadow:0 0 4px #000,0 0 3px #000' }), el('span', { style: 'background:' + col + ';color:' + clv(v)[2], text: fmt(v, 0) })]);
+      lb._h = h; labels.push(lb); b.appendChild(lb);
+      plane.appendChild(b);
+    });
+    var scale = 1;
+    function setAng() {
+      plane.style.transform = 'scale(' + scale.toFixed(3) + ') rotateX(55deg) rotateZ(' + t3Ang.toFixed(2) + 'deg)';
+      labels.forEach(function (lb) { lb.style.transform = 'translateZ(' + (lb._h + 6) + 'px) rotateZ(' + (-t3Ang).toFixed(2) + 'deg) rotateX(-55deg)'; });
+    }
+    wrap.appendChild(plane);
+    setTimeout(function () { var W = wrap.clientWidth, H = wrap.clientHeight, diag = Math.sqrt(PW * PW + PH * PH); scale = Math.min(W / diag, H / (diag * 0.78)) * 0.84; setAng(); }, 0);
+    setAng();
+    if (t3Raf) cancelAnimationFrame(t3Raf);
+    var lastT = null;
+    (function tick(t) { if (!plane.isConnected) { t3Raf = null; return; } if (t3Spin && lastT != null) { t3Ang = (t3Ang + (t - lastT) / 1000 * 3) % 360; setAng(); } lastT = t; t3Raf = requestAnimationFrame(tick); })();
+    var ctl = el('div', { class: 'm3ctl' });
+    choices.forEach(function (c, i) { var on = i === t3Day; ctl.appendChild(el('button', { type: 'button', class: on ? 'on' : '', style: on ? 'background:#1F6FD1;border-color:#1F6FD1' : '', text: c[1] + ' ' + mdLabel(c[0]), onclick: function () { t3Day = i; render(); } })); });
+    ctl.appendChild(el('span', { class: 'sp' }));
+    ctl.appendChild(el('button', { type: 'button', text: '⟲', onclick: function () { t3Ang -= 30; setAng(); } }));
+    var sb = el('button', { type: 'button', text: t3Spin ? '⏸ 회전 멈춤' : '▶ 자동 회전', onclick: function () { t3Spin = !t3Spin; sb.textContent = t3Spin ? '⏸ 회전 멈춤' : '▶ 자동 회전'; } });
+    ctl.appendChild(sb);
+    ctl.appendChild(el('button', { type: 'button', text: '⟳', onclick: function () { t3Ang += 30; setAng(); } }));
+    wrap.appendChild(ctl);
+    wrap.appendChild(el('div', { class: 'm3note', style: 'color:#fff;text-shadow:0 0 3px #000', text: '막대 높이·색 = 집중률(높을수록 붐빔) · 70 이상만 이름 표시 · 막대를 누르면 오른쪽에 30일 달력' }));
+    view.appendChild(el('section', { class: 'nozoom', style: 'grid-row:2;grid-column:1;display:flex;flex-direction:column;padding:8px;background:#0E2238' }, [wrap]));
+    // 오른쪽: 순위 + 고른 곳 달력
+    var ord = pts.slice().sort(function (a, b) { return (b.v || 0) - (a.v || 0); });
+    var S = t3Sel || (ord[0] || {}).name;
+    var rk = el('div', { class: 'rows wide' });
+    ord.slice(0, 10).forEach(function (p, i) { var lv = clv(p.v || 0); rk.appendChild(el('div', { class: 'row' + (p.name === S ? ' sel' : ''), onclick: function () { t3Sel = p.name; render(); } }, [el('span', { class: 'rk', text: String(i + 1) }), el('span', { text: p.name }), el('div', { class: 'bar' }, [el('div', { style: 'width:' + (p.v || 0) + '%;background:' + lv[1] })]), el('span', { class: 'v', text: fmt(p.v, 0) })])); });
+    var rows = SP[S] || [], cal = el('div', { class: 'cal' });
+    WD.forEach(function (w) { cal.appendChild(el('b', { text: w })); });
+    if (rows.length) for (var i = 0; i < ymdDate(rows[0][0]).getDay(); i++) cal.appendChild(el('span'));
+    rows.forEach(function (x) { var lv = clv(x[1]); cal.appendChild(el('div', { class: x[0] === day ? 'today' : '', style: 'background:' + lv[1] + ';color:' + lv[2] }, [document.createTextNode(mdLabel(x[0])), el('em', { text: fmt(x[1], 0) })])); });
+    view.appendChild(el('section', { class: 'nozoom', style: 'grid-row:2;grid-column:2;display:flex;flex-direction:column;gap:8px' }, [
+      el('div', { class: 'sh' }, [el('h2', { text: mdw(day) + ' 붐빌 곳' }), el('small', { text: '집중률' })]), rk,
+      el('div', { class: 'sh', style: 'margin-top:6px' }, [el('h2', { text: S + ' 30일' }), el('small', { text: '누르면 바뀜' })]), cal,
+      el('div', { class: 'calleg' }, CLV.map(function (c) { return el('span', {}, [el('i', { style: 'background:' + c[1] }), document.createTextNode(c[3])]); }))]));
+  }
   function festKey(t) { return String(t || '').replace(/\s|동해시|동해|제\d+회|\d{4}년?|축제$/g, ''); }
   function festStats(f, VD, eds) {
     if (!f.start || !f.end || !VD[f.end]) return null;
@@ -1639,7 +1728,7 @@ function startApp() {
   var zoomIdx = null;
   function addZoom() {
     var old = document.getElementById('zoomBack'); if (old) old.remove();
-    var secs = view.querySelectorAll('section:not(.detail)');
+    var secs = view.querySelectorAll('section:not(.detail):not(.nozoom)');
     Array.prototype.forEach.call(secs, function (sec, idx) {
       var sh = sec.querySelector('.sh'); if (!sh) return;
       var on = zoomIdx === idx;
