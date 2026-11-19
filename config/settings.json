@@ -147,15 +147,28 @@
       "show": false
     },
     {
+      "id": "budget",
+      "no": 11,
+      "field": "예산",
+      "name": "예산 규모",
+      "unit": "억 원",
+      "dir": 1,
+      "digits": 0,
+      "source": "지방재정365",
+      "show": true
+    },
+    {
       "id": "fin_indep",
       "no": 11,
-      "field": "재정",
+      "field": "예산",
       "name": "재정자립도",
       "unit": "%",
       "dir": 1,
       "digits": 1,
       "source": "지방재정365",
-      "show": true
+      "show": true,
+      "main": false,
+      "_설명": "예산 탭에만 표시(한눈에 보기에서는 예산 규모로 대신)"
     },
     {
       "id": "employment",

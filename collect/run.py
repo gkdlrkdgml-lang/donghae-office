@@ -121,6 +121,10 @@ def collect(state, S, C):
         fail(state, 'finance_final', e)
     if sources.AMOUNTS:
         state.setdefault('finance', {})['amounts'] = {'initial': sources.AMOUNTS.get('finance', {}), 'final': sources.AMOUNTS.get('finance_final', {})}
+        ai = sources.AMOUNTS.get('finance', {})
+        if ai:
+            yy = max(ai)
+            set_ind(state, 'budget', {k: v['budget'] / 1e8 for k, v in ai[yy].items()}, '%s년 당초예산(일반회계)' % yy, 'file')
 
 
 def demo(state, S, C):

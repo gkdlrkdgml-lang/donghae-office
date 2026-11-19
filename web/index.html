@@ -249,7 +249,7 @@ function startApp() {
 
   // ---------- 1. 한눈에 보기 ----------
   function screenMain() {
-    var list = D.indicators;
+    var list = D.indicators.filter(function (i) { return i.main !== false; });
     view.style.gridTemplateColumns = 'minmax(0, 1.6fr) minmax(0, 1fr)';
     view.style.gridTemplateRows = '44px minmax(0, 1fr)';
     view.appendChild(el('div', { class: 'title' }, [
@@ -454,10 +454,10 @@ function startApp() {
       cards.push({ k: D.me + '시 인구', v: fmt(m.total, 0) + '명', s: ymLabel(A.ym) + ' 주민등록 기준' + (dmm != null ? ' · 지난달보다 ' + (dmm >= 0 ? '+' : '') + fmt(dmm, 0) + '명' : '') + ' · ' + fmt(m.hh, 0) + '세대' });
     }
     D.indicators.forEach(function (i) {
-      if (i.me && i.me.judge === 'strong') cards.push({ k: '강원 18개 시·군 중', v: i.name + ' ' + i.me.rank + '위', s: fmt(i.me.value, i.digits) + i.unit + ' · ' + i.basis });
+      if (i.main !== false && i.id !== 'budget' && i.me && i.me.judge === 'strong') cards.push({ k: '강원 18개 시·군 중', v: i.name + ' ' + i.me.rank + '위', s: fmt(i.me.value, i.digits) + i.unit + ' · ' + i.basis });
     });
-    var f = ind('fin_indep');
-    if (f && f.me) cards.push({ k: '재정자립도', v: fmt(f.me.value, 1) + '%', s: '도내 ' + f.me.rank + '위 · ' + f.basis });
+    var f = ind('budget');
+    if (f && f.me) cards.push({ k: D.me + '시 예산', v: fmt(f.me.value, 0) + '억 원', s: f.basis + ' · 도내 ' + f.me.rank + '위' });
     return cards.length ? cards : [{ k: D.title, v: D.me + '시', s: '' }];
   }
   function screenFrame() {
