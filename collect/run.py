@@ -10,7 +10,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from common import (settings, codes, load_env, save_json, load_json, log, now, read_manual, WEB_DATA)  # noqa: E402
+from common import (settings, codes, load_env, save_json, load_json, log, now, read_manual, WEB_DATA, ym_shift)  # noqa: E402
 import sources  # noqa: E402
 from rank import rank  # noqa: E402
 
@@ -109,8 +109,16 @@ def collect(state, S, C):
             if man:
                 set_ind(state, iid, man, mb or '수기 입력', 'manual')
 
-    # 3-2) 전입·전출(KOSIS 국내인구이동), 청년·고령 인원(1세별)
+    # 3-2) 전입·전출(KOSIS 국내인구이동), 청년·고령 인원(1세별), 출생·사망·1인세대(행안부)
     if state.get('admin'):
+        vy = state['admin'].get('ym')
+        for tryym in [vy, ym_shift(vy, -1)] if vy else []:
+            try:
+                state['admin']['vital'] = sources.vital(S, C, tryym)
+                ok(state, 'vital', tryym)
+                break
+            except Exception as e:  # noqa: BLE001
+                fail(state, 'vital', e)
         try:
             state['admin']['youth'] = sources.youth_elderly(S, C)
             ok(state, 'youth', state['admin']['youth']['ym'])

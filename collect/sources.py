@@ -368,6 +368,43 @@ def migration(S, C, code='51170'):
     return res
 
 
+MOIS_MONTHLY = {
+    'birth': 'https://apis.data.go.kr/1741000/admmSexdBrthReg/selectAdmmSexdBrthReg',
+    'death': 'https://apis.data.go.kr/1741000/admmSexdAgeErsr/selectAdmmSexdAgeErsr',
+    'hsmb': 'https://apis.data.go.kr/1741000/admmHsmbHh/selectAdmmHsmbHh',
+}
+
+
+def mois_monthly(S, C, kind, ym, lv):
+    """행안부 행정동별 월간 자료(출생·사망·세대원수별 세대). lv=2 시·군 18개, lv=3 우리 시 행정동."""
+    src = {'url': MOIS_MONTHLY[kind], 'key_env': 'DATA_GO_KR_KEY',
+           'params': {'type': 'JSON', 'numOfRows': '100', 'pageNo': '1', 'lv': lv, 'regSeCd': '1'}}
+    me = [r for r in C['regions'] if r['name'] == C['me']][0]
+    rows = _call(src, {'admmCd': me['stdg'], 'srchFrYm': ym, 'srchToYm': ym}, '%s_%s_lv%s' % (kind, ym, lv))
+    out = {}
+    for r in rows:
+        key = str(r.get('dongNm') or '').strip() if lv == '3' else match_region(r.get('sggNm'), C['regions'])
+        if not key:
+            continue
+        if kind == 'hsmb':
+            out[key] = {'one': to_num(r.get('hhNmprCnt1')), 'two': to_num(r.get('hhNmprCnt2')), 'total': to_num(r.get('totHhCnt'))}
+        else:
+            out[key] = {'total': to_num(r.get('totNmprCnt')), 'male': to_num(r.get('maleNmprCnt')), 'female': to_num(r.get('femlNmprCnt'))}
+    return out
+
+
+def vital(S, C, ym):
+    """출생·사망·1인세대: 이번 달과 지난달(시·군 18개), 이번 달 행정동별."""
+    pv = ym_shift(ym, -1)
+    res = {'ym': ym, 'prev_ym': pv}
+    for kind in ('birth', 'death', 'hsmb'):
+        cur = mois_monthly(S, C, kind, ym, '2')
+        if len(cur) < 15:  # 이번 달이 아직 안 나왔으면 한 달 앞으로
+            raise RuntimeError('%s %s 자료 부족(%d)' % (kind, ym, len(cur)))
+        res[kind] = {'cur': cur, 'prev': mois_monthly(S, C, kind, pv, '2'), 'dong': mois_monthly(S, C, kind, ym, '3')}
+    return res
+
+
 def youth_elderly(S, C):
     """KOSIS 1세별 주민등록인구(DT_1B04006): 우리 시 청년(19~34세)·고령(65세+) 정확한 인원, 최근 2개월."""
     src = {'key_env': 'KOSIS_KEY', 'meta_url': 'https://kosis.kr/openapi/statisticsData.do', 'params': {'orgId': '101', 'tblId': 'DT_1B04006'}}

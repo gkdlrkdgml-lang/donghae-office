@@ -76,7 +76,7 @@
   .hint { font-size: 14px !important; color: var(--blue) !important; font-weight: 600; margin-left: auto; margin-right: 12px; }
   .basis { background: var(--navy); color: #fff !important; border-radius: 999px; padding: 6px 16px; font-weight: 700; font-size: 15px !important; }
   .popL { display: grid; grid-template-rows: auto auto minmax(0, 1fr); gap: 14px; min-height: 0; }
-  .pr1 { display: grid; grid-template-columns: 1.35fr repeat(4, minmax(0, 1fr)); gap: 12px; }
+  .pr1 { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); grid-template-columns: 1.35fr; gap: 12px; }
   .pc { background: #fff; border: 1.5px solid #C9D8EE; border-radius: 16px; padding: 12px 14px; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; min-width: 0; }
   .pc .pl { font-size: 19px; font-weight: 800; color: var(--ink); }
   .pc .pl small { font-size: 14px; font-weight: 600; color: var(--sub); }
@@ -96,11 +96,11 @@
   .pc.wide .pv { font-size: 46px; }
   .mig { display: grid; grid-template-rows: auto auto minmax(0, 1fr); gap: 10px; padding: 0 0 14px; overflow: hidden; border: 1.5px solid #C9D8EE; }
   .band { background: var(--navy); color: #fff; font-weight: 800; font-size: 18px; text-align: center; padding: 9px; margin: 0; border-radius: 12px 12px 0 0; }
-  .mrow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 0 14px; }
+  .mrow { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); padding: 0 10px; }
   .mc { display: flex; flex-direction: column; align-items: center; gap: 4px; border-right: 1px solid #DCE5F2; padding: 0 6px; }
   .mc:last-child { border-right: 0; }
   .mc .pl { font-size: 19px; font-weight: 800; } .mc .msub { font-size: 13px; color: var(--sub); margin-top: -4px; }
-  .mc .pv { font-size: 32px; font-weight: 800; } .mc .pv small { font-size: 16px; }
+  .mc .pv { font-size: 30px; font-weight: 800; } .mc .pv small { font-size: 16px; }
   .mc .pd { display: flex; gap: 8px; font-size: 14.5px; font-weight: 600; }
   .od { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; padding: 4px 18px 0; min-height: 0; border-top: 1px solid #DCE5F2; }
   .odl { display: flex; flex-direction: column; gap: 5px; padding-top: 8px; }
@@ -374,6 +374,9 @@ function startApp() {
     doorOut: '<rect x="8" y="6" width="16" height="36" rx="2"/><circle cx="13" cy="25" r="1.6" fill="#fff"/><path d="M27 24h14m-6-6 6 6-6 6" stroke="currentColor" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
     cycle: '<path d="M38 20A15 15 0 0 0 11 15" stroke="currentColor" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M8 9v9h9z"/><path d="M10 28a15 15 0 0 0 27 5" stroke="currentColor" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M40 39v-9h-9z"/>',
     pin: '<path d="M24 4c-8 0-14 6-14 14 0 10 14 26 14 26s14-16 14-26c0-8-6-14-14-14z"/><circle cx="24" cy="18" r="5" fill="#fff"/>',
+    baby: '<circle cx="24" cy="17" r="10"/><circle cx="20" cy="16" r="1.6" fill="#fff"/><circle cx="28" cy="16" r="1.6" fill="#fff"/><path d="M20 21q4 3 8 0" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round"/><path d="M12 44c0-9 5-15 12-15s12 6 12 15z"/>',
+    grave: '<path d="M12 44V20a12 12 0 0 1 24 0v24z"/><path d="M24 18v14M18 24h12" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/><rect x="8" y="41" width="32" height="4" rx="2"/>',
+    heart: '<path d="M24 42S6 31 6 18a9 9 0 0 1 18-3 9 9 0 0 1 18 3c0 13-18 24-18 24z"/><path d="M10 24h8l3-6 5 12 3-6h9" stroke="#fff" stroke-width="2.6" fill="none" stroke-linejoin="round" stroke-linecap="round"/>',
     trend: '<path d="M6 34 18 22l8 8 14-16" stroke="currentColor" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M33 12h9v9z"/>'
   };
   function icon(name, color, bg, size) {
@@ -429,10 +432,11 @@ function startApp() {
       body2.appendChild(el('div', {}, [el('div', { class: 'odh', text: '고령인구 비율(만 65세 이상) · 18개 시·군' }), elI ? rankList(elI) : el('div', { class: 'empty', text: '자료 없음' })]));
       popup('연령 세부 · 강원 18개 시·군 비교', '주민등록 연령별 인구(KOSIS) 기준', body2);
     } else if (key === 'dong') {
-      var body3 = el('div', { class: 'detailBody', style: 'grid-template-columns:1fr 1.2fr' });
+      var body3 = el('div', { class: 'detailBody', style: 'grid-template-columns:1.5fr 1fr' });
       var adm = Object.keys(A.admm || {}).map(function (n) { return [n, A.admm[n]]; }).sort(function (a, c) { return c[1].total - a[1].total; });
-      var t1 = el('tbody'); adm.forEach(function (x) { t1.appendChild(el('tr', {}, [el('td', { text: x[0] }), el('td', { class: 'r', text: fmt(x[1].total, 0) }), el('td', { class: 'r', text: x[1].prev_total != null ? ((x[1].total - x[1].prev_total) > 0 ? '+' : '') + fmt(x[1].total - x[1].prev_total, 0) : '–' }), el('td', { class: 'r', text: fmt(x[1].working_age, 1) + '%' }), el('td', { class: 'r', text: fmt(x[1].elderly, 1) + '%' })])); });
-      body3.appendChild(el('div', {}, [el('div', { class: 'odh', text: '행정동 ' + adm.length + '곳' }), el('table', { class: 'dt big' }, [el('thead', {}, [el('tr', {}, ['행정동', '인구', '전월 대비', '생산연령', '고령'].map(function (h, j) { return el('th', { class: j ? 'r' : '', text: h }); }))]), t1])]));
+      var VV = A.vital || {}, gd = function (k, n, f) { return (((VV[k] || {}).dong || {})[n] || {})[f]; };
+      var t1 = el('tbody'); adm.forEach(function (x) { t1.appendChild(el('tr', {}, [el('td', { text: x[0] }), el('td', { class: 'r', text: fmt(x[1].total, 0) }), el('td', { class: 'r', text: x[1].prev_total != null ? ((x[1].total - x[1].prev_total) > 0 ? '+' : '') + fmt(x[1].total - x[1].prev_total, 0) : '–' }), el('td', { class: 'r', text: fmt(x[1].elderly, 1) + '%' }), el('td', { class: 'r', text: fmt(gd('hsmb', x[0], 'one'), 0) }), el('td', { class: 'r', text: fmt(gd('birth', x[0], 'total'), 0) }), el('td', { class: 'r', text: fmt(gd('death', x[0], 'total'), 0) })])); });
+      body3.appendChild(el('div', {}, [el('div', { class: 'odh', text: '행정동 ' + adm.length + '곳' + (VV.ym ? ' · 1인가구·출생·사망 ' + ymLabel(VV.ym) : '') }), el('table', { class: 'dt big' }, [el('thead', {}, [el('tr', {}, ['행정동', '인구', '전월 대비', '고령', '1인가구', '출생', '사망'].map(function (h, j) { return el('th', { class: j ? 'r' : '', text: h }); }))]), t1])]));
       var dg = Object.keys(A.dongs || {}).map(function (n) { return [n, A.dongs[n]]; }).sort(function (a, c) { return c[1].total - a[1].total; });
       var t2 = el('tbody'); dg.forEach(function (x) { t2.appendChild(el('tr', {}, [el('td', { text: x[0] }), el('td', { class: 'r', text: fmt(x[1].total, 0) }), el('td', { class: 'r', text: fmt(x[1].hh, 0) })])); });
       body3.appendChild(el('div', { style: 'min-height:0;overflow:auto;max-height:780px' }, [el('div', { class: 'odh', text: '법정동 ' + dg.length + '곳' }), el('table', { class: 'dt' }, [el('thead', {}, [el('tr', {}, ['법정동', '인구', '세대'].map(function (h, j) { return el('th', { class: j ? 'r' : '', text: h }); }))]), t2])]));
@@ -485,6 +489,8 @@ function startApp() {
     card('남자', 'male', '#1F6FD1', '#E4EEFB', fmt(me.male, 0), '명', me.prev_m_male ? me.male - me.prev_m_male : null);
     card('여자', 'female', '#D6457A', '#FCE6EE', fmt(me.female, 0), '명', me.prev_m_female ? me.female - me.prev_m_female : null);
     card('세대', 'house', '#2E8B57', '#E2F3E9', fmt(me.hh, 0), '세대', me.prev_m_hh ? me.hh - me.prev_m_hh : null, '세대', '세대당 ' + fmt(me.total / me.hh, 2) + '명');
+    var V = A.vital || {}, VH = V.hsmb || {}, h1 = (VH.cur || {})[D.me], h1p = (VH.prev || {})[D.me];
+    if (h1) card('1인가구', 'people', '#7A4FC4', '#EFE9FB', fmt(h1.one, 0), '세대', h1p ? h1.one - h1p.one : null, '세대', '전체 세대의 ' + fmt(h1.one / h1.total * 100, 1) + '%' + (V.ym !== A.ym ? ' · ' + ymLabel(V.ym) : ''));
     card('인구 증감률', 'trend', '#7A4FC4', '#EFE9FB', pcI && pcI.me ? fmt(pcI.me.value, 2) : '–', '%', null, null, pcI && pcI.me ? '전년 같은 달 대비 · 도내 ' + pcI.me.rank + '위' : '');
     r1.lastChild.querySelector('.pd').remove();
     L.appendChild(r1);
@@ -505,19 +511,26 @@ function startApp() {
     L.appendChild(r2);
     // 3줄: 월간 이동
     var r3 = el('section', { class: 'mig' });
-    r3.appendChild(el('div', { class: 'band', text: '인구 이동 현황 · ' + (MG.ym ? ymLabel(MG.ym) : '') }));
+    r3.appendChild(el('div', { class: 'band', text: '월간 변동 현황' + (V.ym ? ' · 출생·사망 ' + ymLabel(V.ym) : '') + (MG.ym ? ' · 전입·전출 ' + ymLabel(MG.ym) : '') }));
     if (MG.ym) {
       var mrow = el('div', { class: 'mrow' });
+      var VB = V.birth || {}, VD = V.death || {};
+      var bc = (VB.cur || {})[D.me], bp = (VB.prev || {})[D.me], dc = (VD.cur || {})[D.me], dp = (VD.prev || {})[D.me];
       function mc(lbl, sub, ic, col, bg, v, d) {
         mrow.appendChild(el('div', { class: 'mc' }, [el('div', { class: 'pl', text: lbl }), sub ? el('div', { class: 'msub', text: sub }) : null, icon(ic, col, bg, 70),
-          el('div', { class: 'pv', style: 'color:' + col, html: (v > 0 && lbl === '순이동' ? '+' : '') + fmt(v, 0) + '<small>명</small>' }),
+          el('div', { class: 'pv', style: 'color:' + col, html: (v > 0 && (lbl === '순이동' || lbl === '자연증감') ? '+' : '') + fmt(v, 0) + '<small>명</small>' }),
           el('div', { class: 'pd' }, [el('span', { text: '전월 대비' }), delta(d)])].filter(Boolean)));
+      }
+      if (bc && dc) {
+        mc('출생', '', 'baby', '#2E8B57', '#E2F3E9', bc.total, bp ? bc.total - bp.total : null);
+        mc('사망', '', 'grave', '#5F6B7A', '#EEF2F7', dc.total, dp ? dc.total - dp.total : null);
+        var nat = bc.total - dc.total, natp = bp && dp ? bp.total - dp.total : null;
+        mc('자연증감', '출생 - 사망', 'heart', nat < 0 ? '#D6457A' : '#1B7A4B', nat < 0 ? '#FCE6EE' : '#E2F3E9', nat, natp != null ? nat - natp : null, true);
       }
       mc('전입', '다른 시·군에서', 'doorIn', '#1F6FD1', '#E4EEFB', MG['in'], MG.prev_in != null ? MG['in'] - MG.prev_in : null);
       mc('전출', '다른 시·군으로', 'doorOut', '#7A4FC4', '#EFE9FB', MG.out, MG.prev_out != null ? MG.out - MG.prev_out : null);
       var net = MG['in'] - MG.out, pnet = MG.prev_in != null ? MG.prev_in - MG.prev_out : null;
       mc('순이동', '전입 - 전출', 'cycle', net < 0 ? '#C0602B' : '#1B7A4B', net < 0 ? '#FDEBDD' : '#E2F3E9', net, pnet != null ? net - pnet : null);
-      mc('시내 이동', '동해시 안에서', 'pin', '#556274', '#EEF2F7', MG.inner, null);
       r3.appendChild(mrow);
       var od = el('div', { class: 'od' });
       function topList(title, list, col) {
@@ -545,7 +558,7 @@ function startApp() {
       r3.appendChild(od);
     } else r3.appendChild(el('div', { class: 'empty', text: '이동 자료 없음' }));
     L.appendChild(r3);
-    moreBadge(r1.children[0], 'pop'); moreBadge(r1.children[4], 'pop');
+    moreBadge(r1.children[0], 'pop'); moreBadge(r1.lastChild, 'pop');
     moreBadge(r2.children[0], 'age'); moreBadge(r2.children[1], 'age');
     if (MG.ym) { var bb = r3.querySelector('.band'); r3.classList.add('click'); bb.appendChild(el('span', { class: 'more inband', text: '자세히 ›' })); r3.addEventListener('click', function () { admDetail = 'mig'; render(); }); }
     view.appendChild(L);
