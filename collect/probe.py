@@ -126,27 +126,26 @@ def main():
             say('[신규 %s] 됨: %s' % (nm, t[:1500].replace('\n', ' ')))
         except Exception as e:  # noqa: BLE001
             say('[신규 %s] 안 됨: %s' % (nm, str(e)[-300:]))
-    kk0 = os.environ.get('KOSIS_KEY', '')
-    import sources as _s0
-    for org, tb in (('116', 'DT_MLTM_6040'), ('110', 'DT_110001_A046'), ('101', 'DT_1YL5902'), ('110', 'DT_156006_001')):
+    import urllib.request as _ur, ssl as _ssl, re as _re6
+    _cx = _ssl.create_default_context(); _cx.check_hostname = False; _cx.verify_mode = _ssl.CERT_NONE  # 헤더·링크 확인용(읽기만)
+    def _get(u):
+        rq = _ur.Request(u, headers={'User-Agent': 'Mozilla/5.0'})
+        with _ur.urlopen(rq, timeout=25, context=_cx) as r:
+            return r.status, dict(r.headers), r.read().decode('utf-8', 'replace'), r.geturl()
+    seen = set()
+    for u in ('https://www.dh.go.kr/tour/', 'https://www.dh.go.kr/tour/main.do'):
         try:
-            meta = _s0.kosis_meta({'key_env': 'KOSIS_KEY', 'meta_url': 'https://kosis.kr/openapi/statisticsData.do', 'params': {'orgId': org, 'tblId': tb}})
-            objs = {}
-            for m in meta:
-                objs.setdefault(m.get('OBJ_ID'), []).append(m)
-            say('[메타] %s: %s' % (tb, ' / '.join('%s(%s개): %s' % (k, len(v), ', '.join('%s=%s' % (x.get('ITM_ID'), x.get('ITM_NM')) for x in v[:25])) for k, v in objs.items())))
-            t = http_get('https://kosis.kr/openapi/statisticsData.do', {'method': 'getMeta', 'type': 'PRD', 'orgId': org, 'tblId': tb, 'format': 'json', 'jsonVD': 'Y', 'apiKey': kk0})
-            say('[주기] %s: %s' % (tb, t[-250:]))
+            st, hd, body, fu = _get(u)
+            say('[관광 %s] %s → %s | XFO=%s CSP=%s' % (u, st, fu, hd.get('X-Frame-Options'), (hd.get('Content-Security-Policy') or '')[:200]))
+            links = _re6.findall(r'<a[^>]+href="([^"#]+)"[^>]*>(.*?)</a>', body, _re6.S)
+            hits = []
+            for h, t in links:
+                tt = _re6.sub(r'<[^>]+>|\s+', ' ', t).strip()
+                if any(k in tt + h for k in ('지도', 'map', 'Map', 'VR', 'vr', '3D', '360', '스마트', '투어', '관광안내')) and h not in seen:
+                    seen.add(h); hits.append('%s=%s' % (tt[:20], h))
+            say('[관광 링크] ' + ' | '.join(hits[:60]))
         except Exception as e:  # noqa: BLE001
-            say('[메타] %s 실패 %s' % (tb, e))
-    for q in ('택시', '운수', '여객', '운송사업', '교통사고', '자동차', '주차', '버스', '신호', '횡단보도', '과태료', '세외수입'):
-        try:
-            t = http_get('https://kosis.kr/openapi/statisticsSearch.do', {'method': 'getList', 'apiKey': kk0, 'searchNm': q, 'format': 'json', 'jsonVD': 'Y', 'resultCount': '400'})
-            j = json.loads(t)
-            j = [x for x in j if str(x.get('ORG_ID')) == '211' or '동해' in str(x.get('TBL_NM'))] if isinstance(j, list) else j
-            say('[검색] %s → %s' % (q, ' | '.join('%s/%s %s(%s~%s)' % (x.get('ORG_ID'), x.get('TBL_ID'), x.get('TBL_NM'), x.get('STRT_PRD_DE'), x.get('END_PRD_DE')) for x in j) if isinstance(j, list) else str(j)[:200]))
-        except Exception as e:  # noqa: BLE001
-            say('[검색] %s 실패 %s' % (q, e))
+            say('[관광 %s] 실패 %s' % (u, e))
     if os.environ.get('PROBE_FULL') != '1':
         return
     probe('admm_population', {'url': 'https://apis.data.go.kr/1741000/admmPpltnHhStus/selectAdmmPpltnHhStus', 'key_env': 'DATA_GO_KR_KEY',
