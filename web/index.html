@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>동해시 AI 시장실</title>
+<link rel="icon" href="img/emblem.png">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   :root {
@@ -18,6 +19,7 @@
   header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 28px; border-bottom: 1px solid var(--line); background: #FFFFFF; }
   .brand { display: flex; align-items: center; gap: 12px; font-size: 20px; font-weight: 700; color: var(--navy); }
   .brand .slogan { font-size: 15px; font-weight: 600; color: var(--blue); padding-left: 14px; margin-left: 2px; border-left: 2px solid var(--line); }
+  .brand .emblem { height: 34px; width: auto; display: block; }
   .brand i { width: 38px; height: 38px; border-radius: 8px; background: var(--blue); display: inline-block; }
   nav { display: flex; gap: 4px; }
   nav button { font: inherit; font-size: 16px; color: var(--sub); background: none; border: 0; padding: 8px 16px; border-radius: 6px; cursor: pointer; min-height: 40px; }
@@ -99,7 +101,7 @@
 <body>
 <div id="stage">
   <header>
-    <div class="brand"><i aria-hidden="true"></i><span id="appTitle">동해시 AI 시장실</span><span id="appSlogan" class="slogan"></span></div>
+    <div class="brand"><img class="emblem" src="img/emblem.png" alt="동해시 상징마크"><span id="appTitle">동해시 AI 시장실</span><span id="appSlogan" class="slogan"></span></div>
     <nav id="nav" aria-label="화면 메뉴"></nav>
     <div class="hright"><span id="badges"></span><span id="updated"></span><span id="clock"></span></div>
   </header>
