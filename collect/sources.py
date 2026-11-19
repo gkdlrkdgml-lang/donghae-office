@@ -351,17 +351,21 @@ def finance_years(S, C, key='finance'):
     if not src.get('url'):
         raise RuntimeError('%s 요청 주소가 settings.json에 아직 없습니다' % key)
     code = src['url'].rstrip('/').rsplit('/', 1)[-1]
-    path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'manual', 'lofin_%s.json' % code)
+    mdir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'manual')
+    files = sorted(fn for fn in (os.listdir(mdir) if os.path.isdir(mdir) else [])
+                   if fn.startswith('lofin_%s' % code) and fn.endswith('.json'))
     rows = None
     try:
         rows = _call(src, {}, key)
     except Exception as e:  # noqa: BLE001
-        if not os.path.exists(path):
+        if not files:
             raise
-        log('%s API 접속 불가(%s) → 저장 파일 %s 사용' % (key, e, os.path.basename(path)))
-    if not rows and os.path.exists(path):
-        with open(path, encoding='utf-8') as fp:
-            rows = find_items(json.load(fp))
+        log('%s API 접속 불가(%s) → 저장 파일 %s 사용' % (key, e, ', '.join(files)))
+    if not rows and files:
+        rows = []
+        for fn in files:
+            with open(os.path.join(mdir, fn), encoding='utf-8') as fp:
+                rows += find_items(json.load(fp))
     f = src['fields']
     by = {}
     for r in rows or []:
