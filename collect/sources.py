@@ -334,78 +334,38 @@ def migration(S, C, code='51170'):
     ym = max(tot)
     pv = max([p for p in tot if p != ym] or [None])
 
-    def od(direction):
+    def od(direction, pd):
         if direction == 'in':   # 어디서 왔나: 전출지 ALL → 전입지 우리 시
-            ex = {'objL1': 'ALL', 'objL2': code + '+', 'objL3': '0+', 'itmId': 'T70+', 'startPrdDe': ym, 'endPrdDe': ym}
+            ex = {'objL1': 'ALL', 'objL2': code + '+', 'objL3': '0+', 'itmId': 'T70+', 'startPrdDe': pd, 'endPrdDe': pd}
             key = 'C1'
         else:                   # 어디로 갔나: 전출지 우리 시 → 전입지 ALL
-            ex = {'objL1': code + '+', 'objL2': 'ALL', 'objL3': '0+', 'itmId': 'T70+', 'startPrdDe': ym, 'endPrdDe': ym}
+            ex = {'objL1': code + '+', 'objL2': 'ALL', 'objL3': '0+', 'itmId': 'T70+', 'startPrdDe': pd, 'endPrdDe': pd}
             key = 'C2'
-        rr = _kosis_rows('DT_1B26003_A02', ex, 'migration_od_' + direction)
-        sgg, sido = [], []
+        rr = _kosis_rows('DT_1B26003_A02', ex, 'migration_od_%s_%s' % (direction, pd))
+        sido_nm = {str(r.get(key)): str(r.get(key + '_NM', '')).strip() for r in rr if len(str(r.get(key, ''))) == 2}
+        sgg, sido = [], {}
         for r in rr:
             c = str(r.get(key, '')); nm = str(r.get(key + '_NM', '')).strip(); v = to_num(r.get('DT'))
-            if not v or c in ('00', code):
-                continue
-            up = c[:2]
-            if len(c) == 2:
-                sido.append([nm, v])
-            elif len(c) == 5 and c[2:] != '000':
-                sido_nm = {x.get(key): x.get(key + '_NM') for x in rr}.get(up, '')
-                sgg.append([nm, v, c])
-        return sgg, sido
-    sin, din = od('in')
-    sout, dout = od('out')
-    names = {}
-    return {'ym': ym, 'prev_ym': pv, 'cur': tot.get(ym), 'prev': tot.get(pv),
-            'from_sgg': sorted(sin, key=lambda x: -x[1]), 'to_sgg': sorted(sout, key=lambda x: -x[1]),
-            'from_sido': sorted(din, key=lambda x: -x[1]), 'to_sido': sorted(dout, key=lambda x: -x[1])}
-
-
-def youth_elderly(S, C):
-    """KOSIS 1세별 주민등록인구(DT_1B04006): 우리 시 청년(19~34세)·고령(65세+) 정확한 인원, 최근 2개월."""
-    src = {'key_env': 'KOSIS_KEY', 'meta_url': 'https://kosis.kr/openapi/statisticsData.do', 'params': {'orgId': '101', 'tblId': 'DT_1B04006'}}
-    meta = kosis_meta(src)
-    full = [r['full'] for r in C['regions'] if r['name'] == C['me']][0]
-    reg = [m for m in meta if str(m.get('ITM_NM', '')).strip() == full and str(m.get('ITM_ID', ''))[:2] in ('51', '32', '42')]
-    if not reg:
-        raise RuntimeError('1세별 표에서 %s 코드를 찾지 못함' % full)
-    robj, rcode = reg[0]['OBJ_ID'], str(reg[0]['ITM_ID'])
-    order = []
-    for m in meta:
-        if m.get('OBJ_ID') and m['OBJ_ID'] != 'ITEM' and m['OBJ_ID'] not in order:
-            order.append(m['OBJ_ID'])
-    extra = {'newEstPrdCnt': '2'}
-    for i, oid in enumerate(order[:8]):
-        extra['objL%d' % (i + 1)] = rcode + '+' if oid == robj else 'ALL'
-    itm = [m for m in meta if m.get('OBJ_ID') == 'ITEM' and '총' in str(m.get('ITM_NM', ''))]
-    if itm:
-        extra['itmId'] = str(itm[0]['ITM_ID']) + '+'
-    rows = _kosis_rows('DT_1B04006', extra, 'age_1y')
-    by = {}
-    for r in rows:
-        if itm and r.get('ITM_ID') != str(itm[0]['ITM_ID']):
-            continue
-        lab = ''
-        for k in ('C2_NM', 'C3_NM', 'C4_NM'):
-            if _re.search(r'\d+\s*세', str(r.get(k, ''))):
-                lab = str(r.get(k)).strip()
-                break
-        m1 = _re.match(r'^(\d+)\s*세$', lab)
-        m2 = _OVER.search(lab)
-        v = to_num(r.get('DT'))
-        if v is None or not (m1 or m2):
-            continue  # 1세 칸과 'N세 이상'만(합계·묶음 제외)
-        by.setdefault(r.get('PRD_DE'), {})[int((m1 or m2).group(1))] = v
-    if not by:
-        raise RuntimeError('1세별 응답이 비었음')
-    out = {}
-    for pd, ages in by.items():
-        out[pd] = {'youth': round(sum(v for k, v in ages.items() if 19 <= k <= 34)),
-                   'elderly': round(sum(v for k, v in ages.items() if k >= 65)), 'total': round(sum(ages.values()))}
-    ym = max(out)
-    pv = max([p for p in out if p != ym] or [None])
-    return {'ym': ym, 'prev_ym': pv, 'cur': out[ym], 'prev': out.get(pv)}
+            if not v or len(c) != 5 or c == code or c.endswith('000'):
+                continue  # 시·군·구만, 우리 시 안 이동은 뺍니다
+            sn = sido_nm.get(c[:2], c[:2])
+            sgg.append([nm, v, c, sn])
+            sido[sn] = sido.get(sn, 0) + v
+        return sorted(sgg, key=lambda x: -x[1]), sorted([[k, v] for k, v in sido.items()], key=lambda x: -x[1])
+    res = {'ym': ym, 'prev_ym': pv, 'total_cur': tot.get(ym), 'total_prev': tot.get(pv)}
+    res['from_sgg'], res['from_sido'] = od('in', ym)
+    res['to_sgg'], res['to_sido'] = od('out', ym)
+    res['in'] = sum(x[1] for x in res['from_sgg']); res['out'] = sum(x[1] for x in res['to_sgg'])
+    if pv:
+        try:
+            pi, _ = od('in', pv); po, _ = od('out', pv)
+            res['prev_in'] = sum(x[1] for x in pi); res['prev_out'] = sum(x[1] for x in po)
+        except Exception:  # noqa: BLE001
+            pass
+    # 시내(동 사이) 이동 = 총전입 - 관외 전입
+    if tot.get(ym, {}).get('in') is not None:
+        res['inner'] = tot[ym]['in'] - res['in']
+    return res
 
 
 def age_mois(S, C):

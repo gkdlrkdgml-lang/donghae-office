@@ -19,6 +19,11 @@
       "show": true
     },
     {
+      "id": "compare",
+      "label": "인구 비교",
+      "show": true
+    },
+    {
       "id": "finance",
       "label": "예산",
       "show": true

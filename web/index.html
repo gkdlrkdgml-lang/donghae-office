@@ -72,6 +72,48 @@
   table.dt.big td, table.dt.big th { font-size: 16px; padding: 7px 8px; }
   table.dt tr.me td { background: #E4EEFB; color: #1B3A6B; font-weight: 700; }
   table.dt tr.pk td { background: #FFF1E2; font-weight: 700; }
+
+  .basis { background: var(--navy); color: #fff !important; border-radius: 999px; padding: 6px 16px; font-weight: 700; font-size: 15px !important; }
+  .popL { display: grid; grid-template-rows: auto auto minmax(0, 1fr); gap: 14px; min-height: 0; }
+  .pr1 { display: grid; grid-template-columns: 1.35fr repeat(4, minmax(0, 1fr)); gap: 12px; }
+  .pc { background: #fff; border: 1.5px solid #C9D8EE; border-radius: 16px; padding: 12px 14px; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; min-width: 0; }
+  .pc .pl { font-size: 19px; font-weight: 800; color: var(--ink); }
+  .pc .pl small { font-size: 14px; font-weight: 600; color: var(--sub); }
+  .pc .pv { font-size: 36px; font-weight: 800; line-height: 1.05; letter-spacing: -0.5px; }
+  .pc .pv small { font-size: 18px; font-weight: 700; margin-left: 2px; }
+  .pc .pd { display: flex; gap: 8px; align-items: center; font-size: 15px; font-weight: 600; color: var(--ink); border: 1.5px solid #C9D8EE; border-radius: 999px; padding: 3px 14px; }
+  .pc .ps { font-size: 13.5px; color: var(--sub); }
+  .pc.hero { background: var(--navy); border-color: var(--navy); color: #fff; justify-content: center; gap: 10px; }
+  .pc.hero .pl { color: #fff; font-size: 22px; } .pc.hero .pv { color: #fff; font-size: 58px; } .pc.hero .ps { color: #C9D6EA; }
+  .pc.hero .pd { background: #fff; border-color: #fff; font-size: 17px; }
+  .ico { width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex: none; }
+  .ico svg { width: 58%; height: 58%; }
+  .dl { font-weight: 800; color: var(--sub); } .dl.up { color: #D03B2F; } .dl.down { color: #2F5FC4; }
+  .pr2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .pc.wide { flex-direction: row; text-align: left; gap: 22px; padding: 14px 24px; align-items: center; }
+  .pc.wide .wrow { display: flex; align-items: center; gap: 18px; margin: 4px 0; }
+  .pc.wide .pv { font-size: 46px; }
+  .mig { display: grid; grid-template-rows: auto auto minmax(0, 1fr); gap: 10px; padding: 0 0 14px; overflow: hidden; border: 1.5px solid #C9D8EE; }
+  .band { background: var(--navy); color: #fff; font-weight: 800; font-size: 18px; text-align: center; padding: 9px; margin: 0; border-radius: 12px 12px 0 0; }
+  .mrow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 0 14px; }
+  .mc { display: flex; flex-direction: column; align-items: center; gap: 4px; border-right: 1px solid #DCE5F2; padding: 0 6px; }
+  .mc:last-child { border-right: 0; }
+  .mc .pl { font-size: 19px; font-weight: 800; } .mc .msub { font-size: 13px; color: var(--sub); margin-top: -4px; }
+  .mc .pv { font-size: 32px; font-weight: 800; } .mc .pv small { font-size: 16px; }
+  .mc .pd { display: flex; gap: 8px; font-size: 14.5px; font-weight: 600; }
+  .od { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; padding: 4px 18px 0; min-height: 0; border-top: 1px solid #DCE5F2; }
+  .odl { display: flex; flex-direction: column; gap: 5px; padding-top: 8px; }
+  .odh { font-size: 15.5px; font-weight: 800; color: var(--navy); margin-bottom: 2px; }
+  .odr { display: grid; grid-template-columns: 112px minmax(0, 1fr) 42px; gap: 8px; align-items: center; font-size: 14.5px; }
+  .odn { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .odb { height: 12px; background: var(--track); border-radius: 6px; overflow: hidden; } .odb i { display: block; height: 100%; border-radius: 6px; }
+  .odr b { text-align: right; }
+  section.dongs { padding: 0; display: flex; flex-direction: column; border: 1.5px solid #C9D8EE; border-radius: 16px; }
+  .dl10 { display: flex; flex-direction: column; padding: 6px 20px; }
+  .dr { display: grid; grid-template-columns: 74px 1fr 92px; grid-template-rows: auto auto; align-items: center; column-gap: 8px; padding: 9px 0; border-bottom: 1px solid #EDF1F6; }
+  .dr b { font-size: 19px; } .dr .dn { font-size: 20px; font-weight: 800; text-align: right; color: var(--navy); }
+  .dr .dl { text-align: right; font-size: 16px; } .dr .de { grid-column: 2 / 4; text-align: right; font-size: 12.5px; color: var(--sub); }
+  section.dongs .note { margin: 10px 16px 14px; }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; }
   .chip { font-size: 13.5px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #EEF2F7; color: #3D4B5E; white-space: nowrap; }
   .chip.bad { background: #FDEBDD; color: #A4470F; } .chip.good { background: #E2F3E9; color: #1B7A4B; } .chip.navy { background: #E4EEFB; color: #1B3A6B; } .chip.violet { background: #EFE9FB; color: #5B3FA0; }
@@ -162,6 +204,7 @@ function startApp() {
     if (attrs) Object.keys(attrs).forEach(function (k) {
       if (k === 'style') e.style.cssText = attrs[k];
       else if (k === 'text') e.textContent = attrs[k];
+      else if (k === 'html') e.innerHTML = attrs[k];
       else if (k.slice(0, 2) === 'on') e.addEventListener(k.slice(2), attrs[k]);
       else e.setAttribute(k, attrs[k]);
     });
@@ -308,9 +351,134 @@ function startApp() {
     view.appendChild(right);
   }
 
-  // ---------- 2. 행정 ----------
-  var admSel = null;
+
+  // ---------- 아이콘(직접 그린 단순 도형) ----------
+  var ICON = {
+    people: '<circle cx="24" cy="15" r="7"/><path d="M11 40c0-8 6-14 13-14s13 6 13 14z"/>',
+    male: '<circle cx="24" cy="10" r="6"/><rect x="16" y="18" width="16" height="16" rx="5"/><rect x="17" y="30" width="6" height="14" rx="3"/><rect x="25" y="30" width="6" height="14" rx="3"/>',
+    female: '<circle cx="24" cy="10" r="6"/><path d="M17 18h14l5 18H12z"/><rect x="18" y="33" width="5" height="11" rx="2.5"/><rect x="25" y="33" width="5" height="11" rx="2.5"/>',
+    house: '<path d="M24 7 5 23h6v18h10V30h6v11h10V23h6z"/>',
+    youth: '<circle cx="15" cy="11" r="5.5"/><circle cx="33" cy="11" r="5.5"/><rect x="8" y="18" width="14" height="14" rx="5"/><rect x="26" y="18" width="14" height="14" rx="5"/><rect x="9" y="29" width="5" height="14" rx="2.5"/><rect x="16" y="29" width="5" height="14" rx="2.5"/><rect x="27" y="29" width="5" height="14" rx="2.5"/><rect x="34" y="29" width="5" height="14" rx="2.5"/><rect x="20" y="22" width="8" height="4" rx="2"/>',
+    senior: '<circle cx="18" cy="10" r="5.5"/><path d="M11 18c2-2 12-2 14 0l2 14H10z"/><rect x="12" y="29" width="5" height="14" rx="2.5"/><rect x="19" y="29" width="5" height="14" rx="2.5"/><rect x="30" y="20" width="3" height="24" rx="1.5"/><path d="M25 22l6-2" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><circle cx="36" cy="12" r="4.5" opacity=".55"/>',
+    doorIn: '<rect x="24" y="6" width="16" height="36" rx="2"/><circle cx="35" cy="25" r="1.6" fill="#fff"/><path d="M6 24h13m-6-6 6 6-6 6" stroke="currentColor" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
+    doorOut: '<rect x="8" y="6" width="16" height="36" rx="2"/><circle cx="13" cy="25" r="1.6" fill="#fff"/><path d="M27 24h14m-6-6 6 6-6 6" stroke="currentColor" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
+    cycle: '<path d="M38 20A15 15 0 0 0 11 15" stroke="currentColor" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M8 9v9h9z"/><path d="M10 28a15 15 0 0 0 27 5" stroke="currentColor" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M40 39v-9h-9z"/>',
+    pin: '<path d="M24 4c-8 0-14 6-14 14 0 10 14 26 14 26s14-16 14-26c0-8-6-14-14-14z"/><circle cx="24" cy="18" r="5" fill="#fff"/>',
+    trend: '<path d="M6 34 18 22l8 8 14-16" stroke="currentColor" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M33 12h9v9z"/>'
+  };
+  function icon(name, color, bg, size) {
+    var d = el('div', { class: 'ico', style: 'background:' + bg + ';color:' + color + (size ? ';width:' + size + 'px;height:' + size + 'px' : '') });
+    d.innerHTML = '<svg viewBox="0 0 48 48" fill="currentColor" aria-hidden="true">' + ICON[name] + '</svg>';
+    return d;
+  }
+  function delta(v, unit) {
+    if (v == null) return el('span', { class: 'dl', text: '–' });
+    if (v === 0) return el('span', { class: 'dl', text: '변동 없음' });
+    return el('span', { class: 'dl ' + (v > 0 ? 'up' : 'down'), text: (v > 0 ? '▲ ' : '▼ ') + fmt(Math.abs(v), 0) + (unit || '명') });
+  }
+
+  // ---------- 2. 행정(인구 현황) ----------
   function screenAdmin() {
+    var A = D.admin, me = A.regions[D.me] || {};
+    var Y = A.youth || {}, MG = A.migration || {}, pcI = ind('pop_change'), elI = ind('elderly'), waI = ind('working_age');
+    view.style.gridTemplateColumns = 'minmax(0, 1fr) 420px';
+    view.style.gridTemplateRows = '44px minmax(0, 1fr)';
+    view.appendChild(el('div', { class: 'title' }, [
+      el('h1', { text: D.me + '시 인구 현황' }),
+      el('span', { class: 'basis', text: ymLabel(A.ym) + ' 주민등록 기준' })
+    ]));
+    var L = el('div', { class: 'popL' });
+    // 1줄: 전체·남·여·세대·증감률
+    var r1 = el('div', { class: 'pr1' });
+    var dm = me.prev_m ? me.total - me.prev_m : null;
+    r1.appendChild(el('div', { class: 'pc hero' }, [el('div', { class: 'pl', text: '전체 인구' }), el('div', { class: 'pv', html: fmt(me.total, 0) + '<small>명</small>' }),
+      el('div', { class: 'pd' }, [el('span', { text: '전월 대비' }), delta(dm)]),
+      el('div', { class: 'ps', text: '1년 전보다 ' + (me.prev ? (me.total - me.prev >= 0 ? '+' : '') + fmt(me.total - me.prev, 0) + '명' : '–') })]));
+    function card(lbl, ic, col, bg, val, unit, d, du, sub) {
+      r1.appendChild(el('div', { class: 'pc' }, [el('div', { class: 'pl', text: lbl }), icon(ic, col, bg),
+        el('div', { class: 'pv', style: 'color:' + col, html: val + '<small>' + unit + '</small>' }),
+        el('div', { class: 'pd' }, [el('span', { text: '전월 대비' }), delta(d, du)]), sub ? el('div', { class: 'ps', text: sub }) : null].filter(Boolean)));
+    }
+    card('남자', 'male', '#1F6FD1', '#E4EEFB', fmt(me.male, 0), '명', me.prev_m_male ? me.male - me.prev_m_male : null);
+    card('여자', 'female', '#D6457A', '#FCE6EE', fmt(me.female, 0), '명', me.prev_m_female ? me.female - me.prev_m_female : null);
+    card('세대', 'house', '#2E8B57', '#E2F3E9', fmt(me.hh, 0), '세대', me.prev_m_hh ? me.hh - me.prev_m_hh : null, '세대', '세대당 ' + fmt(me.total / me.hh, 2) + '명');
+    card('인구 증감률', 'trend', '#7A4FC4', '#EFE9FB', pcI && pcI.me ? fmt(pcI.me.value, 2) : '–', '%', null, null, pcI && pcI.me ? '전년 같은 달 대비 · 도내 ' + pcI.me.rank + '위' : '');
+    r1.lastChild.querySelector('.pd').remove();
+    L.appendChild(r1);
+    // 2줄: 청년·고령
+    var r2 = el('div', { class: 'pr2' });
+    function wide(lbl, sub, ic, col, bg, val, d, extra) {
+      r2.appendChild(el('div', { class: 'pc wide' }, [icon(ic, col, bg, 96), el('div', {}, [
+        el('div', { class: 'pl' }, [lbl, el('small', { text: sub })]),
+        el('div', { class: 'wrow' }, [el('div', { class: 'pv', style: 'color:' + col, html: val + '<small>명</small>' }),
+          el('div', { class: 'pd' }, [el('span', { text: '전월 대비' }), delta(d)])]),
+        extra ? el('div', { class: 'ps', text: extra }) : null].filter(Boolean))]));
+    }
+    var yc = Y.cur || {}, yp = Y.prev || {};
+    wide('청년층', ' (19~34세)', 'youth', '#1F6FD1', '#E4EEFB', yc.youth != null ? fmt(yc.youth, 0) : '–', yc.youth != null && yp.youth != null ? yc.youth - yp.youth : null,
+      yc.youth ? '전체 인구의 ' + fmt(yc.youth / yc.total * 100, 1) + '%' + (waI && waI.me ? ' · 생산연령(15~64세) ' + fmt(waI.me.value, 1) + '% 도내 ' + waI.me.rank + '위' : '') : '');
+    wide('고령층', ' (65세 이상)', 'senior', '#1B7A6B', '#E0F2EE', yc.elderly != null ? fmt(yc.elderly, 0) : '–', yc.elderly != null && yp.elderly != null ? yc.elderly - yp.elderly : null,
+      elI && elI.me ? '전체 인구의 ' + fmt(elI.me.value, 1) + '% · 도내 ' + elI.me.rank + '위' : '');
+    L.appendChild(r2);
+    // 3줄: 월간 이동
+    var r3 = el('section', { class: 'mig' });
+    r3.appendChild(el('div', { class: 'band', text: '인구 이동 현황 · ' + (MG.ym ? ymLabel(MG.ym) : '') + ' (통계청 국내인구이동, 한 달 늦게 나옵니다)' }));
+    if (MG.ym) {
+      var mrow = el('div', { class: 'mrow' });
+      function mc(lbl, sub, ic, col, bg, v, d) {
+        mrow.appendChild(el('div', { class: 'mc' }, [el('div', { class: 'pl', text: lbl }), sub ? el('div', { class: 'msub', text: sub }) : null, icon(ic, col, bg, 70),
+          el('div', { class: 'pv', style: 'color:' + col, html: (v > 0 && lbl === '순이동' ? '+' : '') + fmt(v, 0) + '<small>명</small>' }),
+          el('div', { class: 'pd' }, [el('span', { text: '전월 대비' }), delta(d)])].filter(Boolean)));
+      }
+      mc('전입', '다른 시·군에서', 'doorIn', '#1F6FD1', '#E4EEFB', MG['in'], MG.prev_in != null ? MG['in'] - MG.prev_in : null);
+      mc('전출', '다른 시·군으로', 'doorOut', '#7A4FC4', '#EFE9FB', MG.out, MG.prev_out != null ? MG.out - MG.prev_out : null);
+      var net = MG['in'] - MG.out, pnet = MG.prev_in != null ? MG.prev_in - MG.prev_out : null;
+      mc('순이동', '전입 - 전출', 'cycle', net < 0 ? '#C0602B' : '#1B7A4B', net < 0 ? '#FDEBDD' : '#E2F3E9', net, pnet != null ? net - pnet : null);
+      mc('시내 이동', '동해시 안에서', 'pin', '#556274', '#EEF2F7', MG.inner, null);
+      r3.appendChild(mrow);
+      var od = el('div', { class: 'od' });
+      function topList(title, list, col) {
+        var mx = list.length ? list[0][1] : 1, box = el('div', { class: 'odl' }, [el('div', { class: 'odh', style: 'color:' + col, text: title })]);
+        list.slice(0, 6).forEach(function (x) {
+          box.appendChild(el('div', { class: 'odr' }, [el('span', { class: 'odn', text: (x[3] && x[3].indexOf('강원') < 0 ? x[3].replace(/특별자치도|특별자치시|광역시|특별시|도$/, '') + ' ' : '') + x[0] }),
+            el('div', { class: 'odb' }, [el('i', { style: 'width:' + (x[1] / mx * 100).toFixed(1) + '%;background:' + col })]), el('b', { text: fmt(x[1], 0) })]));
+        });
+        return box;
+      }
+      od.appendChild(topList('어디서 왔나 (전입 많은 곳)', MG.from_sgg || [], '#1F6FD1'));
+      od.appendChild(topList('어디로 갔나 (전출 많은 곳)', MG.to_sgg || [], '#7A4FC4'));
+      var sd = el('div', { class: 'odl' }, [el('div', { class: 'odh', text: '시·도별 순이동' })]);
+      var mp = {};
+      (MG.from_sido || []).forEach(function (x) { mp[x[0]] = (mp[x[0]] || 0) + x[1]; });
+      (MG.to_sido || []).forEach(function (x) { mp[x[0]] = (mp[x[0]] || 0) - x[1]; });
+      var sl = Object.keys(mp).map(function (k) { return [k, mp[k]]; }).filter(function (x) { return x[1]; }).sort(function (a, b) { return Math.abs(b[1]) - Math.abs(a[1]); }).slice(0, 6);
+      var smx = sl.length ? Math.abs(sl[0][1]) : 1;
+      sl.forEach(function (x) {
+        sd.appendChild(el('div', { class: 'odr' }, [el('span', { class: 'odn', text: x[0].replace(/특별자치도|특별자치시|광역시|특별시/, '') }),
+          el('div', { class: 'odb' }, [el('i', { style: 'width:' + (Math.abs(x[1]) / smx * 100).toFixed(1) + '%;background:' + (x[1] < 0 ? '#E8A867' : '#5DB88E') })]),
+          el('b', { text: (x[1] > 0 ? '+' : '') + fmt(x[1], 0), style: 'color:' + (x[1] < 0 ? '#B4531B' : '#1B7A4B') })]));
+      });
+      od.appendChild(sd);
+      r3.appendChild(od);
+    } else r3.appendChild(el('div', { class: 'empty', text: '이동 자료 없음' }));
+    L.appendChild(r3);
+    view.appendChild(L);
+    // 오른쪽: 동별 현황
+    var R = el('section', { class: 'dongs' }, [el('div', { class: 'band', text: '동별 현황 (행정동)' })]);
+    var adm = Object.keys(A.admm || {}).map(function (n) { return [n, A.admm[n]]; }).sort(function (a, b) { return b[1].total - a[1].total; });
+    var tb = el('div', { class: 'dl10' });
+    adm.forEach(function (x) {
+      var d = x[1].prev_total != null ? x[1].total - x[1].prev_total : null;
+      tb.appendChild(el('div', { class: 'dr' }, [el('b', { text: x[0] }), el('span', { class: 'dn', text: fmt(x[1].total, 0) + '명' }), delta(d), el('span', { class: 'de', text: '고령 ' + fmt(x[1].elderly, 1) + '%' })]));
+    });
+    R.appendChild(tb);
+    R.appendChild(el('div', { class: 'note', style: 'margin-top:auto' }, [el('b', { text: '기준 ' }), (A.admm_ym ? ymLabel(A.admm_ym) : '') + ' · 전월 대비 · 고령 = 65세 이상 비율']));
+    view.appendChild(R);
+  }
+
+  // ---------- 2-2. 인구 비교(18개 시·군) ----------
+  var admSel = null;
+  function screenCompare() {
     var A = D.admin;
     admSel = (admSel && A.regions[admSel]) ? admSel : D.me;
     var SN = admSel, isMe = SN === D.me, me = A.regions[SN] || {};
@@ -523,7 +691,7 @@ function startApp() {
   }
 
   // ---------- 그리기 ----------
-  var SCREENS = { main: screenMain, admin: screenAdmin, finance: screenFinance, frame: screenFrame };
+  var SCREENS = { main: screenMain, admin: screenAdmin, compare: screenCompare, finance: screenFinance, frame: screenFrame };
   function render() {
     view.textContent = '';
     view.className = '';

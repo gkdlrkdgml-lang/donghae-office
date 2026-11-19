@@ -214,7 +214,7 @@ def build(state, S, C):
                                       ranking=ranking, me=me, n=len(ranking)))
     # 분야 화면이 비면 메뉴에서 숨김
     has_fin = any(i['id'] == 'fin_indep' for i in out['indicators'])
-    out['menu'] = [m for m in out['menu'] if not (m['id'] == 'finance' and not has_fin) and not (m['id'] == 'admin' and not out['admin'])]
+    out['menu'] = [m for m in out['menu'] if not (m['id'] == 'finance' and not has_fin) and not (m['id'] in ('admin', 'compare') and not out['admin'])]
     return out
 
 
