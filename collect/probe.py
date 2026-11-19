@@ -130,7 +130,9 @@ def main():
     for u in ('https://livebus.dhits.kr/',):
         try:
             rq = _ur.Request(u, headers={'User-Agent': 'Mozilla/5.0'})
-            with _ur.urlopen(rq, timeout=20) as r:
+            import ssl as _ssl
+            _cx = _ssl.create_default_context(); _cx.check_hostname = False; _cx.verify_mode = _ssl.CERT_NONE  # 헤더 확인용(읽기만)
+            with _ur.urlopen(rq, timeout=20, context=_cx) as r:
                 say('[버스] %s %s' % (r.status, ' | '.join('%s: %s' % (k, v) for k, v in r.headers.items())))
                 body = r.read().decode('utf-8', 'replace')
                 import re as _re4
