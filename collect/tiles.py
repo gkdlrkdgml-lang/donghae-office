@@ -1,6 +1,6 @@
 """3D 지도 바닥 그림을 미리 받아 web/img/tiles/ 에 둡니다(보는 PC가 외부 지도 서버에 못 붙어도 나오도록).
 
-한 번 받아 두면 다시 받지 않습니다. 지도 © OpenStreetMap · © CARTO / © 국토교통부 브이월드.
+한 번 받아 두면 다시 받지 않습니다. 지도 © OpenStreetMap 기여자 / © 국토교통부 브이월드.
 """
 import json, math, os, sys, time, urllib.request
 
@@ -30,7 +30,7 @@ def get(url, path):
     if os.path.exists(path) and os.path.getsize(path) > 500:
         return True
     try:
-        rq = urllib.request.Request(url, headers={'User-Agent': 'donghae-office/1.0', 'Referer': 'https://gkdlrkdgml-lang.github.io/'})
+        rq = urllib.request.Request(url, headers={'User-Agent': 'donghae-office/1.0 (+https://gkdlrkdgml-lang.github.io/donghae-office/)', 'Referer': 'https://gkdlrkdgml-lang.github.io/donghae-office/'})
         with urllib.request.urlopen(rq, timeout=30) as r:
             b = r.read()
         if len(b) < 500:
@@ -50,7 +50,7 @@ def main():
     key = (s.get('map') or {}).get('vworld_key', '')
     ok = {'carto': 0, 'sat': 0}
     for x, y in tiles():
-        if get('https://a.basemaps.cartocdn.com/rastertiles/voyager/%d/%d/%d@2x.png' % (Z, x, y), os.path.join(OUT, 'c_%d_%d_%d.png' % (Z, x, y))):
+        if get('https://tile.openstreetmap.org/%d/%d/%d.png' % (Z, x, y), os.path.join(OUT, 'o_%d_%d_%d.png' % (Z, x, y))):
             ok['carto'] += 1
         if key and get('https://api.vworld.kr/req/wmts/1.0.0/%s/Satellite/%d/%d/%d.jpeg' % (key, Z, y, x), os.path.join(OUT, 's_%d_%d_%d.jpg' % (Z, x, y))):
             ok['sat'] += 1

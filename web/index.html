@@ -891,11 +891,16 @@ function startApp() {
   function panel(title, small, body) { var sct = el('section', {}, [el('div', { class: 'sh' }, [el('h2', { text: title }), el('small', { text: small || '' })])]); (Array.isArray(body) ? body : [body]).forEach(function (b) { if (b) sct.appendChild(b); }); view.appendChild(sct); return sct; }
 
 
+  function baseLayer() {
+    var vk = (D.map || {}).vworld;
+    return vk ? window.L.tileLayer('https://api.vworld.kr/req/wmts/1.0.0/' + vk + '/Base/{z}/{y}/{x}.png', { attribution: '© 국토교통부 브이월드', maxZoom: 19 })
+      : window.L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap 기여자', maxZoom: 19 });
+  }
   // 지도 그림: 사이트에 미리 받아 둔 그림 → 없으면 지도 서버 → 그래도 안 되면 숨김
   function tileImg(local, remote, style, fade) {
     var im = el('img', { alt: '', style: style });
     im.onload = function () { if (fade) im.style.opacity = 1; };
-    im.onerror = function () { if (im.dataset.tried) { im.remove(); return; } im.dataset.tried = 1; im.src = remote; };
+    im.onerror = function () { if (im.dataset.tried || !remote) { im.remove(); return; } im.dataset.tried = 1; im.src = remote; };
     im.src = local;
     return im;
   }
@@ -938,7 +943,9 @@ function startApp() {
     var plane = el('div', { class: 'm3plane', style: 'width:' + PW + 'px;height:' + PH + 'px;margin:' + (-PH / 2) + 'px 0 0 ' + (-PW / 2) + 'px' });
     var map = el('div', { class: 'm3map' });
     for (var tx = tx0; tx <= tx1; tx++) for (var ty = ty0; ty <= ty1; ty++) {
-      map.appendChild(tileImg('img/tiles/c_' + M3Z + '_' + tx + '_' + ty + '.png', 'https://' + 'abcd'[(tx + ty) % 4] + '.basemaps.cartocdn.com/rastertiles/voyager/' + M3Z + '/' + tx + '/' + ty + '@2x.png', 'left:' + ((tx - tx0) * 256 - ox) + 'px;top:' + ((ty - ty0) * 256 - oy) + 'px'));
+      var tpos = 'left:' + ((tx - tx0) * 256 - ox) + 'px;top:' + ((ty - ty0) * 256 - oy) + 'px', vk = (D.map || {}).vworld;
+      map.appendChild(tileImg('img/tiles/o_' + M3Z + '_' + tx + '_' + ty + '.png', 'https://tile.openstreetmap.org/' + M3Z + '/' + tx + '/' + ty + '.png', tpos));
+      if (vk) map.appendChild(tileImg('https://api.vworld.kr/req/wmts/1.0.0/' + vk + '/Base/' + M3Z + '/' + ty + '/' + tx + '.png', null, tpos + ';opacity:0;transition:opacity .4s', true));
     }
     plane.appendChild(map);
     plane.appendChild(el('div', { class: 'm3veil' }));
@@ -987,7 +994,7 @@ function startApp() {
     ctl.appendChild(spinBtn);
     ctl.appendChild(el('button', { type: 'button', text: '⟳', onclick: function () { m3Ang += 30; setAng(); } }));
     wrap.appendChild(ctl);
-    wrap.appendChild(el('div', { class: 'm3note', text: '막대 높이 = ' + mt.t + ' · 진한 색 상위 3개 동 · 막대를 누르면 오른쪽에 표시 · 막대는 동 중심 근처 · 지도 © OpenStreetMap · © CARTO' }));
+    wrap.appendChild(el('div', { class: 'm3note', text: '막대 높이 = ' + mt.t + ' · 진한 색 상위 3개 동 · 막대를 누르면 오른쪽에 표시 · 막대는 동 중심 근처 · 지도 © 브이월드 · © OpenStreetMap' }));
     view.appendChild(el('section', { style: 'grid-row: 2; display:flex; flex-direction:column; padding:10px' }, [wrap]));
     // 오른쪽: 순위표 + 선택 동
     var tb = el('tbody');
@@ -1186,7 +1193,7 @@ function startApp() {
       setTimeout(function () {
         if (!window.L || !window.L.map) { mb.appendChild(el('div', { class: 'empty', text: '지도를 불러오지 못했습니다' })); return; }
         var map = window.L.map(mb, { zoomControl: false }).setView([37.52, 129.11], 12);
-        window.L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { attribution: '© OpenStreetMap · © CARTO', maxZoom: 18 }).addTo(map);
+        baseLayer().addTo(map);
         var pts = [];
         items.forEach(function (x) { pts.push([x.lat, x.lng]); window.L.circleMarker([x.lat, x.lng], { radius: 4 + Math.sqrt(x.sp || 1) / 1.6, color: '#fff', weight: 1.5, fillColor: x.type === '노외' ? '#2E8B57' : '#7A4FC4', fillOpacity: .85 }).addTo(map).bindTooltip(x.name + ' · ' + fmt(x.sp, 0) + '면 · ' + (x.fee || ''), { direction: 'top' }); });
         if (pts.length > 1) map.fitBounds(pts, { padding: [20, 20] });
@@ -1473,7 +1480,7 @@ function startApp() {
     setTimeout(function () {
       if (!window.L || !window.L.map) { mapBox.appendChild(el('div', { class: 'empty', text: '지도를 불러오지 못했습니다' })); return; }
       var m = window.L.map(mapBox, { zoomControl: false, attributionControl: true }).setView([37.51, 129.08], 12);
-      window.L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '© OpenStreetMap · © CARTO', maxZoom: 18 }).addTo(m);
+      baseLayer().addTo(m);
       var pts = [];
       ord.forEach(function (n) {
         var c = coord(n); if (!c) return; var v = at(n, day0) || 0, lv = clv(v);
@@ -1609,7 +1616,7 @@ function startApp() {
     for (var tx = tx0; tx <= tx1; tx++) for (var ty = ty0; ty <= ty1; ty++) {
       var pos = 'left:' + ((tx - tx0) * 256 - ox) + 'px;top:' + ((ty - ty0) * 256 - oy) + 'px';
       // 아래: 일반 지도(바다 등 위성 사진이 없는 곳을 채움), 위: 브이월드 위성지도
-      map.appendChild(tileImg('img/tiles/c_' + Z + '_' + tx + '_' + ty + '.png', 'https://' + 'abcd'[(tx + ty) % 4] + '.basemaps.cartocdn.com/rastertiles/voyager/' + Z + '/' + tx + '/' + ty + '@2x.png', pos));
+      map.appendChild(tileImg('img/tiles/o_' + Z + '_' + tx + '_' + ty + '.png', 'https://tile.openstreetmap.org/' + Z + '/' + tx + '/' + ty + '.png', pos));
       if (key) { var si = tileImg('img/tiles/s_' + Z + '_' + tx + '_' + ty + '.jpg', 'https://api.vworld.kr/req/wmts/1.0.0/' + key + '/Satellite/' + Z + '/' + ty + '/' + tx + '.jpeg', pos + ';opacity:0;transition:opacity .4s', true); map.appendChild(si); }
     }
     plane.appendChild(map);
