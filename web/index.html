@@ -1781,8 +1781,20 @@ function startApp() {
       '<b>가장 붐빈 날</b> ' + mdw(peak[0]) + ' ' + fmtK(peak[1]) + '명' + (ymdDate(peak[0]).getDay() % 6 === 0 ? ' · 주말' : ' · 평일'),
       '<b>외국인</b> 축제 기간 방문자의 ' + fmt(foR, 1) + '% (' + fmtK(st.fest.fo) + '명)'
     ];
+    view.style.gridTemplateRows = '44px auto minmax(0, 1.25fr) minmax(0, .75fr)';
+    var lp = view.querySelectorAll('section'); lp[lp.length - 1].style.gridRow = '3 / span 2';
     panel(S.title + ' 전후 일별 방문자', mdw(S.start) + ' ~ ' + mdw(S.end) + ' · 앞뒤 2주 · 명', [lineChart(lab, lines, { bands: [[i0, i1, '축제 기간']], step: 3 }),
-      el('div', { class: 'ins' }, ins.map(function (h) { return el('div', { html: h }); }))]).style.gridRow = 'span 1';
+      el('div', { class: 'ins' }, ins.map(function (h) { return el('div', { html: h }); }))]);
+    // 연도별 회차 비교 (지난 회차 + 올해, 끝나고 방문자 자료가 나오면 자동 추가)
+    var eds = [S].concat(S.eds).filter(function (e) { return e.st && e.st.fest; }).sort(function (p, q) { return p.start < q.start ? -1 : 1; });
+    if (eds.length) {
+      var cats = eds.map(function (e) { return e.start.slice(0, 4) + '년 ' + mdLabel(e.start) + '~' + mdLabel(e.end); });
+      panel('연도별 비교 · ' + festKey(S.title), '축제 기간 하루 평균 vs 직전 2주 평균 · 외지인+외국인 · 명', [groupCols(cats, [
+        { name: '축제 기간', color: '#1F6FD1', values: eds.map(function (e) { return e.st.fest.avg; }) },
+        { name: '직전 2주(평시)', color: '#B8C4D4', values: eds.map(function (e) { return e.st.base ? e.st.base.avg : null; }) }], null, true),
+        el('div', { class: 'chips', style: 'justify-content:center;flex-wrap:nowrap;margin-top:6px' }, eds.map(function (e) {
+          var u = e.st.up; return el('span', { class: 'chip ' + (u == null ? '' : u >= 0 ? 'good' : 'bad'), text: e.start.slice(0, 4) + ' 평시 대비 ' + (u == null ? '–' : (u >= 0 ? '+' : '') + fmt(u, 1) + '%') }); }))]);
+    }
   }
 
   // ---------- 4. 액자 ----------
