@@ -266,12 +266,23 @@ def collect(state, S, C):
         set_ind(state, 'soc_dis', {k: v.get('disabled_rate') for k, v in SO['recipients'].items() if v.get('disabled_rate') is not None}, '%s년 등록장애인 비율(행정안전부)' % SO.get('rcp_year'))
     if SO.get('elderly'):
         set_ind(state, 'soc_old', {k: v.get('per1000') for k, v in SO['elderly'].items() if v.get('per1000') is not None}, '%s년 노인 천명당 노인여가복지시설(통계청)' % SO.get('old_year'))
+    if stale('tasis', 7) or '--force-life' in sys.argv:
+        try:
+            L['tasis'] = sources.tasis(C)
+            ok(state, 'tasis', L['tasis']['ym'])
+        except Exception as e:  # noqa: BLE001
+            fail(state, 'tasis', e)
     EC = L.get('economy') or {}
     if EC.get('year'):
         y = EC['year']
         set_ind(state, 'biz_active', {k: v.get('total') for k, v in EC['active'][y].items() if v.get('total')}, '%s년 말 가동사업자(국세청)' % y)
         set_ind(state, 'biz_new', {k: v.get('total') for k, v in EC['new'][y].items() if v.get('total')}, '%s년 신규 사업자(국세청)' % y)
         set_ind(state, 'biz_net', {k: v.get('total', 0) - (EC['closed'][y].get(k) or {}).get('total', 0) for k, v in EC['new'][y].items() if k in EC['closed'][y]}, '%s년 신규−폐업(국세청)' % y)
+    TS = L.get('tasis') or {}
+    if TS.get('cur'):
+        tl = '%s년 %d월' % (TS['ym'][:4], int(TS['ym'][4:]))
+        set_ind(state, 'biz_active', {k: v.get('00') for k, v in TS['cur'].items() if v.get('00')}, '%s 가동사업자(국세통계포털 우리동네가게)' % tl)
+        set_ind(state, 'biz_yoy', {k: (v['00'] / TS['prev_y'][k]['00'] - 1) * 100 for k, v in TS['cur'].items() if v.get('00') and (TS['prev_y'].get(k) or {}).get('00')}, '%s 가동사업자 전년 같은 달 대비 증감률' % tl)
     # 관광지 집중률·단기예보(매번), 관광지·축제 목록(주 1회)
     for key, fn in (('cnctr', tour.concentration), ('weather', tour.weather)):
         try:

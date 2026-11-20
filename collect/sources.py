@@ -932,3 +932,59 @@ def bokjiro(C):
     if errs:
         log('복지로 일부 실패: %s' % ', '.join(errs[:10]))
     return {'at': now().strftime('%Y-%m-%d'), 'ym': ym, 'prev_ym': py, 'regions': out, 'prev': prev}
+
+
+TASIS_BC = ['00', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14']
+TASIS_BC_NM = {'00': '전체', '01': '농·임·어업', '02': '광업', '03': '제조업', '04': '전기·가스·수도업', '05': '도매업', '06': '소매업', '07': '부동산매매업',
+               '08': '건설업', '09': '음식업', '10': '숙박업', '11': '운수·창고·통신업', '12': '부동산임대업', '13': '대리·중개·도급업', '14': '서비스업(기타포함)'}
+
+
+def _tasis_map(ym, bc):
+    import urllib.request as _ur
+    bd = json.dumps({'dc_search': {'STT_OFR_TBL_NM': 'TTQSNAI01T082143', 'STT_PBL_YR': ym[:4], 'STT_PBL_MM': ym[4:], 'SCH_TFB_BC_CL': 'BC', 'SCH_CLUS_CL': 'sex',
+                                   'SCH_TFB_BC_CD': bc, 'SCH_TFB_BC_NM': '', 'SCH_SIDO_CD': '51', 'SCH_SIDO_NM': '강원특별자치도', 'SCH_SGG_CD': '00000', 'SCH_SGG_NM': '전체'}}, ensure_ascii=False).encode()
+    last = None
+    for i in range(3):
+        try:
+            rq = _ur.Request('https://tasis.nts.go.kr/wqAction.do?actionId=ATWEPFFA001R04', data=bd, headers={
+                'Content-Type': 'application/json; charset=UTF-8', 'User-Agent': 'Mozilla/5.0', 'Referer': 'https://tasis.nts.go.kr/websquare/websquare.html?w2xPath=/cm/index.xml'})
+            with _ur.urlopen(rq, timeout=30) as r:
+                j = json.loads(r.read().decode('utf-8'))
+            return {str(x.get('LABEL', '')).strip(): to_num(x.get('VAL')) for x in (j.get('dc_mapDataList') or [])}
+        except Exception as e:  # noqa: BLE001
+            last = e
+            __import__('time').sleep(2 + 3 * i)
+    raise RuntimeError('국세통계포털 호출 실패 %s %s: %s' % (ym, bc, last))
+
+
+def tasis(C):
+    """국세통계포털 우리동네가게(월별 공개): 강원 18개 시·군 14개 업태 가동사업자 — 최신 월·전월·전년 같은 달 + 13개월 추이."""
+    ym = None
+    t = now().strftime('%Y%m')
+    for k in range(1, 6):
+        c = ym_shift(t, -k)
+        if _tasis_map(c, '00'):
+            ym = c
+            break
+    if not ym:
+        raise RuntimeError('국세통계포털 최신 월을 찾지 못함')
+
+    def grab(m):
+        out = {}
+        for bc in TASIS_BC:
+            vals = _tasis_map(m, bc)
+            for lab, v in vals.items():
+                name = match_region(lab, C['regions'])
+                if name and v is not None:
+                    out.setdefault(name, {})[bc] = v
+        return out
+    cur, pm, py = grab(ym), grab(ym_shift(ym, -1)), grab(ym_shift(ym, -12))
+    trend = []
+    for k in range(12, -1, -1):
+        m = ym_shift(ym, -k)
+        try:
+            v = _tasis_map(m, '00')
+            trend.append([m, {match_region(a, C['regions']): b for a, b in v.items() if match_region(a, C['regions'])}])
+        except Exception as e:  # noqa: BLE001
+            log('국세통계 추이 %s 실패: %s' % (m, e))
+    return {'at': now().strftime('%Y-%m-%d'), 'ym': ym, 'names': TASIS_BC_NM, 'cur': cur, 'prev_m': pm, 'prev_y': py, 'trend': trend}

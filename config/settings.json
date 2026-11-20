@@ -380,6 +380,18 @@
       "source": "통계청 지역별고용조사",
       "show": true,
       "main": false
+    },
+    {
+      "id": "biz_yoy",
+      "no": 28,
+      "field": "경제",
+      "name": "사업자 증감률(전년 같은 달)",
+      "unit": "%",
+      "dir": 1,
+      "digits": 2,
+      "source": "국세통계포털",
+      "show": true,
+      "main": false
     }
   ],
   "sources": {
