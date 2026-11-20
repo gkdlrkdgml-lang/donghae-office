@@ -1471,7 +1471,7 @@ function startApp() {
     // 동해 축제 달
     var FM = {};
     if (isMe) ((((D.life || {}).festivals || {}).items) || []).forEach(function (f) { if (!f.start || !/축제|페스타|무릉제/.test(f.title || '')) return; var a = f.start.slice(0, 6), b = (f.end || f.start).slice(0, 6); [a, b].forEach(function (ym) { (FM[ym] = FM[ym] || []).indexOf(f.title) < 0 && FM[ym].push(f.title); }); });
-    lifeTitle(fullName(SN) + ' 입장객', '한국문화관광연구원 관광자원통계 · ' + fullName(SN) + ' 최신 ' + Y + '년 ' + LM + '월(전국 최신 ' + A.latest.slice(0, 4) + '년 ' + Number(A.latest.slice(4)) + '월) · 시·군이 올리는 대로 자동 반영' + selHint());
+    lifeTitle(fullName(SN) + ' 입장객', '관광자원통계 · 최신 ' + Y + '년 ' + LM + '월 · 자동 반영');
     view.style.gridTemplateColumns = 'minmax(0, 0.85fr) minmax(0, 1.3fr)';
     view.style.gridTemplateRows = '44px auto minmax(0, 1fr) minmax(0, 1fr)';
     var cy = sumY(Y, LM), py = sumY(PY, LM), lm = tot(ly), plm = tot(PY + ly.slice(4));
@@ -1479,9 +1479,9 @@ function startApp() {
     names = Object.keys(allN).sort(function (a, b) { return (sumY(Y, LM, b) || 0) - (sumY(Y, LM, a) || 0); });
     var fo = 0; yms.filter(function (ym) { return ym.slice(0, 4) === Y; }).forEach(function (ym) { var sp = spots(ym); Object.keys(sp).forEach(function (k) { fo += sp[k][1] || 0; }); });
     cardsRow([
-      { l: '올해 누적 입장객', sub: Y + '년 1~' + LM + '월', ic: 'people', col: '#1B3A6B', bg: '#E8EEF7', v: man(cy), u: '명', chips: [rankChip(indFor(ind('attr_visit'), SN)), py ? ['작년 같은 기간 ' + man(py) + ' (' + sg((cy - py) / py * 100, 1) + '%)', cy >= py ? 'good' : 'bad'] : null] },
+      { l: Y + '년 누적 입장객', sub: '1~' + LM + '월', ic: 'people', col: '#1B3A6B', bg: '#E8EEF7', v: man(cy), u: '명', chips: [rankChip(indFor(ind('attr_visit'), SN)), py ? ['작년 같은 기간 ' + man(py) + ' (' + sg((cy - py) / py * 100, 1) + '%)', cy >= py ? 'good' : 'bad'] : null] },
       { l: LM + '월 입장객', sub: Y + '년 ' + LM + '월 · 최신 달', ic: 'trend', col: '#2E8B57', bg: '#E2F3E9', v: man(lm), u: '명', chips: [plm ? ['작년 ' + LM + '월 ' + man(plm) + ' (' + sg((lm - plm) / plm * 100, 1) + '%)', lm >= plm ? 'good' : 'bad'] : null, FM[ly] ? ['축제: ' + FM[ly].join(', '), 'violet'] : null] },
-      names[0] ? { l: '올해 1위 관광지', sub: Y + '년 1~' + LM + '월', ic: 'trend', col: '#C0602B', bg: '#FDEBDD', v: names[0], u: '', chips: [[man(sumY(Y, LM, names[0])) + '명', ''], names[1] ? ['2위 ' + names[1], ''] : null] } : null,
+      names[0] ? { l: Y + '년 1위 관광지', sub: Y + '년 1~' + LM + '월', ic: 'trend', col: '#C0602B', bg: '#FDEBDD', v: names[0], u: '', chips: [[man(sumY(Y, LM, names[0])) + '명', ''], names[1] ? ['2위 ' + names[1], ''] : null] } : null,
       { l: '외국인 입장객', sub: Y + '년 1~' + LM + '월', ic: 'globe', col: '#7A4FC4', bg: '#EFE9FB', v: man(fo), u: '명', chips: [cy ? ['전체의 ' + fmt(fo / cy * 100, 1) + '%', 'violet'] : null] }
     ]);
     var I0 = ind('attr_visit'), I = I0 ? indFor(I0, SN) : null;
@@ -1493,7 +1493,7 @@ function startApp() {
     var ser = ys.map(function (y, i) { return { name: y + '년', color: cols[i], width: i === 2 ? 3.5 : 2, dash: i === 0 ? '5 4' : null, labels: i === 2 ? true : false, values: lab.map(function (x, j) { return tot(y + ('0' + (j + 1)).slice(-2)); }) }; });
     panel('월별 입장객 · ' + ys[0] + '~' + Y + '년', (isMe ? '★ = 축제(라벤더·도째비페스타·무릉제·수산물축제 등)가 열린 달 · ' : '') + '유료관광지 합계 · 명', lineChart(lab, ser, { fit: true }));
     // 관광지별 표 + 축제 달 비교
-    var hd = ['관광지', LM + '월', '올해 누적', '작년 같은 기간', '증감'].concat(isMe ? ['축제 달 vs 평소'] : []);
+    var hd = ['관광지', LM + '월', Y + '년 누적', '작년 같은 기간', '증감'].concat(isMe ? ['축제 달 vs 평소'] : []);
     var tb = el('tbody', {}, names.slice(0, 12).map(function (nm) {
       var a = sumY(Y, LM, nm), b = sumY(PY, LM, nm), d = (a != null && b) ? (a - b) / b * 100 : null;
       var tds = [el('td', { html: '<b>' + nm + '</b>' }), el('td', { class: 'r', text: man(tot(ly, nm)) }), el('td', { class: 'r', html: '<b>' + man(a) + '</b>' }), el('td', { class: 'r', text: man(b) }),
