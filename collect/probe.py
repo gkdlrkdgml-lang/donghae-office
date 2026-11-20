@@ -239,8 +239,10 @@ def main():
                     sj = json.loads(mj.group(1))
                     for pth, v in (sj.get('paths') or {}).items():
                         ops.append(pth.strip('/'))
-                        for meth, d in v.items():
-                            say('[물API] %s 경로 %s %s: %s | 인자 %s' % (pk, meth, pth, d.get('summary'), [(x.get('name'), x.get('required')) for x in d.get('parameters', [])]))
+                        for meth, d in (v.items() if isinstance(v, dict) else []):
+                            if not isinstance(d, dict):
+                                continue
+                            say('[물API] %s 경로 %s %s: %s | 인자 %s' % (pk, meth, pth, d.get('summary'), [(x.get('name'), x.get('required')) if isinstance(x, dict) else x for x in d.get('parameters', [])]))
                             rs = json.dumps(d.get('responses', {}), ensure_ascii=False)
                             say('[물API] %s 응답항목 %s' % (pk, ','.join(sorted(set(_re.findall(r'"([a-zA-Z]{3,})": \{"type"', rs))))[:900]))
                 except Exception as e2:  # noqa: BLE001
@@ -250,7 +252,7 @@ def main():
             say('[물API] %s 페이지 실패 %s' % (pk, e))
         for op in (ops or ['']):
             try:
-                t = http_get(base + ('/' + op if op else ''), {'serviceKey': _dk, 'pageNo': '1', 'numOfRows': '5', '_type': 'json', 'wtwkBsnm': '동해시', 'stMt': '09', 'edMt': '10'}, tries=1)
+                t = http_get(base + ('/' + op if op else ''), {'serviceKey': _dk, 'pageNo': '1', 'numOfRows': '5', '_type': 'json', 'wtwkBsnm': '동해시', 'stMt': '08', 'edMt': '10'}, tries=1)
                 say('[물API] %s %s → %s' % (pk, op, t[:1500].replace(_dk, '***')))
             except Exception as e:  # noqa: BLE001
                 say('[물API] %s %s 실패 %s' % (pk, op, str(e)[:400]))
