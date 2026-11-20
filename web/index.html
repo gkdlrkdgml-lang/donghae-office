@@ -1433,7 +1433,7 @@ function startApp() {
         var fi = l.values.findIndex(function (v) { return v != null; }), li = n - 1; while (li > 0 && l.values[li] == null) li--;
         if (l.area) svg.appendChild(svgEl('path', { d: d + 'L' + X(li) + ' ' + Y(lo) + 'L' + X(fi) + ' ' + Y(lo) + 'Z', fill: l.color, opacity: .1 }));
         svg.appendChild(svgEl('path', { d: d, fill: 'none', stroke: l.color, 'stroke-width': l.width || 2.5, 'stroke-dasharray': l.dash || '', 'stroke-linejoin': 'round' }));
-        if (n <= 45 && !l.dash && !l.nodot) l.values.forEach(function (v, i) { if (v != null) { svg.appendChild(svgEl('circle', { cx: X(i), cy: Y(v), r: 3, fill: '#fff', stroke: l.color, 'stroke-width': 2 })); if (opts.vals || (l.labels === 'last' ? (zoomed || i === lastI(l)) : l.labels) || (zoomed && !opts.noZoomVals)) svg.appendChild(svgEl('text', { x: X(i), y: zoomed && lix % 2 ? Y(v) + 22 : Y(v) - 10, 'text-anchor': i === lastI(l) && i > 0 ? 'end' : i === 0 ? 'start' : 'middle', 'font-size': zoomed ? 15 : 14, 'font-weight': 800, fill: l.color, stroke: '#fff', 'stroke-width': 4, 'paint-order': 'stroke', 'stroke-linejoin': 'round' }, opts.fit ? fmt(v, 0) + (opts.unit || '') : fmtK(v))); } });
+        if (n <= 45 && !l.dash && !l.nodot) l.values.forEach(function (v, i) { if (v != null) { svg.appendChild(svgEl('circle', { cx: X(i), cy: Y(v), r: 3, fill: '#fff', stroke: l.color, 'stroke-width': 2 })); if (opts.vals || (l.labels === 'last' ? (zoomed || i === lastI(l)) : l.labels) || (zoomed && !opts.noZoomVals)) svg.appendChild(svgEl('text', { x: X(i), y: zoomed && lix % 2 ? Y(v) + 22 : Y(v) - 10, 'text-anchor': i === lastI(l) && i > 0 ? 'end' : i === 0 ? 'start' : 'middle', 'font-size': zoomed ? 15 : 14, 'font-weight': 800, fill: l.color, stroke: '#fff', 'stroke-width': 4, 'paint-order': 'stroke', 'stroke-linejoin': 'round' }, opts.fit ? fmt(v, opts.d || 0) + (opts.unit || '') : fmtK(v))); } });
       });
       box.appendChild(svg);
       if (lines.length > 1 || lines[0].name) box.appendChild(el('div', { class: 'lleg' }, lines.map(function (l) { return el('span', {}, [el('i', { style: 'background:' + l.color + (l.dash ? ';opacity:.6' : '') }), document.createTextNode(l.name)]); }).concat(!zoomed && !opts.vals && !opts.noZoomVals && lines.some(function (l) { return !l.dash && l.labels !== true; }) ? [el('span', { style: 'color:#8A97A8;font-size:12px', text: '⤢ 크게 보기를 누르면 데이터 수치를 보실 수 있습니다' })] : [])));
@@ -2076,13 +2076,14 @@ function startApp() {
     function gw(tk, pre, d, u) { var a = avg(tk, pre); return a == null ? null : ['도내 평균 ' + fmt(a, d) + u, 'navy']; }
     function prev(tk, pre, d, u) { var t = T(tk); if (!t) return null; var ys = Object.keys(t.data).sort(), py = ys[ys.length - 2]; if (!py) return null; var a = tv(tk, SN, pre), b = tv(tk, SN, pre, py); if (a == null || b == null) return null; var x = a - b; return [py + '년보다 ' + (x > 0 ? '+' : '') + fmt(x, d) + u, '']; }
     cardsRow([
-      T('sewer') ? { l: '하수도 보급률', sub: yl('sewer') + ' · 공공하수처리구역', ic: 'drop', col: '#1F6FD1', bg: '#E4EEFB', v: fmt(tv('sewer', SN, '공공하수처리구역인구보급률'), 1), u: '%', chips: [rankChip(indFor(ind('sew_rate'), SN)), vsMe('sewer', '공공하수처리구역인구보급률', 1, '%p') || gw('sewer', '공공하수처리구역인구보급률', 1, '%')] } : null,
-      T('supply') ? { l: '상수도 보급률', sub: yl('supply') + ' · 지방·광역상수도', ic: 'drop', col: '#0F8A8A', bg: '#DDF3F2', v: fmt(tv('supply', SN, '지방 및 광역상수도 보급률'), 1), u: '%', chips: [rankChip(indFor(ind('sup_rate'), SN)), vsMe('supply', '지방 및 광역상수도 보급률', 1, '%p') || gw('supply', '지방 및 광역상수도 보급률', 1, '%')] } : null,
+      T('sewer') ? { l: '하수도 보급률', sub: yl('sewer'), ic: 'drop', col: '#1F6FD1', bg: '#E4EEFB', v: fmt(tv('sewer', SN, '공공하수처리구역인구보급률'), 1), u: '%', chips: [rankChip(indFor(ind('sew_rate'), SN)), vsMe('sewer', '공공하수처리구역인구보급률', 1, '%p') || gw('sewer', '공공하수처리구역인구보급률', 1, '%')] } : null,
+      T('supply') ? { l: '상수도 보급률', sub: yl('supply'), ic: 'drop', col: '#0F8A8A', bg: '#DDF3F2', v: fmt(tv('supply', SN, '지방 및 광역상수도 보급률'), 1), u: '%', chips: [rankChip(indFor(ind('sup_rate'), SN)), vsMe('supply', '지방 및 광역상수도 보급률', 1, '%p') || gw('supply', '지방 및 광역상수도 보급률', 1, '%')] } : null,
       T('wops') ? { l: '하루 수돗물 생산', sub: yl('wops') + ' · 하루 평균', ic: 'factory', col: '#7A4FC4', bg: '#EFE9FB', v: fmt(tv('wops', SN, '1일평균생산량'), 0), u: '㎥', chips: [['1인 1일 ' + fmt(tv('wops', SN, '1인1일평균급수량'), 0) + 'ℓ', 'violet'], ['시설 이용률 ' + fmt(tv('wops', SN, '시설이용률'), 1) + '%', '']] } : null,
-      T('wops') ? { l: '요금 부과율', sub: yl('wops') + ' · 생산량 중 요금 매긴 양', ic: 'coin', col: '#2E8B57', bg: '#E2F3E9', v: fmt(tv('wops', SN, '요금부과율'), 1), u: '%', chips: [rankChip(indFor(ind('bill_rate'), SN)), prev('wops', '요금부과율', 1, '%p') || gw('wops', '요금부과율', 1, '%')] } : null,
-      T('sops') ? { l: '노후 하수관 비율', sub: yl('sops') + ' · 20년 넘은 관', ic: 'warn', col: '#D9534F', bg: '#FDE7E4', v: fmt(tv('sops', SN, '경년관비율'), 1), u: '%', chips: [rankChip(indFor(ind('old_pipe'), SN)), ['관로 ' + fmt(tv('sops', SN, '총관로길이'), 0) + 'km', '']] } : null
+      T('wops') ? { l: '요금 부과율', sub: yl('wops'), ic: 'coin', col: '#2E8B57', bg: '#E2F3E9', v: fmt(tv('wops', SN, '요금부과율'), 1), u: '%', chips: [rankChip(indFor(ind('bill_rate'), SN)), prev('wops', '요금부과율', 1, '%p') || gw('wops', '요금부과율', 1, '%')] } : null,
+      T('sops') ? { l: '노후 하수관 비율', sub: yl('sops') + ' · 20년 이상', ic: 'warn', col: '#D9534F', bg: '#FDE7E4', v: fmt(tv('sops', SN, '경년관비율'), 1), u: '%', chips: [rankChip(indFor(ind('old_pipe'), SN)), ['하수도 공기업 ' + ind('old_pipe').n + '곳 비교', '']] } : null,
+      T('wfee') ? { l: '수도요금', sub: yl('wfee') + ' · ㎥당 평균', ic: 'coin', col: '#C0602B', bg: '#FDEBDD', v: fmt(tv('wfee', SN, '전체 · ㎥당요금'), 0), u: '원', chips: [['가정용 ' + fmt(tv('wfee', SN, '가정용 · ㎥당요금'), 0) + '원', 'violet'], T('wcost') ? ['현실화율 ' + fmt(tv('wcost', SN, '요금현실화율'), 1) + '%', ''] : null] } : null
     ]);
-    var MET = [['sew_rate', '하수도 보급률'], ['sup_rate', '상수도 보급률'], ['bill_rate', '요금 부과율'], ['old_pipe', '노후 하수관'], ['lpcd', '1인 급수량']].filter(function (m) { return ind(m[0]); });
+    var MET = [['sew_rate', '하수도'], ['sup_rate', '상수도'], ['bill_rate', '부과율'], ['w_price', '수도요금'], ['w_real', '현실화율'], ['lpcd', '1인 급수량'], ['old_pipe', '노후관']].filter(function (m) { return ind(m[0]); });
     if (!MET.some(function (m) { return m[0] === watMet; })) watMet = MET[0] && MET[0][0];
     var I0 = ind(watMet), I = indFor(I0, SN);
     var sw = el('div', { class: 'chips', style: 'flex-wrap:nowrap;gap:6px;margin-bottom:6px' }, MET.map(function (m) {
@@ -2100,10 +2101,10 @@ function startApp() {
     ys = Object.keys(ys).sort();
     var LN = [['sewer', '공공하수처리구역인구보급률', '하수도 보급률', '#1F6FD1'], ['supply', '지방 및 광역상수도 보급률', '상수도 보급률', '#0F8A8A'], ['wops', '요금부과율', '요금 부과율', '#2E9C6A'], ['sops', '경년관비율', '노후 하수관', '#D9534F']].filter(function (c) { return T(c[0]); });
     panel('연도별 추이 · ' + fullName(SN), '최근 3년 공표값 · %', lineChart(ys.map(function (y) { return y + '년'; }), LN.map(function (c) {
-      return { name: c[2], color: c[3], values: ys.map(function (y) { return (T(c[0]).data[y] || {})[SN] ? tv(c[0], SN, c[1], y) : null; }), width: 3, labels: true }; }), { fit: true, unit: '%' }));
+      return { name: c[2], color: c[3], values: ys.map(function (y) { return (T(c[0]).data[y] || {})[SN] ? tv(c[0], SN, c[1], y) : null; }), width: 3, labels: c[0] === 'sewer' ? 'last' : true }; }), { fit: true, unit: '%', d: 1 }));
     // 시설 현황 표
-    var RW = [['wops', '시설용량', '정수 시설용량', '㎥/일', 0], ['wops', '1일평균생산량', '하루 평균 생산량', '㎥', 0], ['wops', '1일최대생산량', '하루 최대 생산량', '㎥', 0], ['wops', '시설이용률', '정수 시설 이용률', '%', 1],
-      ['sops', '하수처리시설용량', '하수처리 시설용량', '㎥/일', 0], ['sops', '1일평균하수처리량', '하루 평균 하수처리', '㎥', 0], ['sops', '시설이용률', '하수처리 시설 이용률', '%', 1], ['sops', '총관로길이', '하수관 총길이', 'km', 0]].filter(function (r) { return T(r[0]); });
+    var RW = [['wops', '1일평균생산량', '하루 평균 생산량', '㎥', 0], ['wops', '시설이용률', '정수 시설 이용률', '%', 1], ['wcost', '㎥당 원가', '수돗물 ㎥당 생산원가', '원', 0], ['wcost', '㎥당 요금', '수돗물 ㎥당 요금', '원', 0],
+      ['sops', '1일평균하수처리량', '하루 평균 하수처리', '㎥', 0], ['sops', '시설이용률', '하수처리 시설 이용률', '%', 1]].filter(function (r) { return T(r[0]); });
     var cols = isMe ? [D.me] : [SN, D.me];
     var tb = el('tbody', {}, RW.map(function (r) {
       var vals = cols.map(function (c) { return tv(r[0], c, r[1]); }), a = avg(r[0], r[1]);

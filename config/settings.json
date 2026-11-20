@@ -462,6 +462,32 @@
       "show": true,
       "main": false,
       "note": "설치 20년 넘은 하수관 ÷ 전체 하수관"
+    },
+    {
+      "id": "w_price",
+      "no": 34,
+      "field": "상하수도",
+      "name": "수도요금(㎥당)",
+      "unit": "원",
+      "dir": -1,
+      "digits": 0,
+      "source": "행안부 지방공기업 경영정보",
+      "show": true,
+      "main": false,
+      "note": "요금수입 ÷ 부과량 · 주민 부담이 적은 쪽을 좋게 봄(낮을수록 좋음)"
+    },
+    {
+      "id": "w_real",
+      "no": 35,
+      "field": "상하수도",
+      "name": "수도요금 현실화율",
+      "unit": "%",
+      "dir": 1,
+      "digits": 1,
+      "source": "행안부 지방공기업 경영정보",
+      "show": true,
+      "main": false,
+      "note": "㎥당 요금 ÷ ㎥당 생산원가 · 높을수록 적자가 적음"
     }
   ],
   "sources": {
