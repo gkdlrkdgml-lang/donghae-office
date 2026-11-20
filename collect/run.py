@@ -266,7 +266,7 @@ def collect(state, S, C):
         set_ind(state, 'soc_dis', {k: v.get('disabled_rate') for k, v in SO['recipients'].items() if v.get('disabled_rate') is not None}, '%s년 등록장애인 비율(행정안전부)' % SO.get('rcp_year'))
     if SO.get('elderly'):
         set_ind(state, 'soc_old', {k: v.get('per1000') for k, v in SO['elderly'].items() if v.get('per1000') is not None}, '%s년 노인 천명당 노인여가복지시설(통계청)' % SO.get('old_year'))
-    if stale('tasis', 7) or '--force-life' in sys.argv:
+    if stale('tasis', 7) or 'prev_ye' not in (L.get('tasis') or {}) or '--force-life' in sys.argv:
         try:
             L['tasis'] = sources.tasis(C)
             ok(state, 'tasis', L['tasis']['ym'])

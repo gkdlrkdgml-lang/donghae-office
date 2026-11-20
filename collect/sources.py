@@ -979,6 +979,8 @@ def tasis(C):
                     out.setdefault(name, {})[bc] = v
         return out
     cur, pm, py = grab(ym), grab(ym_shift(ym, -1)), grab(ym_shift(ym, -12))
+    ye = str(int(ym[:4]) - 1) + '12'
+    pye = py if ye == ym_shift(ym, -12) else grab(ye)
     trend = []
     for k in range(12, -1, -1):
         m = ym_shift(ym, -k)
@@ -987,4 +989,4 @@ def tasis(C):
             trend.append([m, {match_region(a, C['regions']): b for a, b in v.items() if match_region(a, C['regions'])}])
         except Exception as e:  # noqa: BLE001
             log('국세통계 추이 %s 실패: %s' % (m, e))
-    return {'at': now().strftime('%Y-%m-%d'), 'ym': ym, 'names': TASIS_BC_NM, 'cur': cur, 'prev_m': pm, 'prev_y': py, 'trend': trend}
+    return {'at': now().strftime('%Y-%m-%d'), 'ym': ym, 'names': TASIS_BC_NM, 'cur': cur, 'prev_m': pm, 'prev_y': py, 'year_end': ye, 'prev_ye': pye, 'trend': trend}
