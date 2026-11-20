@@ -207,11 +207,11 @@ def main():
             say('[경제주기] %s: %s' % (tb, t[:300]))
         except Exception as e:  # noqa: BLE001
             say('[경제메타] %s 실패 %s' % (tb, e))
-    for q in ():
+    for q in ('생활폐기물 발생', '폐기물 처리현황 시군구', '재활용률', '상수도 보급률', '하수도 보급률', '1인당 급수량', '수도요금', '음식물류 폐기물', '도시공원 면적', '온실가스 배출량 시군구'):
         try:
             t = http_get('https://kosis.kr/openapi/statisticsSearch.do', {'method': 'getList', 'apiKey': _kk, 'searchNm': q, 'format': 'json', 'jsonVD': 'Y', 'resultCount': '20'})
             j = json.loads(t)
-            say('[KOSIS검색] %s → %s' % (q, ' | '.join('%s/%s %s(%s~%s %s)' % (x.get('ORG_ID'), x.get('TBL_ID'), x.get('TBL_NM'), x.get('STRT_PRD_DE'), x.get('END_PRD_DE'), x.get('PRD_SE', '')) for x in j if str(x.get('ORG_ID')) in ('117', '322', '331', '350', '101', '110'))[:2500] if isinstance(j, list) else str(j)[:300]))
+            say('[KOSIS검색] %s → %s' % (q, ' | '.join('%s/%s %s(%s~%s %s)' % (x.get('ORG_ID'), x.get('TBL_ID'), x.get('TBL_NM'), x.get('STRT_PRD_DE'), x.get('END_PRD_DE'), x.get('PRD_SE', '')) for x in j if str(x.get('ORG_ID')) in ('117', '322', '331', '350', '101', '110', '106', '126', '116', '460'))[:2500] if isinstance(j, list) else str(j)[:300]))
         except Exception as e:  # noqa: BLE001
             say('[KOSIS검색] %s 실패 %s' % (q, e))
     _dk = os.environ.get('DATA_GO_KR_KEY', '').strip()
