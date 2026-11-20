@@ -256,6 +256,13 @@ def main():
                 say('[물API] %s %s → %s' % (pk, op, t[:1500].replace(_dk, '***')))
             except Exception as e:  # noqa: BLE001
                 say('[물API] %s %s 실패 %s' % (pk, op, str(e)[:400]))
+    for op, prm in (('storeListInDong', {'divId': 'signguCd', 'key': '51170'}),):
+        try:
+            q = dict(prm); q.update({'serviceKey': _dk, 'type': 'json', 'numOfRows': '3', 'pageNo': '1'})
+            t = http_get('https://apis.data.go.kr/B553077/api/open/sdsc2/' + op, q, tries=1)
+            say('[상가] %s → %s' % (op, t[:1500].replace(_dk, '***')))
+        except Exception as e:  # noqa: BLE001
+            say('[상가] %s 실패 %s' % (op, str(e)[:300]))
     if os.environ.get('PROBE_FULL') != '1':
         return
     probe('admm_population', {'url': 'https://apis.data.go.kr/1741000/admmPpltnHhStus/selectAdmmPpltnHhStus', 'key_env': 'DATA_GO_KR_KEY',
