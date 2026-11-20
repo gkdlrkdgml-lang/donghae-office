@@ -1599,8 +1599,10 @@ function startApp() {
     var plane = el('div', { class: 'm3plane', style: 'width:' + PW + 'px;height:' + PH + 'px;margin:' + (-PH / 2) + 'px 0 0 ' + (-PW / 2) + 'px' });
     var map = el('div', { class: 'm3map' });
     for (var tx = tx0; tx <= tx1; tx++) for (var ty = ty0; ty <= ty1; ty++) {
-      var src = key ? 'https://api.vworld.kr/req/wmts/1.0.0/' + key + '/Satellite/' + Z + '/' + ty + '/' + tx + '.jpeg' : 'https://' + 'abcd'[(tx + ty) % 4] + '.basemaps.cartocdn.com/rastertiles/voyager/' + Z + '/' + tx + '/' + ty + '@2x.png';
-      map.appendChild(el('img', { src: src, alt: '', style: 'left:' + ((tx - tx0) * 256 - ox) + 'px;top:' + ((ty - ty0) * 256 - oy) + 'px', onerror: function () { this.style.visibility = 'hidden'; } }));
+      var pos = 'left:' + ((tx - tx0) * 256 - ox) + 'px;top:' + ((ty - ty0) * 256 - oy) + 'px';
+      // 아래: 일반 지도(바다 등 위성 사진이 없는 곳을 채움), 위: 브이월드 위성지도
+      map.appendChild(el('img', { src: 'https://' + 'abcd'[(tx + ty) % 4] + '.basemaps.cartocdn.com/rastertiles/voyager/' + Z + '/' + tx + '/' + ty + '@2x.png', alt: '', style: pos }));
+      if (key) map.appendChild(el('img', { src: 'https://api.vworld.kr/req/wmts/1.0.0/' + key + '/Satellite/' + Z + '/' + ty + '/' + tx + '.jpeg', alt: '', style: pos + ';opacity:0;transition:opacity .4s', onload: function () { this.style.opacity = 1; }, onerror: function () { this.remove(); } }));
     }
     plane.appendChild(map);
     var labels = [];
