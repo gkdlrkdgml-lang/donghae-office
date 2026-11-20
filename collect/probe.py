@@ -151,7 +151,20 @@ def main():
             code = 'NO_SERVICE' if 'NO_OPENAPI' in m or '404' in m else 'NOT_REG' if 'NOT_REGISTERED' in m else m[-200:].replace('\n', ' ')
             say('[찾기 %s] %s' % (nm, code))
     _kk = os.environ.get('KOSIS_KEY', '')
-    for q in ('가동사업자', '신규사업자', '폐업자 시군구', '사업자 현황 시군구', '매출지수', '청년 창업', '창업기업'):
+    import sources as _s9
+    for tb in ('DT_133N_A9811', 'DT_133001N_9822', 'DT_133001N_9816', 'DT_133N_984'):
+        try:
+            meta = _s9.kosis_meta({'key_env': 'KOSIS_KEY', 'meta_url': 'https://kosis.kr/openapi/statisticsData.do', 'params': {'orgId': '133', 'tblId': tb}})
+            objs = {}
+            for m in meta:
+                objs.setdefault(m.get('OBJ_ID'), []).append(m)
+            say('[경제메타] %s: %s' % (tb, ' / '.join('%s(%s개, %s): %s' % (k, len(v), v[0].get('OBJ_NM'), ', '.join('%s=%s' % (x.get('ITM_ID'), x.get('ITM_NM')) for x in v[:12])) for k, v in objs.items())))
+            say('[경제메타] %s 동해: %s' % (tb, ', '.join('%s:%s=%s(상위 %s)' % (x.get('OBJ_ID'), x.get('ITM_ID'), x.get('ITM_NM'), x.get('UP_ITM_ID')) for x in meta if '동해' in str(x.get('ITM_NM')) or '강원' in str(x.get('ITM_NM')))))
+            t = http_get('https://kosis.kr/openapi/statisticsData.do', {'method': 'getMeta', 'type': 'PRD', 'orgId': '133', 'tblId': tb, 'format': 'json', 'jsonVD': 'Y', 'apiKey': _kk})
+            say('[경제주기] %s: %s' % (tb, t[:300]))
+        except Exception as e:  # noqa: BLE001
+            say('[경제메타] %s 실패 %s' % (tb, e))
+    for q in ('고용률 시군', '지역별고용조사 시군', '사업체 종사자 시군구', '소상공인 시군구', '근로자 시군구 월'):
         try:
             t = http_get('https://kosis.kr/openapi/statisticsSearch.do', {'method': 'getList', 'apiKey': _kk, 'searchNm': q, 'format': 'json', 'jsonVD': 'Y', 'resultCount': '20'})
             j = json.loads(t)
