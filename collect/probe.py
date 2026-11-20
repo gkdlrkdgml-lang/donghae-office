@@ -152,6 +152,18 @@ def main():
             say('[찾기 %s] %s' % (nm, code))
     _kk = os.environ.get('KOSIS_KEY', '')
     try:
+        import urllib.request as _ur
+        body = 'datsClCrit=WS&datsClNo=1004&datsNo=22&datTbl=TIP_DPWL_DSRT_DSTP_DSPSN_STN&radioType=1&statYm=202610&statYy=2026&statMm=10&selbox=%ED%95%B4%EB%8B%B9%EC%9B%94&statCtprvCd=51&statSggCd=5117000000&meaCol=REG_DSPSN_NT&chartType=bar&spdmRtYN=N&dimCols=DSDGR_NM%20AS%20DIMCOL0&grpCol0=DSDGR_NM&DIMCOL0=DSDGR_NM&ordCol0=DSDGR_NM_ORD0'
+        rq = _ur.Request('https://www.bokjiro.go.kr/ssis-tbu/twatga/sociGuaStat/selectChartData.do', data=body.encode(), headers={'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8', 'User-Agent': 'Mozilla/5.0', 'Referer': 'https://www.bokjiro.go.kr/ssis-tbu/twatga/sociGuaStat/SociGuaStatDetailIframe.do?datsNo=22&datsClNo=1041&datsClCrit=WS'})
+        with _ur.urlopen(rq, timeout=30) as r:
+            say('[복지로] %s %s' % (r.status, r.read()[:500].decode('utf-8', 'replace')))
+        with _ur.urlopen(_ur.Request('https://www.bokjiro.go.kr/ssis-tbu/twatga/sociGuaStat/SociGuaStatDetailIframe.do?datsNo=56&datsClNo=1071&datsClCrit=WS', headers={'User-Agent': 'Mozilla/5.0'}), timeout=30) as r:
+            h = r.read().decode('utf-8', 'replace')
+            import re as _r7
+            say('[복지로 페이지] datTbl=%s meaCol=%s dims=%s' % (_r7.findall(r'datTbl[^>]*value="([^"]*)"', h)[:3], _r7.findall(r'name="meaCol"[^>]*', h)[:4], _r7.findall(r'name="dimCols"[^>]*', h)[:6]))
+    except Exception as e:  # noqa: BLE001
+        say('[복지로] 실패 %s' % e)
+    try:
         t = http_get('https://infuser.odcloud.kr/oas/docs', {'namespace': '15062448/v1'})
         import re as _re8
         paths = _re8.findall(r'"(/15062448/v1/uddi:[^"]+)"', t)
@@ -166,7 +178,7 @@ def main():
     except Exception as e:  # noqa: BLE001
         say('[사회보장 swagger] 실패 %s' % e)
     import sources as _s9
-    for org, tb in (('117', 'DT_117N_B00003'), ('350', 'DT_35006_N021')):
+    for org, tb in ():
         try:
             meta = _s9.kosis_meta({'key_env': 'KOSIS_KEY', 'meta_url': 'https://kosis.kr/openapi/statisticsData.do', 'params': {'orgId': org, 'tblId': tb}})
             objs = {}
