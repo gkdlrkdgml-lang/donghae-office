@@ -227,7 +227,8 @@ def main():
             say('[KOSIS검색] %s → %s' % (q, ' | '.join('%s/%s %s(%s~%s %s)' % (x.get('ORG_ID'), x.get('TBL_ID'), x.get('TBL_NM'), x.get('STRT_PRD_DE'), x.get('END_PRD_DE'), x.get('PRD_SE', '')) for x in j if str(x.get('ORG_ID')) in ('117', '322', '331', '350', '101', '110', '106', '126', '116', '460'))[:2500] if isinstance(j, list) else str(j)[:300]))
         except Exception as e:  # noqa: BLE001
             say('[KOSIS검색] %s 실패 %s' % (q, e))
-    _dk = urllib.parse.unquote(os.environ.get('DATA_GO_KR_KEY', '').strip())
+    from urllib.parse import unquote as _unq
+    _dk = _unq(os.environ.get('DATA_GO_KR_KEY', '').strip())
     import re as _re
     for pk, base in (('15134145', 'https://apis.data.go.kr/B500001/waternow/twdClwr'), ('15134425', 'https://apis.data.go.kr/B500001/waternow/twdOrgwtWdr'), ('15158788', '')):
         ops = []
