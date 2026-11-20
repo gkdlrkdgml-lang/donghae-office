@@ -1472,7 +1472,8 @@ function startApp() {
       var why = HOL[peakDay] ? HOL[peakDay] : (w === 6 ? '토요일' : w === 0 ? '일요일' : '평일');
       var ev = (((L.events || {}).items) || []).filter(function (e) { return e.start <= peakDay && (e.end || e.start) >= peakDay; }).map(function (e) { return e.title; });
       var top = names.slice().sort(function (a2, b2) { return (at(b2, peakDay) || 0) - (at(a2, peakDay) || 0); })[0];
-      return { why: why, x: base ? av(peakDay) / base : null, ev: ev, top: top, topv: at(top, peakDay) };
+      var nx = (((L.events || {}).items) || []).filter(function (e) { return (e.end || e.start) >= day0 && dayAvg[e.start < day0 ? day0 : e.start]; }).sort(function (p1, p2) { return p1.start < p2.start ? -1 : 1; })[0];
+      return { why: why, x: base ? av(peakDay) / base : null, ev: ev, top: top, topv: at(top, peakDay), nx: ev.length ? null : nx };
     })();
     view.style.gridTemplateColumns = 'minmax(0, 1.25fr) minmax(0, 1fr) minmax(0, .85fr)';
     view.style.gridTemplateRows = '44px auto minmax(0, 1fr)';
@@ -1487,7 +1488,7 @@ function startApp() {
       { l: '오늘 가장 붐빌 곳', sub: mdw(day0), ic: 'pin', v: ord[0] || '–', u: '', chips: [ord[0] ? ['집중률 ' + fmt(at(ord[0], day0), 1), 'navy'] : null] },
       { l: '혼잡 예상', sub: '집중률 90 이상 · 30일', ic: 'cloud', col: '#D9534F', bg: '#FDE7E4', v: fmt(hot.length, 0), u: '건', chips: [hot[0] ? [mdLabel(hot[0][0]) + ' ' + hot[0][1], 'bad'] : ['없음', 'good']] },
       { l: '이번 주말 최고', sub: wkTop ? mdw(wkTop[0]) : '', ic: 'camera', col: '#C0602B', bg: '#FDEBDD', v: wkTop ? wkTop[1] : '–', u: '', chips: [wkTop ? ['집중률 ' + fmt(wkTop[2], 1), 'violet'] : null] },
-      { l: '30일 중 가장 붐빌 날', sub: peakWhy ? '사유: ' + peakWhy.why + (peakWhy.ev.length ? ' · ' + peakWhy.ev[0] : '') + (peakWhy.x ? ' · 평일의 ' + fmt(peakWhy.x, 1) + '배' : '') : '', ic: 'trend', col: '#7A4FC4', bg: '#EFE9FB', v: peakDay ? mdLabel(peakDay) : '–', u: peakDay ? '(' + WD[ymdDate(peakDay).getDay()] + ')' : '', chips: [peakDay ? ['평균 집중률 ' + fmt(dayAvg[peakDay][0] / dayAvg[peakDay][1], 1), 'violet'] : null, peakWhy && peakWhy.top ? [peakWhy.top + ' ' + fmt(peakWhy.topv, 0), 'navy'] : null] },
+      { l: '30일 중 가장 붐빌 날', sub: peakWhy ? '사유: ' + peakWhy.why + (peakWhy.ev.length ? ' · ' + peakWhy.ev[0] : '') + (peakWhy.x ? ' · 평일의 ' + fmt(peakWhy.x, 1) + '배' : '') : '', ic: 'trend', col: '#7A4FC4', bg: '#EFE9FB', v: peakDay ? mdLabel(peakDay) : '–', u: peakDay ? '(' + WD[ymdDate(peakDay).getDay()] + ')' : '', chips: [peakDay ? ['평균 집중률 ' + fmt(dayAvg[peakDay][0] / dayAvg[peakDay][1], 1), 'violet'] : null, peakWhy && peakWhy.nx ? ['행사일 ' + mdLabel(peakWhy.nx.start) + ' ' + peakWhy.nx.title + ' ' + fmt(dayAvg[peakWhy.nx.start < day0 ? day0 : peakWhy.nx.start][0] / dayAvg[peakWhy.nx.start < day0 ? day0 : peakWhy.nx.start][1], 1), 'bad'] : peakWhy && peakWhy.top ? [peakWhy.top + ' ' + fmt(peakWhy.topv, 0), 'navy'] : null] },
       { l: '오늘 날씨', sub: '동해 천곡동', ic: 'sun', col: '#1F6FD1', bg: '#E4EEFB', v: sl0 ? sl0.TMP : '–', u: '°C', chips: [tmx != null ? ['최고 ' + Math.round(tmx) + '° · 최저 ' + Math.round(tmn) + '°', 'navy'] : null, sl0 ? [wxIcon(sl0) + ' 비 ' + (sl0.POP || 0) + '%', ''] : null] }
     ]);
     // 지도
