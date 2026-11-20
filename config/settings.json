@@ -19,13 +19,28 @@
       "show": true
     },
     {
-      "id": "welfare",
-      "label": "보건 및 의료",
+      "id": "economy",
+      "label": "경제",
       "show": true
     },
     {
       "id": "social",
       "label": "복지",
+      "show": true
+    },
+    {
+      "id": "tour",
+      "label": "관광",
+      "show": true
+    },
+    {
+      "id": "finance",
+      "label": "예산",
+      "show": true
+    },
+    {
+      "id": "welfare",
+      "label": "보건 및 의료",
       "show": true
     },
     {
@@ -36,21 +51,6 @@
     {
       "id": "env",
       "label": "환경",
-      "show": true
-    },
-    {
-      "id": "tour",
-      "label": "관광",
-      "show": true
-    },
-    {
-      "id": "economy",
-      "label": "경제",
-      "show": true
-    },
-    {
-      "id": "finance",
-      "label": "예산",
       "show": true
     },
     {

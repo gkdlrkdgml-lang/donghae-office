@@ -177,6 +177,7 @@
   .col b { font-size: 15px; white-space: nowrap; letter-spacing: -0.4px; }
   .cols.tight .col b { font-size: 13px; }
   /* 한눈에 보기: 지표 기둥 */
+  .gcols .gz { display: none; } section.zoom .gcols .gz { display: block; }
   .pillars { display: flex; gap: 18px; align-items: stretch; flex: 1 1 auto; min-height: 0; }
   .pillar { flex: 1 1 0; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
   .ptrack { flex: 1 1 auto; background: var(--track); border-radius: 8px; position: relative; overflow: hidden; }
@@ -409,7 +410,7 @@ function startApp() {
     view.style.gridTemplateRows = '44px minmax(0, 1fr)';
     view.appendChild(el('div', { class: 'title' }, [
       el('h1', { text: '강원 ' + D.regions.length + '개 시·군 중 ' + D.me + '시의 위치' }),
-      el('span', { text: '순위 = 좋은 쪽이 1위(낮을수록 좋은 지표는 낮은 곳이 1위) · 막대가 높을수록 좋음 · 누르면 세부 현황' })
+      el('span', { text: '1위 = 도내에서 가장 좋은 곳 · 막대가 높을수록 좋음 · 초록 강점 · 주황 개선 필요 · 누르면 세부 현황' })
     ]));
     var GO = { pop_change: ['admin', 'compare'], working_age: ['admin', 'compare'], elderly: ['admin', 'compare'], medical: ['welfare'], ev: ['traffic', 'ev'], cars: ['traffic', 'cars'],
       accidents: ['traffic', 'safe'], parking: ['traffic', 'park'], bus_stops: ['traffic', 'busst'], taxi: ['traffic', 'taxi'], visitors: ['tour', 'now'], tour_exp: ['tour', 'dem'], budget: ['finance'], fin_indep: ['finance'] };
@@ -419,7 +420,7 @@ function startApp() {
       go(t[0]);
     }
     function dirTag(i) {
-      return i.dir === 1 ? ['▲ 높을수록 좋음', '#2E9C6A', '#E2F3E9'] : i.dir === -1 ? ['▼ 낮을수록 좋음', '#1F6FD1', '#E4EEFB'] : ['좋고 나쁨 판정 안 함', '#6B7686', '#EEF1F5'];
+      return i.dir === 1 ? ['▲ 높은 곳이 1위', '#2E9C6A', '#E2F3E9'] : i.dir === -1 ? ['▼ 낮은 곳이 1위', '#1F6FD1', '#E4EEFB'] : ['많은 곳이 1위 · 판정 안 함', '#6B7686', '#EEF1F5'];
     }
     var pillars = el('div', { class: 'pillars' });
     list.forEach(function (i) {
@@ -1394,7 +1395,8 @@ function startApp() {
     function draw() {
       var W = box.clientWidth, H = box.clientHeight; if (!W || !H) return;
       box.textContent = '';
-      var pL = 62, pR = 26, pT = 26, pB = 26, n = labels.length, all = [];
+      var pL = 62, pR = 26, pT = 26, pB = 26, n = labels.length, all = [], zoomed = !!box.closest('section.zoom');
+      function lastI(l) { for (var q = l.values.length - 1; q >= 0; q--) if (l.values[q] != null) return q; return -1; }
       lines.forEach(function (l) { l.values.forEach(function (v) { if (v != null) all.push(v); }); });
       var mn0 = Math.min.apply(null, all), mx0 = Math.max.apply(null, all), pad = Math.max(2, (mx0 - mn0) * 0.15), lo = opts.fit ? Math.floor(mn0 - pad) : 0;
       var mx = Math.max.apply(null, all.concat([lo + 1])), span = mx - lo, mag = Math.pow(10, Math.floor(Math.log10(span))), top = lo + Math.ceil(span / mag * 2) / 2 * mag;
@@ -1414,16 +1416,16 @@ function startApp() {
       }
       var step = opts.step || Math.max(1, Math.ceil(n / 12));
       labels.forEach(function (lb, i) { if (i % step === 0 || i === n - 1 && n - 1 - (Math.floor((n - 1) / step) * step) > step / 2) svg.appendChild(svgEl('text', { x: X(i), y: H - 6, 'text-anchor': 'middle', 'font-size': 13, fill: '#556274' }, lb)); });
-      lines.forEach(function (l) {
+      lines.forEach(function (l, li) {
         var d = '', pen = false;
         l.values.forEach(function (v, i) { if (v == null) { pen = false; return; } d += (pen ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(v).toFixed(1); pen = true; });
         var fi = l.values.findIndex(function (v) { return v != null; }), li = n - 1; while (li > 0 && l.values[li] == null) li--;
         if (l.area) svg.appendChild(svgEl('path', { d: d + 'L' + X(li) + ' ' + Y(lo) + 'L' + X(fi) + ' ' + Y(lo) + 'Z', fill: l.color, opacity: .1 }));
         svg.appendChild(svgEl('path', { d: d, fill: 'none', stroke: l.color, 'stroke-width': l.width || 2.5, 'stroke-dasharray': l.dash || '', 'stroke-linejoin': 'round' }));
-        if (n <= 45 && !l.dash && !l.nodot) l.values.forEach(function (v, i) { if (v != null) { svg.appendChild(svgEl('circle', { cx: X(i), cy: Y(v), r: 3, fill: '#fff', stroke: l.color, 'stroke-width': 2 })); if (opts.vals || l.labels) svg.appendChild(svgEl('text', { x: X(i), y: Y(v) - 10, 'text-anchor': 'middle', 'font-size': 14, 'font-weight': 800, fill: l.color }, opts.fit ? fmt(v, 0) + (opts.unit || '') : fmtK(v))); } });
+        if (n <= 45 && !l.dash && !l.nodot) l.values.forEach(function (v, i) { if (v != null) { svg.appendChild(svgEl('circle', { cx: X(i), cy: Y(v), r: 3, fill: '#fff', stroke: l.color, 'stroke-width': 2 })); if (opts.vals || (l.labels === 'last' ? (zoomed || i === lastI(l)) : l.labels) || (zoomed && !opts.noZoomVals)) svg.appendChild(svgEl('text', { x: X(i), y: Y(v) - 10 - (zoomed ? li * 16 : 0), 'text-anchor': 'middle', 'font-size': zoomed ? 15 : 14, 'font-weight': 800, fill: l.color }, opts.fit ? fmt(v, 0) + (opts.unit || '') : fmtK(v))); } });
       });
       box.appendChild(svg);
-      if (lines.length > 1 || lines[0].name) box.appendChild(el('div', { class: 'lleg' }, lines.map(function (l) { return el('span', {}, [el('i', { style: 'background:' + l.color + (l.dash ? ';opacity:.6' : '') }), document.createTextNode(l.name)]); })));
+      if (lines.length > 1 || lines[0].name) box.appendChild(el('div', { class: 'lleg' }, lines.map(function (l) { return el('span', {}, [el('i', { style: 'background:' + l.color + (l.dash ? ';opacity:.6' : '') }), document.createTextNode(l.name)]); }).concat(!zoomed && !opts.vals && !opts.noZoomVals ? [el('span', { style: 'color:#8A97A8;font-size:12px', text: '⤢ 크게 보기에서 모든 수치' })] : [])));
     }
     setTimeout(draw, 0);
     return box;
@@ -1436,7 +1438,7 @@ function startApp() {
     w.appendChild(el('div', { class: 'lleg' }, series.map(function (s) { return el('span', {}, [el('i', { style: 'background:' + s.color }), document.createTextNode(s.name)]); })));
     cats.forEach(function (c, ci) {
       var bars = el('div', { class: 'bars' });
-      series.forEach(function (s) { var v = s.values[ci]; bars.appendChild(el('i', { title: s.name + ' ' + c + ' ' + fmt(v, 0), style: 'height:' + (v == null ? 0 : v / mx * 100).toFixed(1) + '%;background:' + s.color + (v == null ? ';visibility:hidden' : '') }, labels ? [el('b', { text: v == null ? '' : v >= 1000 ? fmtK(v) : fmt(v, v < 100 ? 1 : 0), style: 'color:' + s.color })] : [])); });
+      series.forEach(function (s) { var v = s.values[ci]; bars.appendChild(el('i', { title: s.name + ' ' + c + ' ' + fmt(v, 0), style: 'height:' + (v == null ? 0 : v / mx * 100).toFixed(1) + '%;background:' + s.color + (v == null ? ';visibility:hidden' : '') }, [el('b', { class: labels ? '' : 'gz', text: v == null ? '' : v >= 1000 ? fmtK(v) : fmt(v, v < 100 ? 1 : 0), style: 'color:' + s.color })])); });
       w.appendChild(el('div', { class: 'g' + (ci === peak ? ' pk' : '') }, [bars, el('span', { text: c })]));
     });
     return w;
@@ -1893,7 +1895,7 @@ function startApp() {
     var T = TS.trend || [];
     var who = isMe ? [SN] : [SN, D.me];
     panel('가동 사업자 추이 · 최근 13개월', who.map(fullName).join(' · ') + ' · 개 · 국세통계포털', lineChart(T.map(function (t) { return Number(t[0].slice(4)) + '월'; }),
-      who.map(function (w, k) { return { name: fullName(w), color: k ? '#F0A04B' : '#1F6FD1', values: T.map(function (t) { return t[1][w]; }), width: k ? 2.5 : 3.5, labels: !k, area: !k }; }), { fit: true, unit: '개' }));
+      who.map(function (w, k) { return { name: fullName(w), color: k ? '#F0A04B' : '#1F6FD1', values: T.map(function (t) { return t[1][w]; }), width: k ? 2.5 : 3.5, labels: 'last', area: !k }; }), { fit: true, unit: '개' }));
     // 업태별 전년 같은 달 대비 증감(월별)
     var bcs = Object.keys(NM).filter(function (k) { return k !== '00' && c[k] != null; });
     var rows = bcs.map(function (k) { return [k, c[k], py[k] != null ? c[k] - py[k] : null, pm[k] != null ? c[k] - pm[k] : null]; }).sort(function (p, q) { return (q[1] || 0) - (p[1] || 0); });
