@@ -289,6 +289,11 @@ def collect(state, S, C):
         tl = '%s년 %d월' % (TS['ym'][:4], int(TS['ym'][4:]))
         set_ind(state, 'biz_active', {k: v.get('00') for k, v in TS['cur'].items() if v.get('00')}, '%s 가동사업자(국세통계포털 우리동네가게)' % tl)
         set_ind(state, 'biz_yoy', {k: (v['00'] / TS['prev_y'][k]['00'] - 1) * 100 for k, v in TS['cur'].items() if v.get('00') and (TS['prev_y'].get(k) or {}).get('00')}, '%s 가동사업자 전년 같은 달 대비 증감률' % tl)
+        if TS.get('young'):
+            set_ind(state, 'biz_new', {k: v.get('cur') for k, v in TS['young'].items() if v.get('cur') is not None}, '%s 문 연 지 6개월 미만 사업자(국세통계포털)' % tl)
+        if TS.get('prev_ye'):
+            set_ind(state, 'biz_net', {k: v['00'] - TS['prev_ye'][k]['00'] for k, v in TS['cur'].items() if v.get('00') is not None and (TS['prev_ye'].get(k) or {}).get('00') is not None},
+                    '%s년 1~%d월 가동사업자 순증(작년 12월 대비, 국세통계포털)' % (TS['ym'][:4], int(TS['ym'][4:])))
     # 관광지 집중률·단기예보(매번), 관광지·축제 목록(주 1회)
     for key, fn in (('cnctr', tour.concentration), ('weather', tour.weather)):
         try:

@@ -1887,14 +1887,20 @@ function startApp() {
     cardsRow([
       { l: '가동 사업자', sub: ymL, ic: 'bank', v: fmt(c['00'], 0), u: '개', chips: [dm != null ? ['전월 대비 ' + sg(dm), dm >= 0 ? 'good' : 'bad'] : null, dy != null ? ['전년 같은 달 ' + sg(dy) + ' (' + sg(dy / py['00'] * 100, 1) + '%)', dy >= 0 ? 'good' : 'bad'] : null] },
       (function () { var yg = ((TS.young || {})[SN]) || {}; if (yg.cur == null) return null; var d0 = yg.cur - yg.prev_y;
-        return { l: '새로 연 사업자', sub: ymL + ' · 문 연 지 6개월 미만', ic: 'doorIn', col: '#2E8B57', bg: '#E2F3E9', v: fmt(yg.cur, 0), u: '개', chips: [['1년 전 같은 달 ' + fmt(yg.prev_y, 0) + ' (' + sg(d0) + ')', d0 >= 0 ? 'good' : 'bad'], ['전월 ' + fmt(yg.prev_m, 0), '']] }; })(),
+        return { l: '새로 연 사업자', sub: ymL + ' · 6개월 미만', ic: 'doorIn', col: '#2E8B57', bg: '#E2F3E9', v: fmt(yg.cur, 0), u: '개', chips: [['1년 전 같은 달 ' + fmt(yg.prev_y, 0) + ' (' + sg(d0) + ')', d0 >= 0 ? 'good' : 'bad'], ['전월 ' + fmt(yg.prev_m, 0), '']] }; })(),
       { l: '고용률', sub: pd ? pd.slice(0, 4) + '년 ' + (pd.slice(-2) === '01' ? '상' : '하') + '반기 · 15~64세' : '15~64세', ic: 'people', col: '#7A4FC4', bg: '#EFE9FB', v: fmt(e.rate_1564, 1), u: '%',
         chips: [e.emp_all != null ? ['취업자 ' + fmt(e.emp_all * 1000, 0) + '명', 'navy'] : null, e.rate_1529 != null ? ['청년(15~29) ' + fmt(e.rate_1529, 1) + '%', 'violet'] : null] },
-      { l: '신규 등록', sub: y + '년 연간', ic: 'trend', col: '#2E8B57', bg: '#E2F3E9', v: fmt(n, 0), u: '개', chips: [rankChip(indFor(ind('biz_new'), SN)), meChip(g(N, D.me), '개')] },
-      { l: '폐업', sub: y + '년 연간', ic: 'doorOut', col: '#D9534F', bg: '#FDE7E4', v: fmt(x, 0), u: '개', chips: [['순증 ' + sg(n - x), n - x >= 0 ? 'good' : 'bad'], a ? ['폐업률 ' + fmt(x / a * 100, 1) + '%', ''] : null] }
+      (function () { var ye0 = ((TS.prev_ye || {})[SN] || {})['00']; if (c['00'] == null || ye0 == null) return null; var v = c['00'] - ye0;
+        return { l: '올해 순증 사업자', sub: TS.ym.slice(0, 4) + '년 1~' + Number(TS.ym.slice(4)) + '월', ic: 'trend', col: '#1F6FD1', bg: '#E4EEFB', v: sg(v), u: '개',
+          chips: [rankChip(indFor(ind('biz_net'), SN)), meChip(((TS.cur || {})[D.me] || {})['00'] - (((TS.prev_ye || {})[D.me] || {})['00']), '개')] }; })(),
+      (function () { var K = ((L.licenses || {}).kinds) || {}, Y = String(new Date().getFullYear()), o = 0, x = 0;
+        Object.keys(K).forEach(function (k) { Object.keys(K[k].open || {}).forEach(function (m) { if (m.slice(0, 4) === Y) o += K[k].open[m]; }); Object.keys(K[k].close || {}).forEach(function (m) { if (m.slice(0, 4) === Y) x += K[k].close[m]; }); });
+        if (!Object.keys(K).length) return null;
+        return { l: '음식점·숙박 개업', sub: (isMe ? '' : D.me + '시 · ') + Y + '년 1월~오늘', ic: 'doorIn', col: '#2E8B57', bg: '#E2F3E9', v: fmt(o, 0), u: '곳',
+          chips: [['폐업 ' + fmt(x, 0), 'bad'], ['순증 ' + sg(o - x), o - x >= 0 ? 'good' : 'bad']] }; })()
     ]);
     // 순위(지표 바꿔 보기)
-    var MET = [['biz_active', '가동 사업자'], ['biz_yoy', '전년 대비 증감률'], ['emp_rate', '고용률'], ['biz_new', '신규(연간)']].filter(function (m) { return ind(m[0]); });
+    var MET = [['biz_active', '가동 사업자'], ['biz_yoy', '전년 대비 증감률'], ['emp_rate', '고용률'], ['biz_new', '새로 연 사업자'], ['biz_net', '올해 순증']].filter(function (m) { return ind(m[0]); });
     if (!MET.some(function (m) { return m[0] === ecoMet; })) ecoMet = MET[0] && MET[0][0];
     var I0 = ind(ecoMet), I = indFor(I0, SN);
     var sw = el('div', { class: 'chips', style: 'flex-wrap:nowrap;gap:6px;margin-bottom:6px' }, MET.map(function (m) {
