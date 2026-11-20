@@ -195,7 +195,7 @@ def main():
     except Exception as e:  # noqa: BLE001
         say('[사회보장 swagger] 실패 %s' % e)
     import sources as _s9
-    for org, tb in ():
+    for org, tb in (('106', 'DT_106N_29_2020005'), ('101', 'DT_1YL21311'), ('106', 'DT_106N_29_2020009'), ('106', 'DT_106N_99_3300040'), ('106', 'DT_106N_99_3300307')):
         try:
             meta = _s9.kosis_meta({'key_env': 'KOSIS_KEY', 'meta_url': 'https://kosis.kr/openapi/statisticsData.do', 'params': {'orgId': org, 'tblId': tb}})
             objs = {}
@@ -207,7 +207,7 @@ def main():
             say('[경제주기] %s: %s' % (tb, t[:300]))
         except Exception as e:  # noqa: BLE001
             say('[경제메타] %s 실패 %s' % (tb, e))
-    for q in ('생활폐기물 발생', '폐기물 처리현황 시군구', '재활용률', '상수도 보급률', '하수도 보급률', '1인당 급수량', '수도요금', '음식물류 폐기물', '도시공원 면적', '온실가스 배출량 시군구'):
+    for q in ():
         try:
             t = http_get('https://kosis.kr/openapi/statisticsSearch.do', {'method': 'getList', 'apiKey': _kk, 'searchNm': q, 'format': 'json', 'jsonVD': 'Y', 'resultCount': '20'})
             j = json.loads(t)
@@ -217,9 +217,7 @@ def main():
     _dk = os.environ.get('DATA_GO_KR_KEY', '').strip()
     base = 'https://apis.data.go.kr/B553077/api/open/sdsc2/'
     for op, prm in (('storeListInDong', {'divId': 'signguCd', 'key': '51170'}),
-                    ('storeListByDate', {'key': '20261118'}),
-                    ('storeListByDate', {'key': '20261001'}),
-                    ('storeListByDate', {'key': '20260901'})):
+                    ('storeListByDate', {'key': '20261118'})):
         try:
             q = dict(prm); q.update({'serviceKey': _dk, 'type': 'json', 'numOfRows': '3', 'pageNo': '1'})
             t = http_get(base + op, q, tries=1)
