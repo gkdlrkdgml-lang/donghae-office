@@ -989,7 +989,23 @@ def tasis(C):
             trend.append([m, {match_region(a, C['regions']): b for a, b in v.items() if match_region(a, C['regions'])}])
         except Exception as e:  # noqa: BLE001
             log('국세통계 추이 %s 실패: %s' % (m, e))
-    return {'at': now().strftime('%Y-%m-%d'), 'ym': ym, 'names': TASIS_BC_NM, 'cur': cur, 'prev_m': pm, 'prev_y': py, 'year_end': ye, 'prev_ye': pye, 'trend': trend}
+    # 존속연수 '6개월 미만' 가동 사업자(최근 6개월 안에 새로 연 곳 중 지금도 영업 중) — 시·군별
+    young = {}
+    import urllib.request as _ur
+    for reg in C['regions']:
+        try:
+            bd = json.dumps({'dc_search': {'STT_OFR_TBL_NM': 'TTQSNAI01T082145', 'STT_PBL_YR': ym[:4], 'STT_PBL_MM': ym[4:], 'SCH_TFB_BC_CL': 'BC', 'SCH_CLUS_CL': 'ascdYrcnt',
+                                           'SCH_TFB_BC_CD': '00', 'SCH_TFB_BC_NM': '', 'SCH_SIDO_CD': '51', 'SCH_SIDO_NM': '', 'SCH_SGG_CD': reg['sgg'], 'SCH_SGG_NM': ''}}, ensure_ascii=False).encode()
+            rq = _ur.Request('https://tasis.nts.go.kr/wqAction.do?actionId=ATWEPFFA001R03', data=bd, headers={'Content-Type': 'application/json; charset=UTF-8', 'User-Agent': 'Mozilla/5.0', 'Referer': 'https://tasis.nts.go.kr/websquare/websquare.html?w2xPath=/cm/index.xml'})
+            with _ur.urlopen(rq, timeout=30) as r:
+                j = json.loads(r.read().decode('utf-8'))
+            for blk in (j.get('detailJsonDataList') or []):
+                for d in (blk.get('detailList') or []):
+                    if str(d.get('BMAN_CD')) == '00' and str(d.get('CLUS_CL_CD')) == '01':
+                        young[reg['name']] = {'cur': to_num(d.get('TMN_CNT')), 'prev_m': to_num(d.get('PVMN_CNT')), 'prev_y': to_num(d.get('PYR_SMMN_CNT'))}
+        except Exception as e:  # noqa: BLE001
+            log('국세통계 존속연수 %s 실패: %s' % (reg['name'], e))
+    return {'at': now().strftime('%Y-%m-%d'), 'ym': ym, 'names': TASIS_BC_NM, 'cur': cur, 'prev_m': pm, 'prev_y': py, 'year_end': ye, 'prev_ye': pye, 'trend': trend, 'young': young}
 
 
 LICENSE_SVCS = [('general_restaurants', '일반음식점'), ('rest_cafes', '휴게음식점'), ('bakeries', '제과점'), ('lodgings', '숙박업'), ('rural_homestays', '농어촌민박')]
