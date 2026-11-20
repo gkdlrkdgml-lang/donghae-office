@@ -1988,7 +1988,8 @@ function startApp() {
     p1.style.gridRow = '3 / span 2';
     // 월별 새로 등록
     var lab = [], a = [], b = [];
-    for (var m = 1; m <= Mo; m++) { var k = Y + ('0' + m).slice(-2); lab.push(m + '월'); a.push((r.new_m || {})[k] || 0); b.push((me.new_m || {})[k] || 0); }
+    var lastM = Math.max.apply(null, [1].concat(Object.keys(r.new_m || {}).filter(function (k) { return k.slice(0, 4) === Y; }).map(function (k) { return Number(k.slice(4)); })));
+    for (var m = 1; m <= lastM; m++) { var k = Y + ('0' + m).slice(-2); lab.push(m + '월'); a.push((r.new_m || {})[k] || 0); b.push((me.new_m || {})[k] || 0); }
     var ser = [{ name: fullName(SN), color: '#2E9C6A', values: a, width: 3.5, labels: true }];
     if (!isMe) ser.push({ name: fullName(D.me), color: '#1B3A6B', values: b, width: 2.5, dash: '5 4' });
     panel('월별 새로 연 상가 · ' + Y + '년', '등록한 달 기준 · 지금 영업 중인 곳만 · 곳', lineChart(lab, ser, { fit: true, unit: '곳' }));
