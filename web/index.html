@@ -1646,7 +1646,8 @@ function startApp() {
     setAng();
     if (t3Raf) cancelAnimationFrame(t3Raf);
     var lastT = null;
-    (function tick(t) { if (!plane.isConnected) { t3Raf = null; return; } if (t3Spin && lastT != null) { t3Ang = (t3Ang + (t - lastT) / 1000 * 3) % 360; setAng(); } lastT = t; t3Raf = requestAnimationFrame(tick); })();
+    function tick3(t) { if (!plane.isConnected) { t3Raf = null; return; } if (t3Spin && lastT != null) { t3Ang = (t3Ang + (t - lastT) / 1000 * 3) % 360; setAng(); } lastT = t; t3Raf = requestAnimationFrame(tick3); }
+    t3Raf = requestAnimationFrame(tick3);
     var ctl = el('div', { class: 'm3ctl' });
     choices.forEach(function (c, i) { var on = i === t3Day; ctl.appendChild(el('button', { type: 'button', class: on ? 'on' : '', style: on ? 'background:#1F6FD1;border-color:#1F6FD1' : '', text: c[1] + ' ' + mdLabel(c[0]), onclick: function () { t3Day = i; render(); } })); });
     ctl.appendChild(el('span', { class: 'sp' }));
