@@ -195,19 +195,31 @@ def main():
     except Exception as e:  # noqa: BLE001
         say('[사회보장 swagger] 실패 %s' % e)
     import sources as _s9
-    for org, tb in (('106', 'DT_106N_29_2020005'), ('101', 'DT_1YL21311'), ('106', 'DT_106N_29_2020009'), ('106', 'DT_106N_99_3300040'), ('106', 'DT_106N_99_3300307')):
+    for org, tb in (('106', 'DT_106N_06_0100043'), ('106', 'DT_106N_07_0100050'), ('106', 'DT_106N_06_0100050'), ('110', 'DT_110020_A006'), ('110', 'DT_110020_B006'), ('106', 'DT_106N_07_0100058')):
         try:
             meta = _s9.kosis_meta({'key_env': 'KOSIS_KEY', 'meta_url': 'https://kosis.kr/openapi/statisticsData.do', 'params': {'orgId': org, 'tblId': tb}})
             objs = {}
             for m in meta:
                 objs.setdefault(m.get('OBJ_ID'), []).append(m)
-            say('[경제메타] %s: %s' % (tb, ' / '.join('%s(%s개, %s): %s' % (k, len(v), v[0].get('OBJ_NM'), ', '.join('%s=%s' % (x.get('ITM_ID'), x.get('ITM_NM')) for x in v[:30])) for k, v in objs.items())))
-            say('[경제메타] %s 동해: %s' % (tb, ', '.join('%s:%s=%s(상위 %s)' % (x.get('OBJ_ID'), x.get('ITM_ID'), x.get('ITM_NM'), x.get('UP_ITM_ID')) for x in meta if '동해' in str(x.get('ITM_NM')) or '강원' in str(x.get('ITM_NM')))))
+            say('[물메타] %s: %s' % (tb, ' / '.join('%s(%s개, %s): %s' % (k, len(v), v[0].get('OBJ_NM'), ', '.join('%s=%s' % (x.get('ITM_ID'), x.get('ITM_NM')) for x in v[:40])) for k, v in objs.items())))
+            say('[물메타] %s 동해: %s' % (tb, ', '.join('%s:%s=%s(상위 %s)' % (x.get('OBJ_ID'), x.get('ITM_ID'), x.get('ITM_NM'), x.get('UP_ITM_ID')) for x in meta if '동해' in str(x.get('ITM_NM')) or str(x.get('ITM_NM')).startswith('강원'))))
             t = http_get('https://kosis.kr/openapi/statisticsData.do', {'method': 'getMeta', 'type': 'PRD', 'orgId': org, 'tblId': tb, 'format': 'json', 'jsonVD': 'Y', 'apiKey': _kk})
-            say('[경제주기] %s: %s' % (tb, t[:300]))
+            say('[물주기] %s: %s' % (tb, t[:200]))
+            prm = {'method': 'getList', 'format': 'json', 'jsonVD': 'Y', 'orgId': org, 'tblId': tb, 'prdSe': 'Y', 'newEstPrdCnt': '1', 'apiKey': _kk}
+            i = 0
+            for k, v in objs.items():
+                if k == 'ITEM':
+                    prm['itmId'] = 'ALL'
+                    continue
+                i += 1
+                dh = [x for x in v if '동해' in str(x.get('ITM_NM'))]
+                prm['objL%d' % i] = (dh[0]['ITM_ID'] + '+') if dh else 'ALL'
+            t = http_get('https://kosis.kr/openapi/Param/statisticsParameterData.do', prm)
+            j = json.loads(t)
+            say('[물자료] %s %s: %s' % (tb, {k: v for k, v in prm.items() if k.startswith('obj')}, ' | '.join('%s %s %s %s=%s%s' % (r.get('PRD_DE'), r.get('C1_NM'), r.get('C2_NM', ''), r.get('ITM_NM'), r.get('DT'), r.get('UNIT_NM', '')) for r in j[:60]) if isinstance(j, list) else str(j)[:300]))
         except Exception as e:  # noqa: BLE001
-            say('[경제메타] %s 실패 %s' % (tb, e))
-    for q in ():
+            say('[물메타] %s 실패 %s' % (tb, e))
+    for q in ('유수율', '누수율', '수돗물 음용률'):
         try:
             t = http_get('https://kosis.kr/openapi/statisticsSearch.do', {'method': 'getList', 'apiKey': _kk, 'searchNm': q, 'format': 'json', 'jsonVD': 'Y', 'resultCount': '20'})
             j = json.loads(t)
