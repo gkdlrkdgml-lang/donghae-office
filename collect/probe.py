@@ -150,6 +150,14 @@ def main():
             m = str(e)
             code = 'NO_SERVICE' if 'NO_OPENAPI' in m or '404' in m else 'NOT_REG' if 'NOT_REGISTERED' in m else m[-200:].replace('\n', ' ')
             say('[찾기 %s] %s' % (nm, code))
+    _kk = os.environ.get('KOSIS_KEY', '')
+    for q in ('가동사업자', '신규사업자', '폐업자 시군구', '사업자 현황 시군구', '매출지수', '청년 창업', '창업기업'):
+        try:
+            t = http_get('https://kosis.kr/openapi/statisticsSearch.do', {'method': 'getList', 'apiKey': _kk, 'searchNm': q, 'format': 'json', 'jsonVD': 'Y', 'resultCount': '20'})
+            j = json.loads(t)
+            say('[KOSIS검색] %s → %s' % (q, ' | '.join('%s/%s %s(%s~%s %s)' % (x.get('ORG_ID'), x.get('TBL_ID'), x.get('TBL_NM'), x.get('STRT_PRD_DE'), x.get('END_PRD_DE'), x.get('PRD_SE', '')) for x in j)[:3000] if isinstance(j, list) else str(j)[:300]))
+        except Exception as e:  # noqa: BLE001
+            say('[KOSIS검색] %s 실패 %s' % (q, e))
     if os.environ.get('PROBE_FULL') != '1':
         return
     probe('admm_population', {'url': 'https://apis.data.go.kr/1741000/admmPpltnHhStus/selectAdmmPpltnHhStus', 'key_env': 'DATA_GO_KR_KEY',
