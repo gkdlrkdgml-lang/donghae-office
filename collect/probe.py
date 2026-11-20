@@ -151,8 +151,22 @@ def main():
             code = 'NO_SERVICE' if 'NO_OPENAPI' in m or '404' in m else 'NOT_REG' if 'NOT_REGISTERED' in m else m[-200:].replace('\n', ' ')
             say('[찾기 %s] %s' % (nm, code))
     _kk = os.environ.get('KOSIS_KEY', '')
+    try:
+        t = http_get('https://infuser.odcloud.kr/oas/docs', {'namespace': '15062448/v1'})
+        import re as _re8
+        paths = _re8.findall(r'"(/15062448/v1/uddi:[^"]+)"', t)
+        say('[사회보장 swagger] %s' % paths)
+        from urllib.parse import unquote as _uq8
+        for pth in paths[-3:]:
+            try:
+                r = http_get('https://api.odcloud.kr/api' + pth, {'serviceKey': _uq8(os.environ.get('DATA_GO_KR_KEY', '').strip()), 'page': '1', 'perPage': '3', 'returnType': 'JSON'}, tries=1)
+                say('[사회보장 호출] %s → %s' % (pth, r[:700]))
+            except Exception as e:  # noqa: BLE001
+                say('[사회보장 호출] %s 실패 %s' % (pth, str(e)[-300:]))
+    except Exception as e:  # noqa: BLE001
+        say('[사회보장 swagger] 실패 %s' % e)
     import sources as _s9
-    for org, tb in ():
+    for org, tb in (('117', 'DT_117N_B00003'), ('350', 'DT_35006_N021')):
         try:
             meta = _s9.kosis_meta({'key_env': 'KOSIS_KEY', 'meta_url': 'https://kosis.kr/openapi/statisticsData.do', 'params': {'orgId': org, 'tblId': tb}})
             objs = {}
@@ -164,7 +178,7 @@ def main():
             say('[경제주기] %s: %s' % (tb, t[:300]))
         except Exception as e:  # noqa: BLE001
             say('[경제메타] %s 실패 %s' % (tb, e))
-    for q in ('수급자 시군구별', '시군구별 수급자', '기초생활보장 시군구', '생계급여 시군구', '의료급여 시군구', '노인복지시설 현황', '노인주거복지시설', '재가노인복지시설', '장애인복지시설 현황', '어린이집 현황 시군구', '기초연금 수급자 시군구', '장애인연금 시군구', '복지대상자 시군구', '사회보장 시군구'):
+    for q in ():
         try:
             t = http_get('https://kosis.kr/openapi/statisticsSearch.do', {'method': 'getList', 'apiKey': _kk, 'searchNm': q, 'format': 'json', 'jsonVD': 'Y', 'resultCount': '20'})
             j = json.loads(t)
