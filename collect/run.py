@@ -239,10 +239,29 @@ def collect(state, S, C):
     if EM.get('period'):
         pdl = EM['period']
         set_ind(state, 'emp_rate', {k: v.get('rate_1564') for k, v in EM['data'][pdl].items() if v.get('rate_1564') is not None}, '%s년 %s반기 15~64세 고용률(통계청 지역별고용조사)' % (pdl[:4], '상' if pdl.endswith('01') or '1/2' in pdl else '하'))
+    if stale('bokjiro', 7) or '--force-life' in sys.argv:
+        try:
+            L['bokjiro'] = sources.bokjiro(C)
+            ok(state, 'bokjiro', L['bokjiro']['ym'])
+        except Exception as e:  # noqa: BLE001
+            fail(state, 'bokjiro', e)
+    BJ = L.get('bokjiro') or {}
+    pops = {k: v.get('total') for k, v in ((state.get('admin') or {}).get('regions') or {}).items()}
+    if BJ.get('regions'):
+        ylab = '%s년 %d월' % (BJ['ym'][:4], int(BJ['ym'][4:]))
+        rc = {k: sum(x or 0 for x in v.get('basic', {}).values()) / pops[k] * 100 for k, v in BJ['regions'].items() if v.get('basic') and pops.get(k)}
+        dr = {k: sum(x or 0 for x in v.get('disabled', {}).values()) / pops[k] * 100 for k, v in BJ['regions'].items() if v.get('disabled') and pops.get(k)}
+        fc = {k: sum(x or 0 for x in v.get('facility', {}).values()) for k, v in BJ['regions'].items() if v.get('facility')}
+        if rc:
+            set_ind(state, 'soc_rcp', rc, '%s 기초생활보장 수급자 ÷ 주민등록인구(복지로 복지통계)' % ylab)
+        if dr:
+            set_ind(state, 'soc_dis', dr, '%s 등록장애인 ÷ 주민등록인구(복지로 복지통계)' % ylab)
+        if fc:
+            set_ind(state, 'soc_fac', fc, '%s 사회복지시설(복지로 복지통계)' % ylab)
     SO = L.get('social') or {}
-    if SO.get('facilities'):
+    if SO.get('facilities') and not BJ.get('regions'):
         set_ind(state, 'soc_fac', {k: v.get('total') for k, v in SO['facilities'].items() if v.get('total') is not None}, '%s년 사회복지시설(행정안전부)' % SO.get('fac_year'))
-    if SO.get('recipients'):
+    if SO.get('recipients') and not BJ.get('regions'):
         set_ind(state, 'soc_rcp', {k: v.get('recipients_rate') for k, v in SO['recipients'].items() if v.get('recipients_rate') is not None}, '%s년 기초생활보장 수급자 비율(행정안전부)' % SO.get('rcp_year'))
         set_ind(state, 'soc_dis', {k: v.get('disabled_rate') for k, v in SO['recipients'].items() if v.get('disabled_rate') is not None}, '%s년 등록장애인 비율(행정안전부)' % SO.get('rcp_year'))
     if SO.get('elderly'):

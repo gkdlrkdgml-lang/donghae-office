@@ -1900,16 +1900,23 @@ function startApp() {
     var SN = (F[regName()] || R[regName()]) ? regName() : D.me, isMe = SN === D.me;
     var f = F[SN] || {}, r = R[SN] || {}, ds = DS[SN] || {}, o = O[SN] || {}, me = { f: F[D.me] || {}, r: R[D.me] || {}, d: DS[D.me] || {} };
     var el2 = ind('elderly'), elI = indFor(el2, SN);
-    lifeTitle(fullName(SN) + ' 복지 현황', '행정안전부·보건복지부·통계청(KOSIS) · 매년 자동 갱신' + selHint());
+    lifeTitle(fullName(SN) + ' 복지 현황', '복지로 복지통계(사회보장정보시스템 행복이음, 매월) · 장기요양·노인여가: KOSIS · 자동 갱신' + selHint());
     view.style.gridTemplateRows = '44px auto minmax(0, 1fr) minmax(0, 1fr)';
+    var BJ = (D.life || {}).bokjiro || {}, bj = (BJ.regions || {})[SN] || {}, bjm = (BJ.regions || {})[D.me] || {}, bp = BJ.prev || {};
+    function S_(o) { if (!o) return null; var t = 0, c = 0; Object.keys(o).forEach(function (k) { if (o[k] != null) { t += o[k]; c++; } }); return c ? t : null; }
+    var ymL = BJ.ym ? BJ.ym.slice(0, 4) + '년 ' + Number(BJ.ym.slice(4)) + '월' : '';
+    var pop = ((D.admin || {}).regions || {})[SN] ? D.admin.regions[SN].total : null;
+    function yy(cur, key) { if (!isMe || cur == null) return null; var p = S_(bp[key]); if (p == null) return null; var d = cur - p; return ['전년 같은 달 ' + (d > 0 ? '+' : '') + fmt(d, 0), d > 0 ? 'navy' : 'violet']; }
+    function vs(cur, key) { if (isMe || cur == null) return null; var m = S_(bjm[key]); if (m == null) return null; var d = cur - m; return [D.me + '보다 ' + (d > 0 ? '+' : '') + fmt(d, 0), '']; }
+    var fac = S_(bj.facility), bas = S_(bj.basic), dis = S_(bj.disabled), pen = S_(bj.pension);
+    var lt = (SO.ltc || {})[SN] || {};
     cardsRow([
-      { l: '사회복지시설', sub: (SO.fac_year || '') + '년', ic: 'house', v: fmt(f.total, 0), u: '곳', chips: [['생활인원 ' + fmt(f.residents, 0) + '명', 'navy'], rankChip(indFor(ind('soc_fac'), SN))] },
-      { l: '기초생활수급자', sub: (SO.rcp_year || '') + '년', ic: 'hand', col: '#C0602B', bg: '#FDEBDD', v: fmt(r.recipients, 0), u: '명', chips: [['인구의 ' + fmt(r.recipients_rate, 2) + '%', 'violet'], meChip(me.r.recipients, '명')] },
-      { l: '등록장애인', sub: (SO.dis_year || SO.rcp_year || '') + '년', ic: 'heart', col: '#1F6FD1', bg: '#E4EEFB', v: fmt(ds.total != null ? ds.total : r.disabled, 0), u: '명', chips: [ds.severe != null ? ['심한 장애 ' + fmt(ds.severe, 0), 'navy'] : null, ['인구의 ' + fmt(r.disabled_rate, 2) + '%', 'violet']] },
-      { l: '고령인구 비율', sub: '65세 이상', ic: 'senior', col: '#7A4FC4', bg: '#EFE9FB', v: elI && elI.me ? fmt(elI.me.value, 1) : '–', u: '%', chips: [rankChip(elI), o.pop60 != null ? ['60세 이상 ' + fmt(o.pop60, 0) + '명', ''] : null] },
-      (function () { var lt = (SO.ltc || {})[SN] || {}; return { l: '장기요양기관', sub: (SO.ltc_year || '') + '년', ic: 'senior', col: '#0F8A8A', bg: '#DDF3F2', v: fmt(lt.all_n, 0), u: '곳',
-        chips: [['재가 ' + fmt(lt.home_n, 0) + ' · 시설 ' + fmt(lt.facility_n, 0), 'navy'], lt.all_cap != null ? ['정원 ' + fmt(lt.all_cap, 0) + '명', ''] : null] }; })(),
-      { l: '노인여가복지시설', sub: '경로당·노인교실 등', ic: 'people', col: '#2E8B57', bg: '#E2F3E9', v: fmt(o.facilities, 0), u: '곳', chips: [o.per1000 != null ? ['노인 천명당 ' + fmt(o.per1000, 1), 'good'] : null, rankChip(indFor(ind('soc_old'), SN))] }
+      { l: '사회복지시설', sub: ymL || (SO.fac_year || '') + '년', ic: 'house', v: fmt(fac != null ? fac : f.total, 0), u: '곳', chips: [rankChip(indFor(ind('soc_fac'), SN)), yy(fac, 'facility') || vs(fac, 'facility')] },
+      { l: '기초생활수급자', sub: ymL || (SO.rcp_year || '') + '년', ic: 'hand', col: '#C0602B', bg: '#FDEBDD', v: fmt(bas != null ? bas : r.recipients, 0), u: '명', chips: [['가구 ' + fmt(S_(bj.basic_hh), 0) + (pop && bas ? ' · 인구의 ' + fmt(bas / pop * 100, 2) + '%' : ''), 'violet'], yy(bas, 'basic') || vs(bas, 'basic')] },
+      { l: '등록장애인', sub: ymL || (SO.dis_year || '') + '년', ic: 'heart', col: '#1F6FD1', bg: '#E4EEFB', v: fmt(dis != null ? dis : ds.total, 0), u: '명', chips: [(bj.disabled || {})['심한 장애'] != null ? ['심한 장애 ' + fmt(bj.disabled['심한 장애'], 0), 'navy'] : null, yy(dis, 'disabled') || vs(dis, 'disabled')] },
+      { l: '기초연금 수급자', sub: ymL, ic: 'coin', col: '#2E8B57', bg: '#E2F3E9', v: fmt(pen, 0), u: '명', chips: [o.pop60 != null && pen ? ['60세 이상 ' + fmt(o.pop60, 0) + '명', ''] : null, yy(pen, 'pension') || vs(pen, 'pension')] },
+      { l: '고령인구 비율', sub: '65세 이상', ic: 'senior', col: '#7A4FC4', bg: '#EFE9FB', v: elI && elI.me ? fmt(elI.me.value, 1) : '–', u: '%', chips: [rankChip(elI)] },
+      { l: '장기요양기관', sub: (SO.ltc_year || '') + '년', ic: 'senior', col: '#0F8A8A', bg: '#DDF3F2', v: fmt(lt.all_n, 0), u: '곳', chips: [lt.home_n != null ? ['재가 ' + fmt(lt.home_n, 0) + ' · 시설 ' + fmt(lt.facility_n, 0), 'navy'] : null, lt.all_cap != null ? ['정원 ' + fmt(lt.all_cap, 0) + '명', ''] : null] }
     ]);
     var MET = [['soc_rcp', '수급자 비율'], ['soc_dis', '장애인 비율'], ['elderly', '고령인구 비율'], ['soc_fac', '복지시설 수'], ['soc_old', '노인여가시설']].filter(function (m) { return ind(m[0]); });
     if (!MET.some(function (m) { return m[0] === socMet; })) socMet = MET[0] && MET[0][0];
@@ -1918,17 +1925,29 @@ function startApp() {
       return el('button', { type: 'button', class: 'chip ' + (m[0] === socMet ? 'navy' : ''), style: 'cursor:pointer;border:0;font-weight:800' + (m[0] === socMet ? ';background:#1B3A6B;color:#fff' : ''), text: m[1], onclick: function () { socMet = m[0]; render(); } }); }));
     var p1 = panel((I0 ? I0.name : '') + ' · 강원 18개 시·군', (I0 ? I0.basis + ' · ' + I0.unit : '') + ' · 누르면 그 지역', [sw, I ? rankList(I, regPick, regSel) : el('div', { class: 'empty', text: '자료 없음' })]);
     p1.style.gridRow = '3 / span 2';
-    var FT = [['노인', '#7A4FC4'], ['장애인', '#1F6FD1'], ['아동', '#E8A867'], ['한부모가족', '#D6457A'], ['정신요양', '#5DB88E'], ['노숙인', '#8FB2E0']];
-    var parts = FT.filter(function (k) { return f[k[0]]; }).map(function (k) { return [k[0] + ' ' + fmt(f[k[0]], 0) + '곳 · ' + fmt(f[k[0] + '_인원'], 0) + '명', f[k[0]], k[1]]; });
-    panel('사회복지시설 종류 · ' + fullName(SN), (SO.fac_year || '') + '년 · 생활시설 · 곳/생활인원', parts.length ? donut(parts, fmt(f.total, 0) + '곳', '사회복지시설') : el('div', { class: 'empty', text: '자료 없음' }));
-    var dd = [['심한 장애', ds.severe, '#1F6FD1'], ['심하지 않은 장애', ds.mild, '#8FB2E0']].filter(function (k) { return k[1]; });
-    panel('등록장애인 구성 · ' + fullName(SN), (SO.dis_year || '') + '년 · 보건복지부 · 명', [dd.length ? donut(dd.map(function (k) { return [k[0] + ' ' + fmt(k[1], 0), k[1], k[2]]; }), fmt(ds.total, 0), '등록장애인') : el('div', { class: 'empty', text: '자료 없음' }),
-      ds.male != null ? el('div', { class: 'chips', style: 'justify-content:center' }, [el('span', { class: 'chip navy', text: '남 ' + fmt(ds.male, 0) }), el('span', { class: 'chip violet', text: '여 ' + fmt(ds.female, 0) })]) : null]);
+    var PAL = ['#7A4FC4', '#1F6FD1', '#E8A867', '#D6457A', '#5DB88E', '#8FB2E0', '#C0602B', '#B8C4D4'], parts;
+    if (bj.facility) {
+      var fk = Object.keys(bj.facility).filter(function (k) { return bj.facility[k]; }).sort(function (a2, b2) { return bj.facility[b2] - bj.facility[a2]; });
+      var top = fk.slice(0, 6), rest = fk.slice(6).reduce(function (t, k) { return t + bj.facility[k]; }, 0);
+      parts = top.map(function (k, i2) { return [k + ' ' + fmt(bj.facility[k], 0), bj.facility[k], PAL[i2]]; });
+      if (rest) parts.push(['그 밖 ' + (fk.length - 6) + '종 ' + fmt(rest, 0), rest, PAL[7]]);
+    } else {
+      var FT = [['노인', '#7A4FC4'], ['장애인', '#1F6FD1'], ['아동', '#E8A867'], ['한부모가족', '#D6457A'], ['정신요양', '#5DB88E'], ['노숙인', '#8FB2E0']];
+      parts = FT.filter(function (k) { return f[k[0]]; }).map(function (k) { return [k[0] + ' ' + fmt(f[k[0]], 0) + '곳', f[k[0]], k[1]]; });
+    }
+    panel('사회복지시설 종류 · ' + fullName(SN), (bj.facility ? ymL + ' · 복지로' : (SO.fac_year || '') + '년') + ' · 곳', parts.length ? donut(parts, fmt(fac != null ? fac : f.total, 0) + '곳', '사회복지시설') : el('div', { class: 'empty', text: '자료 없음' }));
+    var bd = bj.disabled || {}, sev = bd['심한 장애'] != null ? bd['심한 장애'] : ds.severe, mil = bd['심하지 않은 장애'] != null ? bd['심하지 않은 장애'] : ds.mild;
+    var dd = [['심한 장애', sev, '#1F6FD1'], ['심하지 않은 장애', mil, '#8FB2E0']].filter(function (k) { return k[1]; });
+    var sg = S_(bj.single), md = S_(bj.medaid);
+    panel('등록장애인 · 그 밖 대상자 · ' + fullName(SN), (bj.disabled ? ymL + ' · 복지로' : (SO.dis_year || '') + '년') + ' · 명', [dd.length ? donut(dd.map(function (k) { return [k[0] + ' ' + fmt(k[1], 0), k[1], k[2]]; }), fmt(dis != null ? dis : ds.total, 0), '등록장애인') : el('div', { class: 'empty', text: '자료 없음' }),
+      el('div', { class: 'chips', style: 'justify-content:center;flex-wrap:nowrap' }, [sg != null ? el('span', { class: 'chip violet', text: '한부모가족 ' + fmt(sg, 0) + '명' }) : null, md != null ? el('span', { class: 'chip navy', text: '의료급여 ' + fmt(md, 0) + '명' }) : null])]);
     var who = isMe ? [D.me, '강원 평균'] : [SN, D.me, '강원 평균'];
     var p4 = panel('복지 대상 비율 비교', who.map(fullName).join(' · ') + ' · 인구 대비 %', groupCols(['기초생활수급자', '등록장애인', '고령인구'], cmpSeries(who, function (n) {
       function ev(k) { var x = el2 && el2.ranking.filter(function (q) { return q.name === k; })[0]; return x ? x.value : null; }
-      if (n === '강원 평균') return [avgOf(R, function (q) { return q.recipients_rate; }), avgOf(R, function (q) { return q.disabled_rate; }), el2 ? avgOf(el2.ranking.reduce(function (m, q) { m[q.name] = q; return m; }, {}), function (q) { return q.value; }) : null];
-      return [(R[n] || {}).recipients_rate, (R[n] || {}).disabled_rate, ev(n)]; }), null, true));
+      function iv(id, k) { var x = ind(id); x = x && x.ranking.filter(function (q) { return q.name === k; })[0]; return x ? x.value : null; }
+      function ia(id) { var x = ind(id); if (!x) return null; var t = 0; x.ranking.forEach(function (q) { t += q.value; }); return x.ranking.length ? t / x.ranking.length : null; }
+      if (n === '강원 평균') return [ia('soc_rcp'), ia('soc_dis'), ia('elderly')];
+      return [iv('soc_rcp', n), iv('soc_dis', n), ev(n)]; }), null, true));
     p4.style.gridColumn = '2 / span 2';
   }
   // 보건 및 의료: 아래 탭(의료 현황 / 실시간 의료기관)

@@ -855,3 +855,80 @@ def employment(S, C):
         raise RuntimeError('고용 자료 없음')
     ps = sorted(by)
     return {'at': now().strftime('%Y-%m-%d'), 'period': ps[-1], 'periods': ps, 'data': by}
+
+
+BOKJIRO = 'https://www.bokjiro.go.kr/ssis-tbu/twatga/sociGuaStat/'
+BJ_SETS = {  # 키: (datsNo, datsClNo, datTbl, 분류열, 값열)
+    'disabled': (22, 1004, 'TIP_DPWL_DSRT_DSTP_DSPSN_STN', 'DSDGR_NM', 'REG_DSPSN_NT'),
+    'basic': (1, 1001, 'TIP_NBLG_PNR_STN', 'PNR_DNM', 'PNR_NT'),
+    'basic_hh': (1, 1001, 'TIP_NBLG_PNR_STN', 'PNR_DNM', 'SFML_NT'),
+    'pension': (56, 1007, 'TIP_BSPN_TRGT_SPDM_STN', 'SEX_NM', 'PNR_NT'),
+    'facility': (62, 1008, 'TIP_WLFCL_TYP_DIV_FACL_STN', 'WLFCL_TNM', 'WLFCL_NT'),
+    'single': (16, 1003, 'TIP_OPRN_FAM_FAM_TYP_SPDM_STN', 'OPRN_FAM_TNM', 'PNR_NT'),
+    'medaid': (59, 1002, 'TIP_MDSL_CLSF_PNR_STN', 'MDSL_CLSF_NM', 'PNR_NT'),
+}
+
+
+def _bj_post(path, body, ref):
+    import urllib.request as _ur
+    import time as _t
+    last = None
+    for i in range(3):
+        try:
+            rq = _ur.Request(BOKJIRO + path, data=urllib.parse.urlencode(body).encode(), headers={
+                'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8', 'User-Agent': 'Mozilla/5.0', 'Referer': ref})
+            with _ur.urlopen(rq, timeout=30) as r:
+                return json.loads(r.read().decode('utf-8'))
+        except Exception as e:  # noqa: BLE001
+            last = e
+            _t.sleep(2 + i * 3)
+    raise RuntimeError('복지로 호출 실패 %s: %s' % (path, last))
+
+
+def _bj_query(key, ym, sgg):
+    n, cl, tbl, dim, mea = BJ_SETS[key]
+    ref = BOKJIRO + 'SociGuaStatDetailIframe.do?datsNo=%d&datsClNo=%d&datsClCrit=WS' % (n, cl)
+    body = {'datsClCrit': 'WS', 'datsClNo': cl, 'datsNo': n, 'datTbl': tbl, 'radioType': '1', 'statYm': ym, 'statYy': ym[:4], 'statMm': ym[4:],
+            'selbox': '해당월', 'statCtprvCd': '51', 'statSggCd': sgg, 'meaCol': mea, 'chartType': 'bar', 'spdmRtYN': 'N',
+            'dimCols': '%s AS DIMCOL0' % dim, 'grpCol0': dim, 'DIMCOL0': dim, 'ordCol0': dim + '_ORD0'}
+    d = _bj_post('selectChartData.do', body, ref)
+    if not isinstance(d, dict) or 'chartData' not in d:
+        raise RuntimeError('복지로 %s 응답 오류: %s' % (key, str(d)[:200]))
+    return {str(r.get('DIMCOL0', '')).strip(): to_num(r.get('meaCol')) for r in d['chartData']}
+
+
+def bokjiro(C):
+    """복지로 복지통계(사회보장정보시스템 행복이음, 월별): 강원 18개 시·군 최신 월 + 동해 전년 같은 달."""
+    n, cl, tbl, _, _ = BJ_SETS['disabled']
+    yms = _bj_post('selectParamStatYm.do', {'datsClCrit': 'WS', 'datsClNo': cl, 'datsNo': n, 'datTbl': tbl},
+                   BOKJIRO + 'SociGuaStatDetailIframe.do?datsNo=22&datsClNo=1041&datsClCrit=WS')
+    ym = str(((yms or {}).get('paramStatYm') or [{}])[0].get('statYm') or '')
+    if len(ym) != 6:
+        raise RuntimeError('복지로 최신 연월을 찾지 못함')
+    out, errs = {}, []
+    import time as _t
+    for reg in C['regions']:
+        sgg = reg.get('stdg')
+        if not sgg:
+            continue
+        d = {}
+        for key in BJ_SETS:
+            try:
+                d[key] = _bj_query(key, ym, sgg)
+            except Exception as e:  # noqa: BLE001
+                errs.append('%s %s' % (reg['name'], key))
+            _t.sleep(0.2)
+        out[reg['name']] = d
+    me = [r for r in C['regions'] if r['name'] == C['me']][0]
+    prev = {}
+    py = ym_shift(ym, -12)
+    for key in ('disabled', 'basic', 'pension', 'facility'):
+        try:
+            prev[key] = _bj_query(key, py, me['stdg'])
+        except Exception as e:  # noqa: BLE001
+            errs.append('prev %s' % key)
+    if not any(v.get('basic') for v in out.values()):
+        raise RuntimeError('복지로 자료 없음 (%s)' % ', '.join(errs[:5]))
+    if errs:
+        log('복지로 일부 실패: %s' % ', '.join(errs[:10]))
+    return {'at': now().strftime('%Y-%m-%d'), 'ym': ym, 'prev_ym': py, 'regions': out, 'prev': prev}
