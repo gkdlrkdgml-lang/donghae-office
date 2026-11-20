@@ -39,6 +39,11 @@
       "show": true
     },
     {
+      "id": "economy",
+      "label": "경제",
+      "show": true
+    },
+    {
       "id": "finance",
       "label": "예산",
       "show": true

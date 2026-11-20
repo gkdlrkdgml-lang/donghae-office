@@ -371,6 +371,11 @@ def build(state, S, C):
         'finance': state.get('finance') or {},
         'life': {k: v for k, v in (state.get('life') or {}).items()},
     }
+    try:
+        with open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config', 'economy.json'), encoding='utf-8') as fp:
+            out['economy'] = json.load(fp)
+    except Exception:  # noqa: BLE001
+        out['economy'] = None
     for ind in S['indicators']:
         d = state['indicators'].get(ind['id'])
         if not ind.get('show') or not d or not d.get('values'):
@@ -382,7 +387,7 @@ def build(state, S, C):
     # 분야 화면이 비면 메뉴에서 숨김
     has_fin = any(i['id'] == 'fin_indep' for i in out['indicators'])
     L = out.get('life') or {}
-    need = {'welfare': L.get('hospitals'), 'traffic': L.get('ev') or L.get('cars'), 'env': L.get('air'), 'tour': L.get('visit_months')}
+    need = {'economy': out.get('economy'), 'welfare': L.get('hospitals'), 'traffic': L.get('ev') or L.get('cars'), 'env': L.get('air'), 'tour': L.get('visit_months')}
     out['menu'] = [m for m in out['menu'] if not (m['id'] == 'finance' and not has_fin) and not (m['id'] in ('admin', 'compare') and not out['admin'])
                    and not (m['id'] in need and not need[m['id']])]
     return out

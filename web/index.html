@@ -1833,7 +1833,58 @@ function startApp() {
   }
 
   // ---------- 그리기 ----------
-  var SCREENS = { main: screenMain, admin: screenAdminTabs, welfare: screenWelfare, traffic: screenTrafficTabs, env: screenEnv, tour: screenTourTabs, finance: screenFinance, frame: screenFrame };
+
+  // ---------- 경제: 사업자·청년 창업·매출지수 (경제정책팀 월간 자료) ----------
+  function screenEconomy() {
+    var E = D.economy || {}, B = E.biz || {}, G = E.gangwon || {};
+    function pc(a, b) { return a != null && b ? (a / b - 1) * 100 : null; }
+    function pcs(v) { return v == null ? '–' : (v > 0 ? '+' : v < 0 ? '' : '') + fmt(v, 1) + '%'; }
+    function tone(v, goodUp) { return v == null || Math.abs(v) < 0.05 ? '' : (v > 0) === goodUp ? 'good' : 'bad'; }
+    view.style.gridTemplateColumns = 'minmax(0, 1fr) minmax(0, 1.15fr)';
+    view.style.gridTemplateRows = '44px auto minmax(0, .9fr) minmax(0, 1.1fr)';
+    view.appendChild(el('div', { class: 'title' }, [el('h1', { text: D.me + '시 경제 현황 · ' + ymLabel(E.ym) + ' 기준' }), el('span', { class: 'basis', text: '사업자 등록 동향 · 청년 창업 · 매출지수 · ' + (E.source || '') })]));
+    var a = B.active || {}, n = B.new || {}, c = B.closed || {};
+    function card(l, ic, col, bg, o, goodUp) {
+      var m = pc(o.total, o.prev_m), y = pc(o.total, o.prev_y);
+      return { l: l, sub: '법인 ' + fmt(o.corp, 0) + ' · 개인 ' + fmt(o.indiv, 0), ic: ic, col: col, bg: bg, v: fmt(o.total, 0), u: '개',
+        chips: [['전월 ' + fmt(o.prev_m, 0) + ' · ' + pcs(m), tone(m, goodUp)], ['전년 같은 달 ' + fmt(o.prev_y, 0) + ' · ' + pcs(y), tone(y, goodUp)]] };
+    }
+    function gcard(l, ic, col, bg, o, goodUp) {
+      return { l: l, sub: '강원도', ic: ic, col: col, bg: bg, v: fmt(o.total, 0), u: '개', chips: [['전월 대비 ' + pcs(o.mom), tone(o.mom, goodUp)], ['전년 같은 달 ' + pcs(o.yoy), tone(o.yoy, goodUp)]] };
+    }
+    cardsRow([card('가동 사업자', 'bank', null, null, a, true), card('신규 등록', 'trend', '#2E8B57', '#E2F3E9', n, true), card('폐업', 'doorOut', '#D9534F', '#FDE7E4', c, false),
+      gcard('강원 신규', 'trend', '#1F6FD1', '#E4EEFB', G.new || {}, true), gcard('강원 폐업', 'doorOut', '#C0602B', '#FDEBDD', G.closed || {}, false)]);
+    // 업종별 신규·폐업 (가로 막대)
+    var BI = (E.by_industry || {}).items || [], mx = 1;
+    BI.forEach(function (r) { mx = Math.max(mx, r[1] || 0, r[2] || 0); });
+    var hb = el('div', { style: 'display:flex;flex-direction:column;justify-content:space-around;height:100%;gap:10px;padding:4px 8px' });
+    hb.appendChild(el('div', { class: 'lleg' }, [['신규 등록', '#2E9C6A'], ['폐업', '#D9534F']].map(function (x) { return el('span', {}, [el('i', { style: 'background:' + x[1] }), document.createTextNode(x[0])]); })));
+    BI.forEach(function (r) {
+      function bar(v, col) { return el('div', { style: 'display:flex;align-items:center;gap:8px;height:20px' }, [el('div', { style: 'height:100%;border-radius:0 6px 6px 0;background:' + col + ';width:' + (v / mx * 100 * .82).toFixed(1) + '%;min-width:' + (v ? 3 : 0) + 'px' }), el('b', { style: 'font-size:16px;color:' + col, text: fmt(v, 0) })]); }
+      hb.appendChild(el('div', { style: 'display:grid;grid-template-columns:170px 1fr;align-items:center;gap:10px' }, [
+        el('div', { style: 'font-size:17px;font-weight:700;text-align:right;white-space:nowrap', text: r[0] }),
+        el('div', { style: 'display:flex;flex-direction:column;gap:4px;border-left:2px solid #C9D3E0;padding-left:4px' }, [bar(r[1], '#2E9C6A'), bar(r[2], '#D9534F')])]));
+    });
+    var p1 = panel('업종별 신규등록 · 폐업', ((E.by_industry || {}).note || '') + ' · ' + ymLabel(E.ym) + ' · 개', hb);
+    p1.style.gridRow = '3 / span 2';
+    // 청년 창업
+    var Y = E.youth || {}, ym = Y.months || [];
+    var th = ['구분'].concat(ym, [Y.ytd_label || '누적', '청년창업 전체', '창업사업체 전체']);
+    var tb = el('tbody', {}, [['신규', Y.new, Y.new_ytd, 'good'], ['폐업', Y.closed, Y.closed_ytd, 'bad']].map(function (r, i) {
+      var tds = [el('td', { html: '<b>' + r[0] + '</b>' })].concat((r[1] || []).map(function (v) { return el('td', { class: 'r', text: fmt(v, 0) }); }), [el('td', { class: 'r', html: '<b>' + fmt(r[2], 0) + '</b>' })]);
+      if (i === 0) tds.push(el('td', { class: 'r', rowspan: 2, html: '<b style="font-size:26px;color:#1F6FD1">' + fmt(Y.youth_total, 0) + '</b>' }), el('td', { class: 'r', rowspan: 2, html: '<b style="font-size:26px;color:#1B3A6B">' + fmt(Y.startup_total, 0) + '</b>' }));
+      return el('tr', {}, tds);
+    }));
+    var nn = (Y.new_ytd || 0) - (Y.closed_ytd || 0);
+    panel('청년 창업 현황', ymLabel(Y.ym) + ' · ' + (Y.note || '') + ' · 개', [el('table', { class: 'dt big' }, [el('thead', {}, [el('tr', {}, th.map(function (h, j) { return el('th', { class: j ? 'r' : '', text: h }); }))]), tb]),
+      el('div', { class: 'chips', style: 'margin-top:10px' }, [el('span', { class: 'chip ' + (nn >= 0 ? 'good' : 'bad'), text: (Y.ytd_label || '누적') + ' 순증 ' + (nn >= 0 ? '+' : '') + fmt(nn, 0) + '개' })])]);
+    // 매출지수
+    var SI = E.sales_index || {}, sm = SI.months || [], it = SI.items || [];
+    panel('업종별 매출지수', (SI.base || '') + ' · ' + sm.join(' → ') + ' · 막대 위 숫자 = 지수', groupCols(it.map(function (r) { return r[0]; }),
+      sm.map(function (m, k) { return { name: m, color: k === sm.length - 1 ? '#E0882F' : '#F5C9A0', values: it.map(function (r) { return r[k + 1]; }) }; }), null, true));
+  }
+
+  var SCREENS = { main: screenMain, admin: screenAdminTabs, welfare: screenWelfare, traffic: screenTrafficTabs, env: screenEnv, tour: screenTourTabs, economy: screenEconomy, finance: screenFinance, frame: screenFrame };
   function render() {
     view.textContent = '';
     view.className = '';
