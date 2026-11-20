@@ -1456,15 +1456,66 @@ function startApp() {
   }
   var CLV = [[90, '#D9534F', '#fff', '매우 붐빔 90+'], [70, '#F0A04B', '#fff', '붐빔 70~90'], [50, '#F6D57A', '#5B4300', '보통 50~70'], [0, '#BFE3CC', '#1B5E3A', '여유 50 미만']];
   function clv(v) { for (var i = 0; i < CLV.length; i++) if (v >= CLV[i][0]) return CLV[i]; return CLV[3]; }
+  function screenAttr() {
+    var A = (D.life || {}).attr || {}, MO = A.months || {}, yms = Object.keys(MO).sort(), ly = A.latest || yms[yms.length - 1];
+    var regs = {}; yms.forEach(function (ym) { Object.keys(MO[ym]).forEach(function (g) { regs[g] = 1; }); });
+    var SN = regs[regName()] ? regName() : D.me, isMe = SN === D.me;
+    var Y = ly.slice(0, 4), LM = Number(ly.slice(4)), PY = String(Number(Y) - 1);
+    function spots(ym) { return ((MO[ym] || {})[SN]) || {}; }
+    function tot(ym, nm) { var sp = spots(ym); if (nm) return sp[nm] ? sp[nm][0] : null; var t = 0, n = 0; Object.keys(sp).forEach(function (k) { t += sp[k][0]; n++; }); return n ? t : null; }
+    function sumY(y, upto, nm) { var t = 0, any = false; for (var m = 1; m <= upto; m++) { var v = tot(y + ('0' + m).slice(-2), nm); if (v != null) { t += v; any = true; } } return any ? t : null; }
+    function sg(v, d) { return (v > 0 ? '+' : '') + fmt(v, d || 0); }
+    function man(v) { return v == null ? '–' : v >= 10000 ? fmt(v / 10000, 1) + '만' : fmt(v, 0); }
+    // 동해 축제 달
+    var FM = {};
+    if (isMe) ((((D.life || {}).festivals || {}).items) || []).forEach(function (f) { if (!f.start) return; var a = f.start.slice(0, 6), b = (f.end || f.start).slice(0, 6); [a, b].forEach(function (ym) { (FM[ym] = FM[ym] || []).indexOf(f.title) < 0 && FM[ym].push(f.title); }); });
+    lifeTitle(fullName(SN) + ' 유료관광지 입장객', '한국문화관광연구원 관광자원통계 · 최신 ' + Y + '년 ' + LM + '월 · 새 달이 올라오면 자동 반영' + selHint());
+    view.style.gridTemplateColumns = 'minmax(0, 0.85fr) minmax(0, 1.3fr)';
+    view.style.gridTemplateRows = '44px auto minmax(0, 1fr) minmax(0, 1fr)';
+    var cy = sumY(Y, LM), py = sumY(PY, LM), lm = tot(ly), plm = tot(PY + ly.slice(4));
+    var names = Object.keys(spots(ly)); var allN = {}; yms.filter(function (ym) { return ym.slice(0, 4) === Y; }).forEach(function (ym) { Object.keys(spots(ym)).forEach(function (k) { allN[k] = 1; }); });
+    names = Object.keys(allN).sort(function (a, b) { return (sumY(Y, LM, b) || 0) - (sumY(Y, LM, a) || 0); });
+    var fo = 0; yms.filter(function (ym) { return ym.slice(0, 4) === Y; }).forEach(function (ym) { var sp = spots(ym); Object.keys(sp).forEach(function (k) { fo += sp[k][1] || 0; }); });
+    cardsRow([
+      { l: '올해 누적 입장객', sub: Y + '년 1~' + LM + '월', ic: 'people', col: '#1B3A6B', bg: '#E8EEF7', v: man(cy), u: '명', chips: [rankChip(indFor(ind('attr_visit'), SN)), py ? ['작년 같은 기간 ' + man(py) + ' (' + sg((cy - py) / py * 100, 1) + '%)', cy >= py ? 'good' : 'bad'] : null] },
+      { l: LM + '월 입장객', sub: Y + '년 ' + LM + '월 · 최신 달', ic: 'trend', col: '#2E8B57', bg: '#E2F3E9', v: man(lm), u: '명', chips: [plm ? ['작년 ' + LM + '월 ' + man(plm) + ' (' + sg((lm - plm) / plm * 100, 1) + '%)', lm >= plm ? 'good' : 'bad'] : null, FM[ly] ? ['축제: ' + FM[ly].join(', '), 'violet'] : null] },
+      names[0] ? { l: '올해 1위 관광지', sub: Y + '년 1~' + LM + '월', ic: 'trend', col: '#C0602B', bg: '#FDEBDD', v: names[0], u: '', chips: [[man(sumY(Y, LM, names[0])) + '명', ''], names[1] ? ['2위 ' + names[1], ''] : null] } : null,
+      { l: '외국인 입장객', sub: Y + '년 1~' + LM + '월', ic: 'globe', col: '#7A4FC4', bg: '#EFE9FB', v: man(fo), u: '명', chips: [cy ? ['전체의 ' + fmt(fo / cy * 100, 1) + '%', 'violet'] : null] }
+    ]);
+    var I0 = ind('attr_visit'), I = I0 ? indFor(I0, SN) : null;
+    var p1 = panel('올해 누적 입장객 · 강원 18개 시·군', (I0 ? I0.basis : '') + ' · 만명 · 누르면 그 지역', I ? rankList(I, regPick, regSel) : el('div', { class: 'empty', text: '자료 없음' }));
+    p1.style.gridRow = '3 / span 2';
+    // 해마다 월별
+    var lab = [], ys = [String(Number(Y) - 2), PY, Y], cols = ['#B7C3D3', '#6C8BB8', '#1F6FD1'];
+    for (var m = 1; m <= 12; m++) lab.push(m + '월' + (FM[Y + ('0' + m).slice(-2)] || FM[PY + ('0' + m).slice(-2)] ? ' ★' : ''));
+    var ser = ys.map(function (y, i) { return { name: y + '년', color: cols[i], width: i === 2 ? 3.5 : 2, dash: i === 0 ? '5 4' : null, labels: i === 2 ? true : false, values: lab.map(function (x, j) { return tot(y + ('0' + (j + 1)).slice(-2)); }) }; });
+    panel('월별 입장객 · ' + ys[0] + '~' + Y + '년', (isMe ? '★ = 축제가 열린 달 · ' : '') + '명', lineChart(lab, ser, { fit: true }));
+    // 관광지별 표 + 축제 달 비교
+    var hd = ['관광지', LM + '월', '올해 누적', '작년 같은 기간', '증감'].concat(isMe ? ['축제 달 vs 평소'] : []);
+    var tb = el('tbody', {}, names.slice(0, 12).map(function (nm) {
+      var a = sumY(Y, LM, nm), b = sumY(PY, LM, nm), d = (a != null && b) ? (a - b) / b * 100 : null;
+      var tds = [el('td', { html: '<b>' + nm + '</b>' }), el('td', { class: 'r', text: man(tot(ly, nm)) }), el('td', { class: 'r', html: '<b>' + man(a) + '</b>' }), el('td', { class: 'r', text: man(b) }),
+        el('td', { class: 'r', html: d == null ? '–' : '<b style="color:' + (d >= 0 ? '#2E9C6A' : '#D9534F') + '">' + sg(d, 1) + '%</b>' })];
+      if (isMe) {
+        var fs = 0, fn = 0, ns = 0, nn = 0;
+        yms.forEach(function (ym) { var v = tot(ym, nm); if (v == null) return; if (FM[ym]) { fs += v; fn++; } else { ns += v; nn++; } });
+        var up = fn && nn && ns ? (fs / fn) / (ns / nn) * 100 - 100 : null;
+        tds.push(el('td', { class: 'r', html: up == null ? '–' : '<b style="color:' + (up >= 0 ? '#2E9C6A' : '#D9534F') + '">' + sg(up, 0) + '%</b>' }));
+      }
+      return el('tr', {}, tds);
+    }));
+    panel('관광지별 입장객 · ' + fullName(SN), '명' + (isMe ? ' · 축제 달 vs 평소 = 축제가 열린 달의 월평균이 다른 달보다 몇 % 많은지(' + yms[0].slice(0, 4) + '년~)' : ''), el('table', { class: 'dt big' }, [el('thead', {}, [el('tr', {}, hd.map(function (h, j) { return el('th', { class: j ? 'r' : '', text: h }); }))]), tb]));
+  }
   function screenTourTabs() {
     var L = D.life || {}, tabs = [['now', '방문 현황']];
     if (L.cnctr) tabs.push(['spots', '관광지 혼잡 예측']);
     if (L.visit_days && Object.keys(L.visit_days).length > 400) tabs.push(['past', '과거 3년 분석']);
     if (L.festivals && L.festivals.items && L.festivals.items.length) tabs.push(['fest', '행사·축제']);
     if (L.demand && Object.keys(L.demand).length) tabs.push(['dem', '소비·체류 강도']);
+    if (L.attr && L.attr.months) tabs.push(['attr', '관광지 입장객']);
     if (L.cnctr) tabs.splice(2, 0, ['t3d', '3D 관광지도']);
     if (!tabs.some(function (t) { return t[0] === tourTab; })) tourTab = 'now';
-    ({ now: screenTour, spots: screenSpots, t3d: screenTour3D, past: screenTourPast, fest: screenFest, dem: screenTourDemand })[tourTab]();
+    ({ now: screenTour, spots: screenSpots, t3d: screenTour3D, past: screenTourPast, fest: screenFest, dem: screenTourDemand, attr: screenAttr })[tourTab]();
     var title = view.querySelector('.title');
     if (title && tabs.length > 1) title.insertBefore(tabsBar(tabs, tourTab, function (k) { tourTab = k; }), title.children[1] || null);
   }

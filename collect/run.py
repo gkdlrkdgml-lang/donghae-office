@@ -229,6 +229,12 @@ def collect(state, S, C):
             ok(state, 'social', '시설 %s · 수급 %s' % (L['social'].get('fac_year'), L['social'].get('rcp_year')))
         except Exception as e:  # noqa: BLE001
             fail(state, 'social', e)
+    if stale('attr', 3) or '--force-attr' in sys.argv:
+        try:
+            L['attr'] = sources.attractions(C, L.get('attr'))
+            ok(state, 'attr', '최신 %s · %d개월' % (L['attr']['latest'], len(L['attr']['months'])))
+        except Exception as e:  # noqa: BLE001
+            fail(state, 'attr', e)
     if stale('stores', 7) or '--force-stores' in sys.argv:
         try:
             L['stores'] = sources.stores(C, os.path.join(WEB_DATA, 'stores_snap.json'))
@@ -296,6 +302,16 @@ def collect(state, S, C):
         set_ind(state, 'biz_active', {k: v.get('total') for k, v in EC['active'][y].items() if v.get('total')}, '%s년 말 가동사업자(국세청)' % y)
         set_ind(state, 'biz_new', {k: v.get('total') for k, v in EC['new'][y].items() if v.get('total')}, '%s년 신규 사업자(국세청)' % y)
         set_ind(state, 'biz_net', {k: v.get('total', 0) - (EC['closed'][y].get(k) or {}).get('total', 0) for k, v in EC['new'][y].items() if k in EC['closed'][y]}, '%s년 신규−폐업(국세청)' % y)
+    AT = L.get('attr') or {}
+    if AT.get('months'):
+        ly = AT['latest']
+        yr = ly[:4]
+        tot = {}
+        for ym, m in AT['months'].items():
+            if ym[:4] == yr:
+                for g, sp in m.items():
+                    tot[g] = tot.get(g, 0) + sum(v[0] for v in sp.values())
+        set_ind(state, 'attr_visit', {k: v / 10000 for k, v in tot.items()}, '%s년 1~%d월 유료관광지 입장객(관광자원통계)' % (yr, int(ly[4:])))
     SR = L.get('stores') or {}
     if SR.get('regions'):
         sy = SR['stdrYm']

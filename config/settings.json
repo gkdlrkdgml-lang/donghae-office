@@ -501,6 +501,19 @@
       "show": true,
       "main": false,
       "note": "지난 분기 목록에 있다가 이번 분기에 사라진 상가 · 적을수록 좋음"
+    },
+    {
+      "id": "attr_visit",
+      "no": 39,
+      "field": "관광",
+      "name": "유료관광지 입장객",
+      "unit": "만명",
+      "dir": 1,
+      "digits": 1,
+      "source": "한국문화관광연구원 관광자원통계",
+      "show": true,
+      "main": false,
+      "note": "입장료 받는 주요 관광지의 입장객 합계 · 집계하는 관광지 수가 시·군마다 다름"
     }
   ],
   "sources": {

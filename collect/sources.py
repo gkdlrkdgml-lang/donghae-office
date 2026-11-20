@@ -1179,3 +1179,51 @@ def stores(C, snap_path):
     if not prev or prev.get('stdrYm') != stdr:
         save_json(snap_path, {'stdrYm': stdr, 'ids': cur_ids, 'changes': out['changes']})
     return out
+
+
+ATTR_URL = 'https://apis.data.go.kr/B551940/TourismResourceStatsService/getPchrgTrrsrtVisitorList'
+
+
+def attractions(C, cache=None, n_months=40):
+    """한국문화관광연구원 관광자원통계(유료관광지 입장객): 강원 18개 시·군, 관광지별 월 입장객.
+    지난달 것은 바뀌지 않으므로 받아 둔 달은 건너뛰고, 최근 4개월과 빈 달만 다시 받습니다."""
+    key = urllib.parse.unquote(os.environ.get('DATA_GO_KR_KEY', '').strip())
+    if not key:
+        raise RuntimeError('DATA_GO_KR_KEY 없음')
+    months = dict((cache or {}).get('months') or {})
+    names = {r['full']: r['name'] for r in C['regions']}
+    cur = now().strftime('%Y%m')
+    got, errs = 0, []
+    for i in range(1, n_months + 1):
+        ym = ym_shift(cur, -i)
+        if ym in months and i > 4:
+            continue
+        try:
+            rows, page = [], 1
+            while True:
+                t = http_get(ATTR_URL, {'serviceKey': key, 'YM': ym, 'SIDO': '강원특별자치도', 'numOfRows': '1000', 'pageNo': str(page), '_type': 'json'}, tries=2, timeout=40)
+                bd = (json.loads(t).get('response') or {}).get('body') or {}
+                it = (bd.get('items') or {}) if isinstance(bd.get('items'), dict) else {}
+                it = it.get('item') or []
+                it = it if isinstance(it, list) else [it]
+                rows += it
+                if page * 1000 >= int(bd.get('totalCount') or 0) or not it:
+                    break
+                page += 1
+            m = {}
+            for x in rows:
+                g = names.get(str(x.get('gungu', '')).strip())
+                v = to_num(x.get('csMvCnt'))
+                if not g or v is None:
+                    continue
+                m.setdefault(g, {})[str(x.get('resNm', '')).strip()] = [int(v), int(to_num(x.get('csForCnt')) or 0)]
+            if m:
+                months[ym] = m
+                got += 1
+            elif ym in months and i <= 4:
+                pass  # 최근 달이 잠시 비어도 받아 둔 값은 지킴
+        except Exception as e:  # noqa: BLE001
+            errs.append('%s %s' % (ym, str(e)[:120]))
+    if not months:
+        raise RuntimeError('관광지 입장객을 받지 못함: %s' % errs[:3])
+    return {'at': now().strftime('%Y-%m-%d'), 'months': dict(sorted(months.items())), 'latest': max(months), 'errors': errs[:5]}
