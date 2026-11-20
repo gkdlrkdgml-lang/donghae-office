@@ -272,6 +272,12 @@ def collect(state, S, C):
             ok(state, 'tasis', L['tasis']['ym'])
         except Exception as e:  # noqa: BLE001
             fail(state, 'tasis', e)
+    if stale('licenses', 1) or '--force-life' in sys.argv:
+        try:
+            L['licenses'] = sources.licenses(C)
+            ok(state, 'licenses', ', '.join('%s %d' % (k, v['active']) for k, v in L['licenses']['kinds'].items()))
+        except Exception as e:  # noqa: BLE001
+            fail(state, 'licenses', e)
     EC = L.get('economy') or {}
     if EC.get('year'):
         y = EC['year']

@@ -990,3 +990,45 @@ def tasis(C):
         except Exception as e:  # noqa: BLE001
             log('국세통계 추이 %s 실패: %s' % (m, e))
     return {'at': now().strftime('%Y-%m-%d'), 'ym': ym, 'names': TASIS_BC_NM, 'cur': cur, 'prev_m': pm, 'prev_y': py, 'year_end': ye, 'prev_ye': pye, 'trend': trend}
+
+
+LICENSE_SVCS = [('general_restaurants', '일반음식점'), ('rest_cafes', '휴게음식점'), ('bakeries', '제과점'), ('lodgings', '숙박업'), ('rural_homestays', '농어촌민박')]
+
+
+def licenses(C, code='4211000'):
+    """행정안전부 지방행정 인허가(공공데이터포털): 동해시 업종별 개업(인허가일)·폐업(폐업일) 월별 건수와 영업 중 업소 수, 최근 개업 업소."""
+    key = urllib.parse.unquote(os.environ.get('DATA_GO_KR_KEY', '').strip())
+    res = {'at': now().strftime('%Y-%m-%d'), 'kinds': {}, 'recent': []}
+    y0 = str(int(now().strftime('%Y')) - 1)
+    for svc, nm in LICENSE_SVCS:
+        rows, page = [], 1
+        while page <= 30:
+            t = http_get('https://apis.data.go.kr/1741000/%s/info' % svc, {'serviceKey': key, 'pageNo': str(page), 'numOfRows': '1000', 'returnType': 'json',
+                                                                         'cond[OPN_ATMY_GRP_CD::EQ]': code}, tries=2)
+            body = (json.loads(t).get('response') or {}).get('body') or {}
+            items = (body.get('items') or {}).get('item') or []
+            if isinstance(items, dict):
+                items = [items]
+            rows += items
+            if len(items) < 1000 or len(rows) >= int(body.get('totalCount') or 0):
+                break
+            page += 1
+        rows = [r for r in rows if str(r.get('OPN_ATMY_GRP_CD')) == code]
+        op, cl, active = {}, {}, 0
+        for r in rows:
+            a = str(r.get('LCPMT_YMD') or '').replace('-', '')
+            c = str(r.get('CLSBIZ_YMD') or '').replace('-', '')
+            if a[:4] >= y0:
+                op[a[:6]] = op.get(a[:6], 0) + 1
+                if a >= now().strftime('%Y') + '0101':
+                    res['recent'].append([a, nm, r.get('BPLC_NM'), r.get('SNTTN_BZSTAT_NM') or r.get('BZSTAT_SE_NM') or '', (r.get('ROAD_NM_ADDR') or r.get('LOTNO_ADDR') or '').replace('강원특별자치도 동해시 ', '')])
+            if c[:4] >= y0:
+                cl[c[:6]] = cl.get(c[:6], 0) + 1
+            if str(r.get('SALS_STTS_CD')) == '01':
+                active += 1
+        res['kinds'][nm] = {'open': op, 'close': cl, 'active': active, 'total': len(rows)}
+    res['recent'].sort(key=lambda x: x[0], reverse=True)
+    res['recent'] = res['recent'][:20]
+    if not any(v['total'] for v in res['kinds'].values()):
+        raise RuntimeError('인허가 자료 없음')
+    return res

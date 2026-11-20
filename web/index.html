@@ -1910,6 +1910,58 @@ function startApp() {
     p4.style.gridColumn = '2';
   }
 
+  // 경제: 아래 탭(사업자·고용 / 음식점·숙박 개업·폐업)
+  var ecoTab = 'biz';
+  function screenEconomyTabs() {
+    var L = D.life || {}, tabs = [['biz', '사업자 · 고용']];
+    if (L.licenses) tabs.push(['shop', '음식점·숙박 개업·폐업']);
+    if (!tabs.some(function (t) { return t[0] === ecoTab; })) ecoTab = 'biz';
+    if (ecoTab === 'shop') screenShop(); else screenEconomy();
+    var title = view.querySelector('.title');
+    if (title && tabs.length > 1) title.insertBefore(tabsBar(tabs, ecoTab, function (k) { ecoTab = k; }), title.children[1] || null);
+  }
+  function screenShop() {
+    var LC = (D.life || {}).licenses || {}, K = LC.kinds || {}, names = Object.keys(K);
+    var now = new Date(), Y = String(now.getFullYear()), PY = String(now.getFullYear() - 1), M = now.getMonth() + 1;
+    function sumY(o, y, upto) { var t = 0; Object.keys(o || {}).forEach(function (ym) { if (ym.slice(0, 4) === y && Number(ym.slice(4)) <= upto) t += o[ym]; }); return t; }
+    var rows = names.map(function (n) { var k = K[n]; return { n: n, act: k.active, o: sumY(k.open, Y, 12), c: sumY(k.close, Y, 12), po: sumY(k.open, PY, M), pc: sumY(k.close, PY, M) }; });
+    var T = rows.reduce(function (t, r) { t.act += r.act; t.o += r.o; t.c += r.c; t.po += r.po; t.pc += r.pc; return t; }, { act: 0, o: 0, c: 0, po: 0, pc: 0 });
+    function sg(v) { return (v > 0 ? '+' : '') + fmt(v, 0); }
+    view.style.gridTemplateColumns = 'minmax(0, 1.25fr) minmax(0, 1fr)';
+    view.style.gridTemplateRows = '44px auto minmax(0, 1fr) minmax(0, 1fr)';
+    view.appendChild(el('div', { class: 'title' }, [el('h1', { text: D.me + '시 음식점·숙박 개업·폐업 · ' + Y + '년' }), el('span', { class: 'basis', text: '행정안전부 지방행정 인허가(공공데이터포털, 매일 갱신) · ' + (LC.at || '') + ' 기준 · 일반·휴게음식점·제과점·숙박업·농어촌민박' })]));
+    var g = K['일반음식점'] || {}, h = K['휴게음식점'] || {}, sk = K['숙박업'] || {};
+    cardsRow([
+      { l: '올해 개업', sub: '1월 ~ 오늘', ic: 'doorIn', v: fmt(T.o, 0), u: '곳', chips: [['작년 같은 기간 ' + fmt(T.po, 0) + ' (' + sg(T.o - T.po) + ')', T.o >= T.po ? 'good' : 'bad']] },
+      { l: '올해 폐업', sub: '1월 ~ 오늘', ic: 'doorOut', col: '#D9534F', bg: '#FDE7E4', v: fmt(T.c, 0), u: '곳', chips: [['작년 같은 기간 ' + fmt(T.pc, 0) + ' (' + sg(T.c - T.pc) + ')', T.c <= T.pc ? 'good' : 'bad']] },
+      { l: '순증', sub: '개업 − 폐업', ic: 'trend', col: '#1F6FD1', bg: '#E4EEFB', v: sg(T.o - T.c), u: '곳', chips: [['작년 같은 기간 ' + sg(T.po - T.pc), '']] },
+      { l: '영업 중', sub: '5개 업종 합계', ic: 'house', col: '#2E8B57', bg: '#E2F3E9', v: fmt(T.act, 0), u: '곳', chips: [['일반음식점 ' + fmt(g.active, 0), 'navy'], ['휴게 ' + fmt(h.active, 0) + ' · 숙박 ' + fmt(sk.active, 0), '']] }
+    ]);
+    // 월별 추이
+    var lab = [], o1 = [], c1 = [], o0 = [];
+    for (var m = 1; m <= 12; m++) { var mm = ('0' + m).slice(-2); lab.push(m + '월'); var a = 0, b = 0, p = 0; names.forEach(function (n) { a += (K[n].open || {})[Y + mm] || 0; b += (K[n].close || {})[Y + mm] || 0; p += (K[n].open || {})[PY + mm] || 0; }); o1.push(m <= M ? a : null); c1.push(m <= M ? b : null); o0.push(p); }
+    var pl = panel('월별 개업·폐업', Y + '년 · 곳 · 점선 = ' + PY + '년 개업', lineChart(lab, [
+      { name: Y + ' 개업', color: '#2E9C6A', values: o1, width: 3.5, labels: true },
+      { name: Y + ' 폐업', color: '#D9534F', values: c1, width: 3, labels: true },
+      { name: PY + ' 개업', color: '#9AA8BA', values: o0, width: 2, dash: '5 4' }], { fit: true, unit: '곳' }));
+    pl.style.gridColumn = '1'; pl.style.gridRow = '3';
+    // 업종별 표
+    var tb = el('tbody', {}, rows.concat([{ n: '합계', act: T.act, o: T.o, c: T.c, po: T.po, pc: T.pc }]).map(function (r) {
+      var net = r.o - r.c, tot = r.n === '합계';
+      return el('tr', { style: tot ? 'font-weight:800;background:#F3F6FA' : '' }, [el('td', { html: '<b>' + r.n + '</b>' }), el('td', { class: 'r', text: fmt(r.act, 0) }),
+        el('td', { class: 'r', html: '<b style="color:#2E9C6A">' + fmt(r.o, 0) + '</b>' }), el('td', { class: 'r', html: '<b style="color:#D9534F">' + fmt(r.c, 0) + '</b>' }),
+        el('td', { class: 'r', html: '<b style="color:' + (net >= 0 ? '#1F6FD1' : '#C0392B') + '">' + sg(net) + '</b>' }), el('td', { class: 'r', style: 'color:#556274', text: fmt(r.po, 0) + ' / ' + fmt(r.pc, 0) })]);
+    }));
+    var pt = panel('업종별 현황', Y + '년 1월~오늘 · 곳 · 작년 = 같은 기간(1~' + M + '월)', el('table', { class: 'dt big' }, [el('thead', {}, [el('tr', {}, ['업종', '영업 중', '올해 개업', '올해 폐업', '순증', '작년 개업/폐업'].map(function (x, j) { return el('th', { class: j ? 'r' : '', text: x }); }))]), tb]));
+    pt.style.gridColumn = '1'; pt.style.gridRow = '4';
+    // 최근 개업
+    var rc = el('tbody', {}, (LC.recent || []).slice(0, 18).map(function (r) {
+      return el('tr', {}, [el('td', { style: 'white-space:nowrap', text: Number(r[0].slice(4, 6)) + '.' + Number(r[0].slice(6, 8)) }), el('td', { html: '<b>' + r[2] + '</b><br><small style="color:var(--sub)">' + r[1] + (r[3] ? ' · ' + r[3] : '') + '</small>' }), el('td', { style: 'font-size:13px;color:#556274', text: (r[4] || '').replace(/^.*\(([^)]+)\)$/, '$1') })]);
+    }));
+    var pr = panel('최근 개업한 곳', Y + '년 · 인허가일 최신순', el('table', { class: 'dt big' }, [el('thead', {}, [el('tr', {}, ['날짜', '업소', '동'].map(function (x) { return el('th', { text: x }); }))]), rc]));
+    pr.style.gridRow = '3 / span 2'; pr.style.gridColumn = '2';
+  }
+
   // ---------- 복지: 사회복지시설·기초수급자·등록장애인·노인 (KOSIS, 강원 18개 시·군) ----------
   var socMet = 'soc_rcp';
   function screenSocial() {
@@ -1979,7 +2031,7 @@ function startApp() {
   function screenWelfareTabs() {
     screenWelfare();
   }
-  var SCREENS = { main: screenMain, admin: screenAdminTabs, welfare: screenWelfareTabs, social: screenSocial, traffic: screenTrafficTabs, env: screenEnv, tour: screenTourTabs, economy: screenEconomy, finance: screenFinance, frame: screenFrame };
+  var SCREENS = { main: screenMain, admin: screenAdminTabs, welfare: screenWelfareTabs, social: screenSocial, traffic: screenTrafficTabs, env: screenEnv, tour: screenTourTabs, economy: screenEconomyTabs, finance: screenFinance, frame: screenFrame };
   function render() {
     view.textContent = '';
     view.className = '';
