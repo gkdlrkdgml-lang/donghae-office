@@ -232,19 +232,22 @@ def main():
         ops = []
         try:
             h = http_get('https://www.data.go.kr/data/%s/openapi.do' % pk, {}, tries=1)
-            ops = sorted(set(_re.findall(r'/(?:B500001/waternow/)?(?:twdClwr|twdOrgwtWdr)/([A-Za-z0-9_]+)', h)))
+            mj = _re.search(r'swaggerJson = `(.*?)`', h, _re.S)
+            ops = []
+            if mj:
+                try:
+                    sj = json.loads(mj.group(1))
+                    for pth, v in (sj.get('paths') or {}).items():
+                        ops.append(pth.strip('/'))
+                        for meth, d in v.items():
+                            say('[물API] %s 경로 %s %s: %s | 인자 %s' % (pk, meth, pth, d.get('summary'), [(x.get('name'), x.get('required')) for x in d.get('parameters', [])]))
+                            rs = json.dumps(d.get('responses', {}), ensure_ascii=False)
+                            say('[물API] %s 응답항목 %s' % (pk, ','.join(sorted(set(_re.findall(r'"([a-zA-Z]{3,})": \{"type"', rs))))[:900]))
+                except Exception as e2:  # noqa: BLE001
+                    say('[물API] swagger 해석 실패 %s %s' % (e2, mj.group(1)[:300]))
             say('[물API] %s 페이지 작업: %s' % (pk, ops))
-            for m in _re.finditer(r'(swagger[^"\']{0,200}|oprtinUrl[^,]{0,200}|operationNm[^,]{0,120})', h):
-                say('[물API] %s 단서 %s' % (pk, m.group(0)[:200]))
         except Exception as e:  # noqa: BLE001
             say('[물API] %s 페이지 실패 %s' % (pk, e))
-        try:
-            h = http_get('https://www.data.go.kr/tcs/dss/selectApiDataDetailView.do', {'publicDataPk': pk}, tries=1)
-            ops2 = sorted(set(_re.findall(r'(?:twdClwr|twdOrgwtWdr)/([A-Za-z0-9_]+)', h)))
-            say('[물API] %s 상세 작업: %s / 길이 %d' % (pk, ops2, len(h)))
-            ops = sorted(set(ops) | set(ops2))
-        except Exception as e:  # noqa: BLE001
-            say('[물API] %s 상세 실패 %s' % (pk, e))
         for op in (ops or ['']):
             try:
                 t = http_get(base + ('/' + op if op else ''), {'serviceKey': _dk, 'pageNo': '1', 'numOfRows': '5', '_type': 'json', 'wtwkBsnm': '동해시', 'stMt': '09', 'edMt': '10'}, tries=1)

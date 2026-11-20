@@ -425,32 +425,6 @@
       "note": "지방·광역상수도 급수인구 ÷ 총인구"
     },
     {
-      "id": "lpcd",
-      "no": 31,
-      "field": "상하수도",
-      "name": "1인 1일 급수량",
-      "unit": "ℓ",
-      "dir": 0,
-      "digits": 0,
-      "source": "행안부 지방공기업 경영정보",
-      "show": true,
-      "main": false,
-      "note": "하루 평균 생산량 ÷ 급수인구 · 공장 등 사용량 포함이라 판정 안 함"
-    },
-    {
-      "id": "bill_rate",
-      "no": 32,
-      "field": "상하수도",
-      "name": "요금 부과율",
-      "unit": "%",
-      "dir": 1,
-      "digits": 1,
-      "source": "행안부 지방공기업 경영정보",
-      "show": true,
-      "main": false,
-      "note": "생산한 수돗물 중 요금이 매겨진 비율 · 높을수록 새는 물이 적음"
-    },
-    {
       "id": "old_pipe",
       "no": 33,
       "field": "상하수도",

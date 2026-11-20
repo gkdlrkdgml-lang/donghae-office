@@ -2078,12 +2078,10 @@ function startApp() {
     cardsRow([
       T('sewer') ? { l: '하수도 보급률', sub: yl('sewer'), ic: 'drop', col: '#1F6FD1', bg: '#E4EEFB', v: fmt(tv('sewer', SN, '공공하수처리구역인구보급률'), 1), u: '%', chips: [rankChip(indFor(ind('sew_rate'), SN)), vsMe('sewer', '공공하수처리구역인구보급률', 1, '%p') || gw('sewer', '공공하수처리구역인구보급률', 1, '%')] } : null,
       T('supply') ? { l: '상수도 보급률', sub: yl('supply'), ic: 'drop', col: '#0F8A8A', bg: '#DDF3F2', v: fmt(tv('supply', SN, '지방 및 광역상수도 보급률'), 1), u: '%', chips: [rankChip(indFor(ind('sup_rate'), SN)), vsMe('supply', '지방 및 광역상수도 보급률', 1, '%p') || gw('supply', '지방 및 광역상수도 보급률', 1, '%')] } : null,
-      T('wops') ? { l: '하루 수돗물 생산', sub: yl('wops') + ' · 하루 평균', ic: 'factory', col: '#7A4FC4', bg: '#EFE9FB', v: fmt(tv('wops', SN, '1일평균생산량'), 0), u: '㎥', chips: [['1인 1일 ' + fmt(tv('wops', SN, '1인1일평균급수량'), 0) + 'ℓ', 'violet'], ['시설 이용률 ' + fmt(tv('wops', SN, '시설이용률'), 1) + '%', '']] } : null,
-      T('wops') ? { l: '요금 부과율', sub: yl('wops'), ic: 'coin', col: '#2E8B57', bg: '#E2F3E9', v: fmt(tv('wops', SN, '요금부과율'), 1), u: '%', chips: [rankChip(indFor(ind('bill_rate'), SN)), prev('wops', '요금부과율', 1, '%p') || gw('wops', '요금부과율', 1, '%')] } : null,
       T('sops') ? { l: '노후 하수관 비율', sub: yl('sops'), ic: 'warn', col: '#D9534F', bg: '#FDE7E4', v: fmt(tv('sops', SN, '경년관비율'), 1), u: '%', chips: [rankChip(indFor(ind('old_pipe'), SN)), ['하수도 공기업 ' + ind('old_pipe').n + '곳 비교', '']] } : null,
       T('wfee') ? { l: '수도요금', sub: yl('wfee') + ' · ㎥당 평균', ic: 'coin', col: '#C0602B', bg: '#FDEBDD', v: fmt(tv('wfee', SN, '전체 · ㎥당요금'), 0), u: '원', chips: [['가정용 ' + fmt(tv('wfee', SN, '가정용 · ㎥당요금'), 0) + '원', 'violet'], T('wcost') ? ['현실화율 ' + fmt(tv('wcost', SN, '요금현실화율'), 1) + '%', ''] : null] } : null
     ]);
-    var MET = [['sew_rate', '하수도'], ['sup_rate', '상수도'], ['bill_rate', '부과율'], ['w_price', '수도요금'], ['w_real', '현실화율'], ['lpcd', '1인 급수량'], ['old_pipe', '노후관']].filter(function (m) { return ind(m[0]); });
+    var MET = [['sew_rate', '하수도'], ['sup_rate', '상수도'], ['w_price', '수도요금'], ['w_real', '현실화율'], ['old_pipe', '노후관']].filter(function (m) { return ind(m[0]); });
     if (!MET.some(function (m) { return m[0] === watMet; })) watMet = MET[0] && MET[0][0];
     var I0 = ind(watMet), I = indFor(I0, SN);
     var sw = el('div', { class: 'chips', style: 'flex-wrap:nowrap;gap:6px;margin-bottom:6px' }, MET.map(function (m) {
@@ -2092,25 +2090,25 @@ function startApp() {
     p1.style.gridRow = '3 / span 2';
     // 비교 막대
     var who = isMe ? [D.me, '강원 평균'] : [SN, D.me, '강원 평균'];
-    var CM = [['sewer', '공공하수처리구역인구보급률', '하수도 보급률'], ['sewer', '고도처리인구보급률', '고도처리 보급률'], ['supply', '지방 및 광역상수도 보급률', '상수도 보급률'], ['wops', '요금부과율', '요금 부과율'], ['sops', '경년관비율', '노후 하수관']].filter(function (c) { return T(c[0]); });
+    var CM = [['sewer', '공공하수처리구역인구보급률', '하수도 보급률'], ['sewer', '고도처리인구보급률', '고도처리 보급률'], ['supply', '지방 및 광역상수도 보급률', '상수도 보급률'], ['sops', '경년관비율', '노후 하수관']].filter(function (c) { return T(c[0]); });
     var p2 = panel('보급률·운영 비교', who.map(fullName).join(' · ') + ' · %', groupCols(CM.map(function (c) { return c[2]; }), cmpSeries(who, function (n) {
       return CM.map(function (c) { return n === '강원 평균' ? avg(c[0], c[1]) : tv(c[0], n, c[1]); }); }), null, true));
     p2.style.gridColumn = '2 / span 2';
     // 연도별 추이
     var ys = {}; ['sewer', 'supply', 'wops', 'sops'].forEach(function (k) { if (T(k)) Object.keys(T(k).data).forEach(function (y) { ys[y] = 1; }); });
     ys = Object.keys(ys).sort();
-    var LN = [['sewer', '공공하수처리구역인구보급률', '하수도', '#1F6FD1'], ['supply', '지방 및 광역상수도 보급률', '상수도', '#0F8A8A'], ['wops', '요금부과율', '부과율', '#2E9C6A'], ['sops', '경년관비율', '노후관', '#D9534F']].filter(function (c) { return T(c[0]); });
+    var LN = [['sewer', '공공하수처리구역인구보급률', '하수도', '#1F6FD1'], ['supply', '지방 및 광역상수도 보급률', '상수도', '#0F8A8A'], ['sops', '경년관비율', '노후관', '#D9534F']].filter(function (c) { return T(c[0]); });
     panel('연도별 추이 · ' + fullName(SN), '최근 3년 공표값 · %', lineChart(ys.map(function (y) { return y + '년'; }), LN.map(function (c) {
       return { name: c[2], color: c[3], values: ys.map(function (y) { return (T(c[0]).data[y] || {})[SN] ? tv(c[0], SN, c[1], y) : null; }), width: 3, labels: c[0] === 'sewer' ? 'last' : true }; }), { fit: true, unit: '%', d: 1 }));
     // 시설 현황 표
-    var RW = [['wops', '1일평균생산량', '하루 평균 생산량', '㎥', 0], ['wops', '시설이용률', '정수 시설 이용률', '%', 1], ['wcost', '㎥당 원가', '수돗물 ㎥당 생산원가', '원', 0], ['wcost', '㎥당 요금', '수돗물 ㎥당 요금', '원', 0],
+    var RW = [['wcost', '㎥당 원가', '수돗물 ㎥당 생산원가', '원', 0], ['wcost', '㎥당 요금', '수돗물 ㎥당 요금', '원', 0],
       ['sops', '1일평균하수처리량', '하루 평균 하수처리', '㎥', 0], ['sops', '시설이용률', '하수처리 시설 이용률', '%', 1]].filter(function (r) { return T(r[0]); });
     var cols = isMe ? [D.me] : [SN, D.me];
     var tb = el('tbody', {}, RW.map(function (r) {
       var vals = cols.map(function (c) { return tv(r[0], c, r[1]); }), a = avg(r[0], r[1]);
       return el('tr', {}, [el('td', { text: r[2] })].concat(vals.map(function (v) { return el('td', { class: 'r', html: '<b>' + fmt(v, r[4]) + '</b> <small>' + r[3] + '</small>' }); })).concat([el('td', { class: 'r', text: a == null ? '–' : fmt(a, r[4]) })]));
     }));
-    var p4 = panel('정수·하수처리 시설 · ' + yl('wops'), '지방공기업 경영정보 · 도내 평균 = 18개 시·군 평균', el('table', { class: 'dt big' }, [el('thead', {}, [el('tr', {}, ['항목'].concat(cols.map(fullName)).concat(['도내 평균']).map(function (h, j) { return el('th', { class: j ? 'r' : '', text: h }); }))]), tb]));
+    var p4 = panel('수도요금·하수처리 · ' + yl('wops'), '지방공기업 경영정보 · 도내 평균 = 18개 시·군 평균', el('table', { class: 'dt big' }, [el('thead', {}, [el('tr', {}, ['항목'].concat(cols.map(fullName)).concat(['도내 평균']).map(function (h, j) { return el('th', { class: j ? 'r' : '', text: h }); }))]), tb]));
     p4.style.gridColumn = '3'; p4.style.gridRow = '4';
   }
   // 보건 및 의료: 아래 탭(의료 현황 / 실시간 의료기관)
