@@ -83,7 +83,7 @@
       "field": "행정",
       "name": "고령인구 비율",
       "unit": "%",
-      "dir": 0,
+      "dir": -1,
       "digits": 1,
       "source": "행안부 주민등록 인구(KOSIS 5세 단위)",
       "show": true,
