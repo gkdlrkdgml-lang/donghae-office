@@ -152,7 +152,7 @@ def main():
             say('[찾기 %s] %s' % (nm, code))
     _kk = os.environ.get('KOSIS_KEY', '')
     import sources as _s9
-    for tb in ('DT_133N_A9811', 'DT_133001N_9822', 'DT_133001N_9816', 'DT_133N_984'):
+    for tb in ():
         try:
             meta = _s9.kosis_meta({'key_env': 'KOSIS_KEY', 'meta_url': 'https://kosis.kr/openapi/statisticsData.do', 'params': {'orgId': '133', 'tblId': tb}})
             objs = {}
@@ -164,7 +164,7 @@ def main():
             say('[경제주기] %s: %s' % (tb, t[:300]))
         except Exception as e:  # noqa: BLE001
             say('[경제메타] %s 실패 %s' % (tb, e))
-    for q in ('고용률 시군', '지역별고용조사 시군', '사업체 종사자 시군구', '소상공인 시군구', '근로자 시군구 월'):
+    for q in ('등록장애인 시군구', '장애인 현황 시군구', '기초생활보장 수급자 시군구', '국민기초생활보장 수급자', '노인복지시설 시군구', '사회복지시설 시군구', '어린이집 시군구', '장애인복지시설 시군구', '한부모가족 시군구', '아동복지시설'):
         try:
             t = http_get('https://kosis.kr/openapi/statisticsSearch.do', {'method': 'getList', 'apiKey': _kk, 'searchNm': q, 'format': 'json', 'jsonVD': 'Y', 'resultCount': '20'})
             j = json.loads(t)
