@@ -229,6 +229,12 @@ def collect(state, S, C):
             ok(state, 'social', '시설 %s · 수급 %s' % (L['social'].get('fac_year'), L['social'].get('rcp_year')))
         except Exception as e:  # noqa: BLE001
             fail(state, 'social', e)
+    if stale('water', 30) or '--force-life' in sys.argv or '--force-water' in sys.argv:
+        try:
+            L['water'] = sources.water(C)
+            ok(state, 'water', ', '.join('%s %s' % (k, v['year']) for k, v in L['water']['tables'].items()) + (' · 실패 %s' % list(L['water']['errors']) if L['water']['errors'] else ''))
+        except Exception as e:  # noqa: BLE001
+            fail(state, 'water', e)
     if stale('employ', 15) or '--force-life' in sys.argv:
         try:
             L['employ'] = sources.employment(S, C)
@@ -284,6 +290,29 @@ def collect(state, S, C):
         set_ind(state, 'biz_active', {k: v.get('total') for k, v in EC['active'][y].items() if v.get('total')}, '%s년 말 가동사업자(국세청)' % y)
         set_ind(state, 'biz_new', {k: v.get('total') for k, v in EC['new'][y].items() if v.get('total')}, '%s년 신규 사업자(국세청)' % y)
         set_ind(state, 'biz_net', {k: v.get('total', 0) - (EC['closed'][y].get(k) or {}).get('total', 0) for k, v in EC['new'][y].items() if k in EC['closed'][y]}, '%s년 신규−폐업(국세청)' % y)
+    WT = (L.get('water') or {}).get('tables') or {}
+
+    def wpick(tk, prefix, label):
+        t = WT.get(tk)
+        if not t:
+            return None
+        y = t['year']
+        vals = {}
+        for reg, cell in t['data'][y].items():
+            if reg == '강원':
+                continue
+            k = next((k for k in cell if k.startswith(prefix)), None)
+            if k is not None:
+                vals[reg] = cell[k]
+        return (vals, '%s년 %s' % (y, label)) if vals else None
+    for iid, tk, pre, lab in (('sew_rate', 'sewer', '공공하수처리구역인구보급률', '하수도 보급률(환경부 하수도통계)'),
+                              ('sup_rate', 'supply', '지방 및 광역상수도 보급률', '상수도 보급률(환경부 상수도통계)'),
+                              ('lpcd', 'wops', '1인1일평균급수량', '1인 1일 급수량(지방공기업 경영정보)'),
+                              ('bill_rate', 'wops', '요금부과율', '생산량 대비 요금 부과량(지방공기업 경영정보)'),
+                              ('old_pipe', 'sops', '경년관비율', '20년 넘은 하수관 비율(지방공기업 경영정보)')):
+        r = wpick(tk, pre, lab)
+        if r:
+            set_ind(state, iid, r[0], r[1])
     TS = L.get('tasis') or {}
     if TS.get('cur'):
         tl = '%s년 %d월' % (TS['ym'][:4], int(TS['ym'][4:]))
@@ -467,7 +496,7 @@ def build(state, S, C):
     # 분야 화면이 비면 메뉴에서 숨김
     has_fin = any(i['id'] == 'fin_indep' for i in out['indicators'])
     L = out.get('life') or {}
-    need = {'social': L.get('social'), 'economy': L.get('economy'), 'welfare': L.get('hospitals'), 'traffic': L.get('ev') or L.get('cars'), 'env': L.get('air'), 'tour': L.get('visit_months')}
+    need = {'water': L.get('water'), 'social': L.get('social'), 'economy': L.get('economy'), 'welfare': L.get('hospitals'), 'traffic': L.get('ev') or L.get('cars'), 'env': L.get('air'), 'tour': L.get('visit_months')}
     out['menu'] = [m for m in out['menu'] if not (m['id'] == 'finance' and not has_fin) and not (m['id'] in ('admin', 'compare') and not out['admin'])
                    and not (m['id'] in need and not need[m['id']])]
     return out

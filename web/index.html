@@ -497,7 +497,10 @@ function startApp() {
     camera: '<rect x="5" y="14" width="38" height="26" rx="5"/><rect x="16" y="8" width="16" height="8" rx="2"/><circle cx="24" cy="27" r="8" fill="#fff"/><circle cx="24" cy="27" r="5"/>',
     suitcase: '<rect x="6" y="14" width="36" height="26" rx="4"/><path d="M17 14V9a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v5" stroke="currentColor" stroke-width="3.5" fill="none"/><path d="M6 24h36" stroke="#fff" stroke-width="2.5"/>',
     globe: '<circle cx="24" cy="24" r="18"/><path d="M6 24h36M24 6c-6 6-6 30 0 36M24 6c6 6 6 30 0 36" stroke="#fff" stroke-width="2.4" fill="none"/>',
-    trend: '<path d="M6 34 18 22l8 8 14-16" stroke="currentColor" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M33 12h9v9z"/>'
+    trend: '<path d="M6 34 18 22l8 8 14-16" stroke="currentColor" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M33 12h9v9z"/>',
+    drop: '<path d="M24 5C18 14 11 22 11 30a13 13 0 0 0 26 0c0-8-7-16-13-25z"/>',
+    factory: '<path d="M5 41V22l10 6v-6l10 6v-6l10 6V8h8v33z"/>',
+    warn: '<path d="M24 5 3 42h42z"/><rect x="22" y="17" width="4" height="13" rx="2" fill="#fff"/><circle cx="24" cy="35" r="2.4" fill="#fff"/>'
   };
   function icon(name, color, bg, size) {
     var d = el('div', { class: 'ico', style: 'background:' + bg + ';color:' + color + (size ? ';width:' + size + 'px;height:' + size + 'px' : '') });
@@ -2057,6 +2060,58 @@ function startApp() {
       return [iv('soc_rcp', n), iv('soc_dis', n), ev(n)]; }), null, true));
     p4.style.gridColumn = '2 / span 2';
   }
+  // 상하수도: 환경부 상·하수도 통계 + 행안부 지방공기업 경영정보(KOSIS), 강원 18개 시·군 비교
+  var watMet = 'sew_rate';
+  function screenWater() {
+    var WT = ((D.life || {}).water || {}).tables || {};
+    function T(tk) { return WT[tk] || null; }
+    function tv(tk, reg, pre, yr) { var t = T(tk); if (!t) return null; var c = ((t.data || {})[yr || t.year] || {})[reg]; if (!c) return null; var k = Object.keys(c).filter(function (x) { return x.indexOf(pre) === 0; })[0]; return k == null ? null : c[k]; }
+    function avg(tk, pre) { var t = T(tk); if (!t) return null; var c = t.data[t.year] || {}, s = 0, n = 0; Object.keys(c).forEach(function (r) { if (r === '강원') return; var v = tv(tk, r, pre); if (v != null) { s += v; n++; } }); return n ? s / n : null; }
+    var regs = {}; Object.keys(WT).forEach(function (k) { Object.keys(WT[k].data[WT[k].year] || {}).forEach(function (r) { regs[r] = 1; }); });
+    var SN = regs[regName()] ? regName() : D.me, isMe = SN === D.me;
+    function yl(tk) { var t = T(tk); return t ? t.year + '년' : ''; }
+    lifeTitle(fullName(SN) + ' 상하수도', '하수도: 환경부 하수도통계(' + yl('sewer') + ') · 상수도: 환경부 상수도통계·행안부 지방공기업 경영정보(' + yl('wops') + ') · 해마다 공표되는 최신값 자동 갱신' + selHint());
+    view.style.gridTemplateRows = '44px auto minmax(0, 1fr) minmax(0, 1fr)';
+    function vsMe(tk, pre, d, u) { if (isMe) return null; var a = tv(tk, SN, pre), b = tv(tk, D.me, pre); if (a == null || b == null) return null; var x = a - b; return [D.me + '보다 ' + (x > 0 ? '+' : '') + fmt(x, d) + u, '']; }
+    function gw(tk, pre, d, u) { var a = avg(tk, pre); return a == null ? null : ['도내 평균 ' + fmt(a, d) + u, 'navy']; }
+    function prev(tk, pre, d, u) { var t = T(tk); if (!t) return null; var ys = Object.keys(t.data).sort(), py = ys[ys.length - 2]; if (!py) return null; var a = tv(tk, SN, pre), b = tv(tk, SN, pre, py); if (a == null || b == null) return null; var x = a - b; return [py + '년보다 ' + (x > 0 ? '+' : '') + fmt(x, d) + u, '']; }
+    cardsRow([
+      T('sewer') ? { l: '하수도 보급률', sub: yl('sewer') + ' · 공공하수처리구역', ic: 'drop', col: '#1F6FD1', bg: '#E4EEFB', v: fmt(tv('sewer', SN, '공공하수처리구역인구보급률'), 1), u: '%', chips: [rankChip(indFor(ind('sew_rate'), SN)), vsMe('sewer', '공공하수처리구역인구보급률', 1, '%p') || gw('sewer', '공공하수처리구역인구보급률', 1, '%')] } : null,
+      T('supply') ? { l: '상수도 보급률', sub: yl('supply') + ' · 지방·광역상수도', ic: 'drop', col: '#0F8A8A', bg: '#DDF3F2', v: fmt(tv('supply', SN, '지방 및 광역상수도 보급률'), 1), u: '%', chips: [rankChip(indFor(ind('sup_rate'), SN)), vsMe('supply', '지방 및 광역상수도 보급률', 1, '%p') || gw('supply', '지방 및 광역상수도 보급률', 1, '%')] } : null,
+      T('wops') ? { l: '하루 수돗물 생산', sub: yl('wops') + ' · 하루 평균', ic: 'factory', col: '#7A4FC4', bg: '#EFE9FB', v: fmt(tv('wops', SN, '1일평균생산량'), 0), u: '㎥', chips: [['1인 1일 ' + fmt(tv('wops', SN, '1인1일평균급수량'), 0) + 'ℓ', 'violet'], ['시설 이용률 ' + fmt(tv('wops', SN, '시설이용률'), 1) + '%', '']] } : null,
+      T('wops') ? { l: '요금 부과율', sub: yl('wops') + ' · 생산량 중 요금 매긴 양', ic: 'coin', col: '#2E8B57', bg: '#E2F3E9', v: fmt(tv('wops', SN, '요금부과율'), 1), u: '%', chips: [rankChip(indFor(ind('bill_rate'), SN)), prev('wops', '요금부과율', 1, '%p') || gw('wops', '요금부과율', 1, '%')] } : null,
+      T('sops') ? { l: '노후 하수관 비율', sub: yl('sops') + ' · 20년 넘은 관', ic: 'warn', col: '#D9534F', bg: '#FDE7E4', v: fmt(tv('sops', SN, '경년관비율'), 1), u: '%', chips: [rankChip(indFor(ind('old_pipe'), SN)), ['관로 ' + fmt(tv('sops', SN, '총관로길이'), 0) + 'km', '']] } : null
+    ]);
+    var MET = [['sew_rate', '하수도 보급률'], ['sup_rate', '상수도 보급률'], ['bill_rate', '요금 부과율'], ['old_pipe', '노후 하수관'], ['lpcd', '1인 급수량']].filter(function (m) { return ind(m[0]); });
+    if (!MET.some(function (m) { return m[0] === watMet; })) watMet = MET[0] && MET[0][0];
+    var I0 = ind(watMet), I = indFor(I0, SN);
+    var sw = el('div', { class: 'chips', style: 'flex-wrap:nowrap;gap:6px;margin-bottom:6px' }, MET.map(function (m) {
+      return el('button', { type: 'button', class: 'chip', style: 'cursor:pointer;border:0;font-weight:800' + (m[0] === watMet ? ';background:#1B3A6B;color:#fff' : ''), text: m[1], onclick: function () { watMet = m[0]; render(); } }); }));
+    var p1 = panel((I0 ? I0.name : '') + ' · 강원 18개 시·군', (I0 ? I0.basis + ' · ' + I0.unit : '') + ' · 누르면 그 지역', [sw, I ? rankList(I, regPick, regSel) : el('div', { class: 'empty', text: '자료 없음' })]);
+    p1.style.gridRow = '3 / span 2';
+    // 비교 막대
+    var who = isMe ? [D.me, '강원 평균'] : [SN, D.me, '강원 평균'];
+    var CM = [['sewer', '공공하수처리구역인구보급률', '하수도 보급률'], ['sewer', '고도처리인구보급률', '고도처리 보급률'], ['supply', '지방 및 광역상수도 보급률', '상수도 보급률'], ['wops', '요금부과율', '요금 부과율'], ['sops', '경년관비율', '노후 하수관']].filter(function (c) { return T(c[0]); });
+    var p2 = panel('보급률·운영 비교', who.map(fullName).join(' · ') + ' · %', groupCols(CM.map(function (c) { return c[2]; }), cmpSeries(who, function (n) {
+      return CM.map(function (c) { return n === '강원 평균' ? avg(c[0], c[1]) : tv(c[0], n, c[1]); }); }), null, true));
+    p2.style.gridColumn = '2 / span 2';
+    // 연도별 추이
+    var ys = {}; ['sewer', 'supply', 'wops', 'sops'].forEach(function (k) { if (T(k)) Object.keys(T(k).data).forEach(function (y) { ys[y] = 1; }); });
+    ys = Object.keys(ys).sort();
+    var LN = [['sewer', '공공하수처리구역인구보급률', '하수도 보급률', '#1F6FD1'], ['supply', '지방 및 광역상수도 보급률', '상수도 보급률', '#0F8A8A'], ['wops', '요금부과율', '요금 부과율', '#2E9C6A'], ['sops', '경년관비율', '노후 하수관', '#D9534F']].filter(function (c) { return T(c[0]); });
+    panel('연도별 추이 · ' + fullName(SN), '최근 3년 공표값 · %', lineChart(ys.map(function (y) { return y + '년'; }), LN.map(function (c) {
+      return { name: c[2], color: c[3], values: ys.map(function (y) { return (T(c[0]).data[y] || {})[SN] ? tv(c[0], SN, c[1], y) : null; }), width: 3, labels: true }; }), { fit: true, unit: '%' }));
+    // 시설 현황 표
+    var RW = [['wops', '시설용량', '정수 시설용량', '㎥/일', 0], ['wops', '1일평균생산량', '하루 평균 생산량', '㎥', 0], ['wops', '1일최대생산량', '하루 최대 생산량', '㎥', 0], ['wops', '시설이용률', '정수 시설 이용률', '%', 1],
+      ['sops', '하수처리시설용량', '하수처리 시설용량', '㎥/일', 0], ['sops', '1일평균하수처리량', '하루 평균 하수처리', '㎥', 0], ['sops', '시설이용률', '하수처리 시설 이용률', '%', 1], ['sops', '총관로길이', '하수관 총길이', 'km', 0]].filter(function (r) { return T(r[0]); });
+    var cols = isMe ? [D.me] : [SN, D.me];
+    var tb = el('tbody', {}, RW.map(function (r) {
+      var vals = cols.map(function (c) { return tv(r[0], c, r[1]); }), a = avg(r[0], r[1]);
+      return el('tr', {}, [el('td', { text: r[2] })].concat(vals.map(function (v) { return el('td', { class: 'r', html: '<b>' + fmt(v, r[4]) + '</b> <small>' + r[3] + '</small>' }); })).concat([el('td', { class: 'r', text: a == null ? '–' : fmt(a, r[4]) })]));
+    }));
+    var p4 = panel('정수·하수처리 시설 · ' + yl('wops'), '지방공기업 경영정보 · 도내 평균 = 18개 시·군 평균', el('table', { class: 'dt big' }, [el('thead', {}, [el('tr', {}, ['항목'].concat(cols.map(fullName)).concat(['도내 평균']).map(function (h, j) { return el('th', { class: j ? 'r' : '', text: h }); }))]), tb]));
+    p4.style.gridColumn = '3'; p4.style.gridRow = '4';
+  }
   // 보건 및 의료: 아래 탭(의료 현황 / 실시간 의료기관)
   var welTab = 'now';
   function screenMedLive() {
@@ -2069,7 +2124,7 @@ function startApp() {
   function screenWelfareTabs() {
     screenWelfare();
   }
-  var SCREENS = { main: screenMain, admin: screenAdminTabs, welfare: screenWelfareTabs, social: screenSocial, traffic: screenTrafficTabs, env: screenEnv, tour: screenTourTabs, economy: screenEconomyTabs, finance: screenFinance, frame: screenFrame };
+  var SCREENS = { main: screenMain, admin: screenAdminTabs, welfare: screenWelfareTabs, social: screenSocial, traffic: screenTrafficTabs, env: screenEnv, water: screenWater, tour: screenTourTabs, economy: screenEconomyTabs, finance: screenFinance, frame: screenFrame };
   function render() {
     view.textContent = '';
     view.className = '';

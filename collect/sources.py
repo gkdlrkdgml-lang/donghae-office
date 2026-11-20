@@ -1048,3 +1048,70 @@ def licenses(C, code='4211000'):
     if not any(v['total'] for v in res['kinds'].values()):
         raise RuntimeError('인허가 자료 없음')
     return res
+
+
+WATER_TABLES = (  # (키, 기관, 표, 설명)
+    ('sewer', '106', 'DT_106N_07_0100050', '하수도 보급현황(환경부 하수도통계)'),
+    ('supply', '106', 'DT_106N_06_0100043', '상수도 보급현황(환경부 상수도통계)'),
+    ('wops', '110', 'DT_110020_A006', '상수도 사업운영현황(지방공기업 경영정보)'),
+    ('sops', '110', 'DT_110020_B006', '하수도 사업운영현황(지방공기업 경영정보)'),
+    ('wfee', '110', 'DT_110020_A004', '상수도 업종별 요금현황(지방공기업 경영정보)'),
+    ('wcost', '110', 'DT_110020_A005', '상수도 총괄원가(지방공기업 경영정보)'),
+    ('sfee', '110', 'DT_110020_B004', '하수도 업종별 요금현황(지방공기업 경영정보)'),
+)
+
+
+def water(C):
+    """상하수도: 강원 18개 시·군의 최근 3년 값(항목 이름 그대로). 표마다 실패해도 나머지는 받습니다."""
+    out = {'at': now().strftime('%Y-%m-%d'), 'tables': {}, 'errors': {}}
+    for key, org, tbl, desc in WATER_TABLES:
+        try:
+            meta = kosis_meta({'key_env': 'KOSIS_KEY', 'meta_url': 'https://kosis.kr/openapi/statisticsData.do', 'params': {'orgId': org, 'tblId': tbl}})
+            od = {}
+            for m in meta:
+                od.setdefault(m.get('OBJ_ID'), []).append(m)
+            objs = list(od.items())
+            params = {'method': 'getList', 'format': 'json', 'jsonVD': 'Y', 'orgId': org, 'tblId': tbl, 'prdSe': 'Y', 'newEstPrdCnt': '3', 'itmId': 'ALL'}
+            i = 0
+            for oid, items in objs:
+                if oid == 'ITEM':
+                    continue
+                i += 1
+                gw = [x for x in items if str(x.get('ITM_NM', '')).strip().startswith('강원')]
+                if gw and any('동해' in str(x.get('ITM_NM')) for x in items):
+                    g = gw[0].get('ITM_ID')
+                    kids = [x.get('ITM_ID') for x in items if x.get('UP_ITM_ID') == g and match_region(str(x.get('ITM_NM')), C['regions'])]
+                    params['objL%d' % i] = '+'.join([g] + kids) + '+'
+                else:
+                    params['objL%d' % i] = 'ALL'
+            src = {'key_env': 'KOSIS_KEY', 'key_param': 'apiKey', 'url': 'https://kosis.kr/openapi/Param/statisticsParameterData.do', 'params': params}
+            rows = _call(src, {}, 'water_' + key)
+            data, units = {}, {}
+            for r in rows:
+                nm = str(r.get('C1_NM', '')).strip()
+                reg = '강원' if nm.startswith('강원') else match_region(nm, C['regions'])
+                if not reg:
+                    continue
+                parts = [str(r.get(c, '')).strip() for c in ('C2_NM', 'C3_NM', 'C4_NM') if r.get(c)]
+                ik = ' · '.join(parts) if parts else str(r.get('ITM_NM', '')).strip()
+                if org == '110' and parts and r.get('ITM_NM') and len(objs) > 2:
+                    ik = ik + ' · ' + str(r.get('ITM_NM')).strip()
+                v = to_num(r.get('DT'))
+                if v is None:
+                    continue
+                cell = data.setdefault(str(r.get('PRD_DE')), {}).setdefault(reg, {})
+                k2 = ik
+                n = 2
+                while k2 in cell:   # 같은 이름(합계·면적 등)이 여러 번 나오면 #2, #3
+                    k2 = '%s#%d' % (ik, n)
+                    n += 1
+                cell[k2] = v
+                units[k2] = str(r.get('UNIT_NM', '') or '').strip()
+            if not data:
+                raise RuntimeError('응답이 비었음')
+            out['tables'][key] = {'desc': desc, 'tbl': tbl, 'year': max(data), 'data': data, 'units': units}
+        except Exception as e:  # noqa: BLE001
+            out['errors'][key] = str(e)[:300]
+    if not out['tables']:
+        raise RuntimeError('상하수도 표를 하나도 받지 못함: %s' % out['errors'])
+    return out
