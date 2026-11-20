@@ -304,11 +304,12 @@ def collect(state, S, C):
         set_ind(state, 'biz_net', {k: v.get('total', 0) - (EC['closed'][y].get(k) or {}).get('total', 0) for k, v in EC['new'][y].items() if k in EC['closed'][y]}, '%s년 신규−폐업(국세청)' % y)
     AT = L.get('attr') or {}
     if AT.get('months'):
-        ly = AT['latest']
+        full = [ym for ym, m in AT['months'].items() if len(m) >= 17]   # 18개 시·군이 다 올라온 달까지만 비교
+        ly = max(full) if full else AT['latest']
         yr = ly[:4]
         tot = {}
         for ym, m in AT['months'].items():
-            if ym[:4] == yr:
+            if ym[:4] == yr and ym <= ly:
                 for g, sp in m.items():
                     tot[g] = tot.get(g, 0) + sum(v[0] for v in sp.values())
         set_ind(state, 'attr_visit', {k: v / 10000 for k, v in tot.items()}, '%s년 1~%d월 유료관광지 입장객(관광자원통계)' % (yr, int(ly[4:])))

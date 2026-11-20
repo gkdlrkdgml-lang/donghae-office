@@ -1460,6 +1460,8 @@ function startApp() {
     var A = (D.life || {}).attr || {}, MO = A.months || {}, yms = Object.keys(MO).sort(), ly = A.latest || yms[yms.length - 1];
     var regs = {}; yms.forEach(function (ym) { Object.keys(MO[ym]).forEach(function (g) { regs[g] = 1; }); });
     var SN = regs[regName()] ? regName() : D.me, isMe = SN === D.me;
+    var mine = yms.filter(function (ym) { return MO[ym][SN] && Object.keys(MO[ym][SN]).length; });
+    if (mine.length) ly = mine[mine.length - 1];
     var Y = ly.slice(0, 4), LM = Number(ly.slice(4)), PY = String(Number(Y) - 1);
     function spots(ym) { return ((MO[ym] || {})[SN]) || {}; }
     function tot(ym, nm) { var sp = spots(ym); if (nm) return sp[nm] ? sp[nm][0] : null; var t = 0, n = 0; Object.keys(sp).forEach(function (k) { t += sp[k][0]; n++; }); return n ? t : null; }
@@ -1469,7 +1471,7 @@ function startApp() {
     // 동해 축제 달
     var FM = {};
     if (isMe) ((((D.life || {}).festivals || {}).items) || []).forEach(function (f) { if (!f.start) return; var a = f.start.slice(0, 6), b = (f.end || f.start).slice(0, 6); [a, b].forEach(function (ym) { (FM[ym] = FM[ym] || []).indexOf(f.title) < 0 && FM[ym].push(f.title); }); });
-    lifeTitle(fullName(SN) + ' 유료관광지 입장객', '한국문화관광연구원 관광자원통계 · 최신 ' + Y + '년 ' + LM + '월 · 새 달이 올라오면 자동 반영' + selHint());
+    lifeTitle(fullName(SN) + ' 유료관광지 입장객', '한국문화관광연구원 관광자원통계 · ' + fullName(SN) + ' 최신 ' + Y + '년 ' + LM + '월(전국 최신 ' + A.latest.slice(0, 4) + '년 ' + Number(A.latest.slice(4)) + '월) · 시·군이 올리는 대로 자동 반영' + selHint());
     view.style.gridTemplateColumns = 'minmax(0, 0.85fr) minmax(0, 1.3fr)';
     view.style.gridTemplateRows = '44px auto minmax(0, 1fr) minmax(0, 1fr)';
     var cy = sumY(Y, LM), py = sumY(PY, LM), lm = tot(ly), plm = tot(PY + ly.slice(4));
@@ -1483,7 +1485,7 @@ function startApp() {
       { l: '외국인 입장객', sub: Y + '년 1~' + LM + '월', ic: 'globe', col: '#7A4FC4', bg: '#EFE9FB', v: man(fo), u: '명', chips: [cy ? ['전체의 ' + fmt(fo / cy * 100, 1) + '%', 'violet'] : null] }
     ]);
     var I0 = ind('attr_visit'), I = I0 ? indFor(I0, SN) : null;
-    var p1 = panel('올해 누적 입장객 · 강원 18개 시·군', (I0 ? I0.basis : '') + ' · 만명 · 누르면 그 지역', I ? rankList(I, regPick, regSel) : el('div', { class: 'empty', text: '자료 없음' }));
+    var p1 = panel('입장객 · 강원 18개 시·군', (I0 ? I0.basis : '') + ' · 만명 · 누르면 그 지역', I ? rankList(I, regPick, regSel) : el('div', { class: 'empty', text: '자료 없음' }));
     p1.style.gridRow = '3 / span 2';
     // 해마다 월별
     var lab = [], ys = [String(Number(Y) - 2), PY, Y], cols = ['#B7C3D3', '#6C8BB8', '#1F6FD1'];
