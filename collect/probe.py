@@ -152,19 +152,19 @@ def main():
             say('[찾기 %s] %s' % (nm, code))
     _kk = os.environ.get('KOSIS_KEY', '')
     import sources as _s9
-    for tb in ():
+    for org, tb in (('101', 'DT_6BD1132'), ('117', 'DT_11761_N009'), ('110', 'DT_110001_A045'), ('110', 'DT_110001_A043'), ('101', 'DT_1YL20961')):
         try:
-            meta = _s9.kosis_meta({'key_env': 'KOSIS_KEY', 'meta_url': 'https://kosis.kr/openapi/statisticsData.do', 'params': {'orgId': '133', 'tblId': tb}})
+            meta = _s9.kosis_meta({'key_env': 'KOSIS_KEY', 'meta_url': 'https://kosis.kr/openapi/statisticsData.do', 'params': {'orgId': org, 'tblId': tb}})
             objs = {}
             for m in meta:
                 objs.setdefault(m.get('OBJ_ID'), []).append(m)
-            say('[경제메타] %s: %s' % (tb, ' / '.join('%s(%s개, %s): %s' % (k, len(v), v[0].get('OBJ_NM'), ', '.join('%s=%s' % (x.get('ITM_ID'), x.get('ITM_NM')) for x in v[:12])) for k, v in objs.items())))
+            say('[경제메타] %s: %s' % (tb, ' / '.join('%s(%s개, %s): %s' % (k, len(v), v[0].get('OBJ_NM'), ', '.join('%s=%s' % (x.get('ITM_ID'), x.get('ITM_NM')) for x in v[:30])) for k, v in objs.items())))
             say('[경제메타] %s 동해: %s' % (tb, ', '.join('%s:%s=%s(상위 %s)' % (x.get('OBJ_ID'), x.get('ITM_ID'), x.get('ITM_NM'), x.get('UP_ITM_ID')) for x in meta if '동해' in str(x.get('ITM_NM')) or '강원' in str(x.get('ITM_NM')))))
-            t = http_get('https://kosis.kr/openapi/statisticsData.do', {'method': 'getMeta', 'type': 'PRD', 'orgId': '133', 'tblId': tb, 'format': 'json', 'jsonVD': 'Y', 'apiKey': _kk})
+            t = http_get('https://kosis.kr/openapi/statisticsData.do', {'method': 'getMeta', 'type': 'PRD', 'orgId': org, 'tblId': tb, 'format': 'json', 'jsonVD': 'Y', 'apiKey': _kk})
             say('[경제주기] %s: %s' % (tb, t[:300]))
         except Exception as e:  # noqa: BLE001
             say('[경제메타] %s 실패 %s' % (tb, e))
-    for q in ('등록장애인 시군구', '장애인 현황 시군구', '기초생활보장 수급자 시군구', '국민기초생활보장 수급자', '노인복지시설 시군구', '사회복지시설 시군구', '어린이집 시군구', '장애인복지시설 시군구', '한부모가족 시군구', '아동복지시설'):
+    for q in ():
         try:
             t = http_get('https://kosis.kr/openapi/statisticsSearch.do', {'method': 'getList', 'apiKey': _kk, 'searchNm': q, 'format': 'json', 'jsonVD': 'Y', 'resultCount': '20'})
             j = json.loads(t)
