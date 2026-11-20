@@ -146,14 +146,15 @@ def collect(state, S, C):
     def per(vals, mult):
         return {k: v / pops[k] * mult for k, v in vals.items() if pops.get(k)}
     for key, fn, days in (('hospitals', life.hospitals, 6), ('ev', life.ev_chargers, 6)):
-        if stale(key, days) or '--force-life' in sys.argv:
+        nopharm = key == 'hospitals' and not any('약국' in (v.get('kinds') or {}) for v in ((L.get('hospitals') or {}).get('regions') or {}).values())
+        if stale(key, days) or nopharm or '--force-life' in sys.argv:
             try:
                 L[key] = fn(C)
                 ok(state, key, '%d개 시·군' % len(L[key]['regions']))
             except Exception as e:  # noqa: BLE001
                 fail(state, key, e)
     if L.get('hospitals'):
-        set_ind(state, 'medical', {k: v['total'] for k, v in L['hospitals']['regions'].items()}, L['hospitals']['at'] + ' 기준 요양기관(약국 제외)')
+        set_ind(state, 'medical', {k: v['total'] for k, v in L['hospitals']['regions'].items()}, L['hospitals']['at'] + ' 기준 요양기관(약국 포함)')
     if L.get('ev'):
         set_ind(state, 'ev', {k: v['total'] for k, v in L['ev']['regions'].items()}, L['ev']['at'] + ' 기준 충전기')
     try:

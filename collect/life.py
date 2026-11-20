@@ -38,6 +38,18 @@ def hospitals(C):
                          'lat': to_num(r.get('YPos')), 'lng': to_num(r.get('XPos'))})
     if len(out) < 15:
         raise RuntimeError('의료기관 응답에서 강원 시·군을 다 찾지 못함(%d)' % len(out))
+    # 약국(심평원 약국정보서비스) — 실패하면 약국 없이 진행
+    try:
+        prow = _call(_src('https://apis.data.go.kr/B551182/pharmacyInfoService/getParmacyBasisList', {'sidoCd': '320000', 'numOfRows': '1000', 'pageNo': '1', '_type': 'json'}), {}, 'pharmacy')
+        for r in prow:
+            name = match_region(r.get('sgguCdNm'), C['regions'])
+            if not name or name not in out:
+                continue
+            d = out[name]
+            d['total'] += 1
+            d['kinds']['약국'] = d['kinds'].get('약국', 0) + 1
+    except Exception as e:  # noqa: BLE001
+        log('약국 실패: %s' % e)
     mine.sort(key=lambda x: -x['doctors'])
     return {'regions': out, 'mine': mine[:40], 'at': now().strftime('%Y-%m-%d')}
 
