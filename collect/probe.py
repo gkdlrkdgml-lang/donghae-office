@@ -228,7 +228,7 @@ def main():
             say('[KOSIS검색] %s 실패 %s' % (q, e))
     _dk = os.environ.get('DATA_GO_KR_KEY', '').strip()
     import re as _re
-    for pk, base in (('15134145', 'https://apis.data.go.kr/B500001/waternow/twdClwr'), ('15134425', 'https://apis.data.go.kr/B500001/waternow/twdOrgwtWdr')):
+    for pk, base in (('15134145', 'https://apis.data.go.kr/B500001/waternow/twdClwr'), ('15134425', 'https://apis.data.go.kr/B500001/waternow/twdOrgwtWdr'), ('15158788', '')):
         ops = []
         try:
             h = http_get('https://www.data.go.kr/data/%s/openapi.do' % pk, {}, tries=1)
@@ -237,6 +237,9 @@ def main():
             if mj:
                 try:
                     sj = json.loads(mj.group(1))
+                    if not base:
+                        base = 'https://' + str(sj.get('host', 'apis.data.go.kr')) + str(sj.get('basePath', ''))
+                        say('[물API] %s 기본주소 %s' % (pk, base))
                     for pth, v in (sj.get('paths') or {}).items():
                         ops.append(pth.strip('/'))
                         for meth, d in (v.items() if isinstance(v, dict) else []):
@@ -252,7 +255,7 @@ def main():
             say('[물API] %s 페이지 실패 %s' % (pk, e))
         for op in (ops or ['']):
             try:
-                t = http_get(base + ('/' + op if op else ''), {'serviceKey': _dk, 'pageNo': '1', 'numOfRows': '5', '_type': 'json', 'wtwkBsnm': '동해시', 'stMt': '08', 'edMt': '10'}, tries=1)
+                t = http_get(base + ('/' + op if op else ''), ({'serviceKey': _dk, 'pageNo': '1', 'numOfRows': '5', '_type': 'json', 'YM': '202609', 'SIDO': '강원특별자치도', 'GUNGU': '동해시'} if pk == '15158788' else {'serviceKey': _dk, 'pageNo': '1', 'numOfRows': '5', '_type': 'json', 'stMt': '08', 'edMt': '10'}), tries=1)
                 say('[물API] %s %s → %s' % (pk, op, t[:1500].replace(_dk, '***')))
             except Exception as e:  # noqa: BLE001
                 say('[물API] %s %s 실패 %s' % (pk, op, str(e)[:400]))
