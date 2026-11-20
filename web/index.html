@@ -2080,7 +2080,7 @@ function startApp() {
       T('supply') ? { l: '상수도 보급률', sub: yl('supply'), ic: 'drop', col: '#0F8A8A', bg: '#DDF3F2', v: fmt(tv('supply', SN, '지방 및 광역상수도 보급률'), 1), u: '%', chips: [rankChip(indFor(ind('sup_rate'), SN)), vsMe('supply', '지방 및 광역상수도 보급률', 1, '%p') || gw('supply', '지방 및 광역상수도 보급률', 1, '%')] } : null,
       T('wops') ? { l: '하루 수돗물 생산', sub: yl('wops') + ' · 하루 평균', ic: 'factory', col: '#7A4FC4', bg: '#EFE9FB', v: fmt(tv('wops', SN, '1일평균생산량'), 0), u: '㎥', chips: [['1인 1일 ' + fmt(tv('wops', SN, '1인1일평균급수량'), 0) + 'ℓ', 'violet'], ['시설 이용률 ' + fmt(tv('wops', SN, '시설이용률'), 1) + '%', '']] } : null,
       T('wops') ? { l: '요금 부과율', sub: yl('wops'), ic: 'coin', col: '#2E8B57', bg: '#E2F3E9', v: fmt(tv('wops', SN, '요금부과율'), 1), u: '%', chips: [rankChip(indFor(ind('bill_rate'), SN)), prev('wops', '요금부과율', 1, '%p') || gw('wops', '요금부과율', 1, '%')] } : null,
-      T('sops') ? { l: '노후 하수관 비율', sub: yl('sops') + ' · 20년 이상', ic: 'warn', col: '#D9534F', bg: '#FDE7E4', v: fmt(tv('sops', SN, '경년관비율'), 1), u: '%', chips: [rankChip(indFor(ind('old_pipe'), SN)), ['하수도 공기업 ' + ind('old_pipe').n + '곳 비교', '']] } : null,
+      T('sops') ? { l: '노후 하수관 비율', sub: yl('sops'), ic: 'warn', col: '#D9534F', bg: '#FDE7E4', v: fmt(tv('sops', SN, '경년관비율'), 1), u: '%', chips: [rankChip(indFor(ind('old_pipe'), SN)), ['하수도 공기업 ' + ind('old_pipe').n + '곳 비교', '']] } : null,
       T('wfee') ? { l: '수도요금', sub: yl('wfee') + ' · ㎥당 평균', ic: 'coin', col: '#C0602B', bg: '#FDEBDD', v: fmt(tv('wfee', SN, '전체 · ㎥당요금'), 0), u: '원', chips: [['가정용 ' + fmt(tv('wfee', SN, '가정용 · ㎥당요금'), 0) + '원', 'violet'], T('wcost') ? ['현실화율 ' + fmt(tv('wcost', SN, '요금현실화율'), 1) + '%', ''] : null] } : null
     ]);
     var MET = [['sew_rate', '하수도'], ['sup_rate', '상수도'], ['bill_rate', '부과율'], ['w_price', '수도요금'], ['w_real', '현실화율'], ['lpcd', '1인 급수량'], ['old_pipe', '노후관']].filter(function (m) { return ind(m[0]); });
@@ -2099,7 +2099,7 @@ function startApp() {
     // 연도별 추이
     var ys = {}; ['sewer', 'supply', 'wops', 'sops'].forEach(function (k) { if (T(k)) Object.keys(T(k).data).forEach(function (y) { ys[y] = 1; }); });
     ys = Object.keys(ys).sort();
-    var LN = [['sewer', '공공하수처리구역인구보급률', '하수도 보급률', '#1F6FD1'], ['supply', '지방 및 광역상수도 보급률', '상수도 보급률', '#0F8A8A'], ['wops', '요금부과율', '요금 부과율', '#2E9C6A'], ['sops', '경년관비율', '노후 하수관', '#D9534F']].filter(function (c) { return T(c[0]); });
+    var LN = [['sewer', '공공하수처리구역인구보급률', '하수도', '#1F6FD1'], ['supply', '지방 및 광역상수도 보급률', '상수도', '#0F8A8A'], ['wops', '요금부과율', '부과율', '#2E9C6A'], ['sops', '경년관비율', '노후관', '#D9534F']].filter(function (c) { return T(c[0]); });
     panel('연도별 추이 · ' + fullName(SN), '최근 3년 공표값 · %', lineChart(ys.map(function (y) { return y + '년'; }), LN.map(function (c) {
       return { name: c[2], color: c[3], values: ys.map(function (y) { return (T(c[0]).data[y] || {})[SN] ? tv(c[0], SN, c[1], y) : null; }), width: 3, labels: c[0] === 'sewer' ? 'last' : true }; }), { fit: true, unit: '%', d: 1 }));
     // 시설 현황 표
