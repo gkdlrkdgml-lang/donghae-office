@@ -1041,13 +1041,13 @@ function startApp() {
     var k = m.kinds || {}, sum = function (keys) { return keys.reduce(function (t, x) { return t + (k[x] || 0); }, 0); };
     var big = sum(['상급종합', '종합병원', '병원', '요양병원', '정신병원']), clinic = sum(['의원']), dent = sum(['치과병원', '치과의원']), orient = sum(['한방병원', '한의원']);
     cardsRow([
-      { l: '의료기관', sub: '약국 제외', ic: 'hospital', v: fmt(m.total, 0), u: '곳', chips: [rankChip(I), I && I.me ? ['1만명당 ' + fmt(I.me.value, 1) + '곳', 'violet'] : null] },
-      { l: '의사', ic: 'doctor', col: '#1F6FD1', bg: '#E4EEFB', v: fmt(m.doctors, 0), u: '명', chips: [D.admin && D.admin.regions[SN] ? ['1만명당 ' + fmt(m.doctors / D.admin.regions[SN].total * 10000, 1) + '명', 'navy'] : null] },
+      { l: '의료기관', sub: '약국 제외', ic: 'hospital', v: fmt(m.total, 0), u: '곳', chips: [rankChip(I), null] },
+      { l: '의사', ic: 'doctor', col: '#1F6FD1', bg: '#E4EEFB', v: fmt(m.doctors, 0), u: '명', chips: [null] },
       { l: '병원급 이상', sub: '종합·병원·요양', ic: 'hospital', col: '#2E8B57', bg: '#E2F3E9', v: fmt(big, 0), u: '곳' },
       { l: '의원', ic: 'clinic', col: '#7A4FC4', bg: '#EFE9FB', v: fmt(clinic, 0), u: '곳' },
       { l: '치과·한방', ic: 'clinic', col: '#C0602B', bg: '#FDEBDD', v: fmt(dent + orient, 0), u: '곳', chips: [['치과 ' + dent, 'violet'], ['한방 ' + orient, 'violet']] }
     ]);
-    panel('인구 1만명당 의료기관', '강원 18개 시·군 · 곳 · 누르면 그 지역', I ? rankList(I, pick, isMe ? null : SN) : el('div', { class: 'empty', text: '자료 없음' }));
+    panel('의료기관 수', '강원 18개 시·군 · 곳 · 누르면 그 지역', I ? rankList(I, pick, isMe ? null : SN) : el('div', { class: 'empty', text: '자료 없음' }));
     var kinds = Object.keys(k).map(function (x) { return [x, k[x]]; }).sort(function (a, b) { return b[1] - a[1]; });
     var pal = ['#1F6FD1', '#2E8B57', '#E8A867', '#7A4FC4', '#D6457A', '#8FB2E0', '#5DB88E', '#B8C4D4', '#C0602B', '#556274'];
     panel('종별 구성 · ' + full, '곳', donut(kinds.map(function (x, i) { return [x[0] + ' ' + x[1], x[1], pal[i % pal.length]]; }), fmt(m.total, 0) + '곳', '의료기관'));
@@ -1102,17 +1102,17 @@ function startApp() {
     var enfTot = e['합계'], enfMe = em['합계'];
     lifeTitle(fullName(SN) + ' 교통안전·도로', (T.acc ? T.acc.year + '년 교통사고(행안부)' : '') + (T.enf ? ' · ' + T.enf.year + '년 교통단속(경찰서)' : '') + (T.road ? ' · ' + T.road.year + '년 도로' : '') + selHint());
     cardsRow([
-      { l: '교통사고', sub: T.acc ? T.acc.year + '년' : '', ic: 'car', v: fmt(a.A1, 0), u: '건', chips: [rankChip(I), I && I.me ? ['10만명당 ' + fmt(I.me.value, 0) + '건', 'violet'] : null] },
-      { l: '사망자', ic: 'heart', col: '#D9534F', bg: '#FDE7E4', v: fmt(a.A2, 0), u: '명', chips: [a.A4 != null ? ['10만명당 ' + fmt(a.A4, 1), 'bad'] : null, meChip(am.A2, '명')] },
-      { l: '부상자', ic: 'hospital', col: '#C0602B', bg: '#FDEBDD', v: fmt(a.A5, 0), u: '명', chips: [a.A7 != null ? ['10만명당 ' + fmt(a.A7, 0), 'violet'] : null, meChip(am.A5, '명')] },
+      { l: '교통사고', sub: T.acc ? T.acc.year + '년' : '', ic: 'car', v: fmt(a.A1, 0), u: '건', chips: [rankChip(I), null] },
+      { l: '사망자', ic: 'heart', col: '#D9534F', bg: '#FDE7E4', v: fmt(a.A2, 0), u: '명', chips: [meChip(am.A2, '명')] },
+      { l: '부상자', ic: 'hospital', col: '#C0602B', bg: '#FDEBDD', v: fmt(a.A5, 0), u: '명', chips: [meChip(am.A5, '명')] },
       { l: '교통단속', sub: (T.enf || {}).year ? T.enf.year + '년 · 경찰서' : '', ic: 'gauge', col: '#7A4FC4', bg: '#EFE9FB', v: fmt(enfTot, 0), u: '건', chips: [e['주정차'] != null ? ['주정차 ' + fmt(e['주정차'], 0), 'navy'] : null, meChip(enfMe, '건')] },
       { l: '도로 포장률', sub: rd['개통'] != null ? '도로 ' + fmt(rd['개통'], 0) + 'm 개통' : '', ic: 'trend', col: '#2E8B57', bg: '#E2F3E9', v: fmt(rd['포장률'], 1), u: '%', chips: [meChip(rdm['포장률'], '%', 1), B[SN] != null ? ['운수업체 ' + fmt(B[SN], 0) + '곳', 'navy'] : null] }
     ]);
-    panel('인구 10만명당 교통사고', '강원 18개 시·군 · 건 · 적을수록 좋음 · 누르면 그 지역', I ? rankList(I, regPick, regSel) : el('div', { class: 'empty', text: '자료 없음' }));
+    panel('교통사고 건수', '강원 18개 시·군 · 건 · 적을수록 좋음 · 누르면 그 지역', I ? rankList(I, regPick, regSel) : el('div', { class: 'empty', text: '자료 없음' }));
     var kinds = ['신호위반', '과속', '안전띠미착용', '음주운전', '중앙선침범', '주정차', '안전운전의무불이행'].filter(function (k) { return em[k] != null || e[k] != null; });
     var who = isMe ? [D.me, '강원 평균'] : [SN, D.me, '강원 평균'];
-    var per = function (n, k) { var p = popOf(n), v = (E[n] || {})[k]; return p && v != null ? v / p * 1000 : null; };
-    panel('교통단속 위반 유형 · 인구 1천명당', who.map(fullName).join(' · ') + ' · 건(경찰서 관할 기준)', groupCols(kinds.map(function (k) { return k.replace('안전운전의무불이행', '안전운전').replace('안전띠미착용', '안전띠'); }), cmpSeries(who, function (n) {
+    var per = function (n, k) { var v = (E[n] || {})[k]; return v != null ? v : null; };
+    panel('교통단속 위반 유형', who.map(fullName).join(' · ') + ' · 건(경찰서 관할 기준)', groupCols(kinds.map(function (k) { return k.replace('안전운전의무불이행', '안전운전').replace('안전띠미착용', '안전띠'); }), cmpSeries(who, function (n) {
       return kinds.map(function (k) { return n === '강원 평균' ? avgOf(E, function (o, kk) { return per(kk, k); }) : per(n, k); }); }), null, true));
     var kindsR = ['고속국도', '일반국도', '지방도', '시군도'];
     var road = RD[SN] || {};
@@ -1125,14 +1125,14 @@ function startApp() {
     var ymd = B.ymd || '';
     lifeTitle(fullName(SN) + ' 시내버스 정류장', (ymd ? ymd.slice(0, 4) + '.' + ymd.slice(4, 6) + '.' + ymd.slice(6) + ' 기준 ' : '') + '국토교통부 정류장별 정차 노선수' + selHint());
     cardsRow([
-      { l: '버스정류장', ic: 'pin', v: fmt(m.stops, 0), u: '곳', chips: [rankChip(I), I && I.me ? ['1만명당 ' + fmt(I.me.value, 1) + '곳', 'violet'] : null] },
+      { l: '버스정류장', ic: 'pin', v: fmt(m.stops, 0), u: '곳', chips: [rankChip(I), null] },
       { l: '정류장당 노선', sub: '평균', ic: 'cycle', col: '#1F6FD1', bg: '#E4EEFB', v: fmt(m.avg_routes, 1), u: '개', chips: [meChip(me.avg_routes, '개', 1), ['최다 ' + fmt(m.max_routes, 0) + '개', 'navy']] },
       { l: '노선이 가장 많은 곳', sub: isMe && top ? top[1] : '', ic: 'trend', col: '#C0602B', bg: '#FDEBDD', v: isMe && top ? top[0] : '–', u: '', small: true, chips: [isMe && top ? [top[2] + '개 노선 정차', 'violet'] : null] },
       { l: '정류장 많은 동', ic: 'house', col: '#2E8B57', bg: '#E2F3E9', v: (function () { var e = me.emd || {}, k = Object.keys(e).sort(function (a, b) { return e[b][0] - e[a][0]; })[0]; return k || '–'; })(), u: '', chips: [(function () { var e = me.emd || {}, k = Object.keys(e).sort(function (a, b) { return e[b][0] - e[a][0]; })[0]; return k ? [e[k][0] + '곳', 'navy'] : null; })()] },
       { l: '실시간 운행', ic: 'car', col: '#7A4FC4', bg: '#EFE9FB', v: '라이브', u: '', small: true, chips: [['「라이브 버스」 탭에서 확인', '']] }
     ]);
     Array.prototype.forEach.call(view.querySelectorAll('.pr1 .pv'), function (pv) { if (pv.textContent.length > 7) pv.style.fontSize = '28px'; });
-    panel('인구 1만명당 버스정류장', '강원 ' + Object.keys(R).length + '개 시·군 · 곳 · 누르면 그 지역', I ? rankList(I, regPick, regSel) : el('div', { class: 'empty', text: '자료 없음' }));
+    panel('버스정류장 수', '강원 ' + Object.keys(R).length + '개 시·군 · 곳 · 누르면 그 지역', I ? rankList(I, regPick, regSel) : el('div', { class: 'empty', text: '자료 없음' }));
     if (isMe && me.emd) {
       var E = me.emd;
       panel('동별 정류장 · ' + D.me + '시', '곳 · 정류장 수(막대) · 법정동 기준', colChart(Object.keys(E).map(function (k) { return [k.replace(/동$/, ''), E[k][0]]; }), null, null, 0, '', false, { plain: true, avgLabel: '동 평균' }));
@@ -1141,9 +1141,8 @@ function startApp() {
       panel('노선이 많이 서는 정류장', '정차 노선 수 상위 12곳', el('table', { class: 'dt big' }, [el('thead', {}, [el('tr', {}, ['', '정류장', '동', '노선'].map(function (h, j) { return el('th', { class: j === 3 ? 'r' : '', text: h }); }))]), tb]));
     } else {
       var who = [SN, D.me, '강원 평균'];
-      panel('정류장 비교', who.map(fullName).join(' · '), groupCols(['1만명당 정류장', '정류장당 노선'], cmpSeries(who, function (n) {
-        var per = function (k) { var p = popOf(k); return p && R[k] ? R[k].stops / p * 10000 : null; };
-        return [n === '강원 평균' ? avgOf(R, function (o, k) { return per(k); }) : per(n), n === '강원 평균' ? avgOf(R, function (o) { return o.avg_routes; }) : (R[n] || {}).avg_routes]; }), null, true));
+      panel('정류장 비교', who.map(fullName).join(' · '), groupCols(['정류장 수'], cmpSeries(who, function (n) {
+        return [n === '강원 평균' ? avgOf(R, function (o) { return o.stops; }) : (R[n] || {}).stops]; }), null, true));
       panel('버스정류장 수 · 강원 18개 시·군', '곳 · 누르면 그 지역', colChart(Object.keys(R).map(function (n) { return [n, R[n].stops]; }), regPick, SN, 0));
     }
   }
@@ -1152,16 +1151,16 @@ function startApp() {
     var I0 = ind('taxi'), I = indFor(I0, SN), m = R[SN] || {}, me = R[D.me] || {};
     lifeTitle(fullName(SN) + ' 택시', (X.at || '') + ' 전국택시업체·택시승차대 표준데이터' + selHint());
     cardsRow([
-      { l: '택시 면허', ic: 'car', v: fmt(m.total, 0), u: '대', chips: [rankChip(I), I && I.me ? ['1천명당 ' + fmt(I.me.value, 1) + '대', 'violet'] : null] },
+      { l: '택시 면허', ic: 'car', v: fmt(m.total, 0), u: '대', chips: [rankChip(I), null] },
       { l: '개인택시', ic: 'people', col: '#1F6FD1', bg: '#E4EEFB', v: fmt(m.personal, 0), u: '대', chips: [m.total ? ['전체의 ' + fmt(m.personal / m.total * 100, 1) + '%', 'navy'] : null, meChip(me.personal, '대')] },
       { l: '법인택시', ic: 'bank', col: '#C0602B', bg: '#FDEBDD', v: fmt(m.corp, 0), u: '대', chips: [['업체 ' + fmt(m.corps, 0) + '곳', 'violet'], meChip(me.corp, '대')] },
       { l: '택시 승차대', ic: 'pin', col: '#2E8B57', bg: '#E2F3E9', v: fmt(m.stands, 0), u: '곳', chips: [['정차면 ' + fmt(m.stand_sp, 0), 'navy'], meChip(me.stands, '곳')] },
-      { l: '인구 1천명당', ic: 'trend', col: '#7A4FC4', bg: '#EFE9FB', v: I && I.me ? fmt(I.me.value, 1) : '–', u: '대', chips: [regSel && I0 && I0.me ? meChip(I0.me.value, '대', 1) : ['강원 평균 ' + fmt(avgOf(R, function (o, k) { var p = popOf(k); return p ? o.total / p * 1000 : null; }), 1), '']] }
+      { l: '강원 평균', sub: '자료 올린 시·군', ic: 'trend', col: '#7A4FC4', bg: '#EFE9FB', v: fmt(avgOf(R, function (o) { return o.total; }), 0), u: '대', chips: [meChip(me.total, '대')] }
     ]);
-    panel('인구 1천명당 택시', '자료를 올린 ' + Object.keys(R).length + '개 시·군 · 일부는 개인택시 미포함이라 참고용', I ? rankList(I, regPick, regSel) : el('div', { class: 'empty', text: '자료 없음' }));
+    panel('택시 면허 대수', '자료를 올린 ' + Object.keys(R).length + '개 시·군 · 일부는 개인택시 미포함이라 참고용', I ? rankList(I, regPick, regSel) : el('div', { class: 'empty', text: '자료 없음' }));
     var who = isMe ? [D.me, '강원 평균'] : [SN, D.me, '강원 평균'];
-    var per = function (o, k, f) { var p = popOf(k); return p && o ? o[f] / p * 1000 : null; };
-    panel('인구 1천명당 비교', who.map(fullName).join(' · ') + ' · 대/곳 · 강원 평균은 자료 올린 시·군만(참고용)', groupCols(['전체 택시', '개인택시', '법인택시', '승차대 정차면'], cmpSeries(who, function (n) {
+    var per = function (o, k, f) { return o && o[f] != null ? o[f] : null; };
+    panel('택시 비교', who.map(fullName).join(' · ') + ' · 대/면 · 강원 평균은 자료 올린 시·군만(참고용)', groupCols(['전체 택시', '개인택시', '법인택시', '승차대 정차면'], cmpSeries(who, function (n) {
       var f = ['total', 'personal', 'corp', 'stand_sp'];
       return f.map(function (ff) { return n === '강원 평균' ? avgOf(R, function (o, k) { return per(o, k, ff); }) : per(R[n], n, ff); }); }), null, true));
     if (isMe) {
@@ -1182,12 +1181,12 @@ function startApp() {
     lifeTitle(fullName(SN) + ' 공영주차장', (P.at || '') + ' 전국주차장정보표준데이터(공영)' + selHint());
     cardsRow([
       { l: '공영주차장', ic: 'car', v: fmt(m.lots, 0), u: '곳', chips: [meChip(me.lots, '곳')] },
-      { l: '주차면', ic: 'pin', col: '#1F6FD1', bg: '#E4EEFB', v: fmt(m.spaces, 0), u: '면', chips: [rankChip(I), I && I.me ? ['1천명당 ' + fmt(I.me.value, 1) + '면', 'violet'] : null] },
+      { l: '주차면', ic: 'pin', col: '#1F6FD1', bg: '#E4EEFB', v: fmt(m.spaces, 0), u: '면', chips: [rankChip(I), null] },
       { l: '노외', sub: '별도 부지', ic: 'bank', col: '#2E8B57', bg: '#E2F3E9', v: fmt(m['노외'], 0), u: '곳', chips: [meChip(me['노외'], '곳')] },
       { l: '노상', sub: '도로 위', ic: 'gauge', col: '#7A4FC4', bg: '#EFE9FB', v: fmt(m['노상'], 0), u: '곳', chips: [meChip(me['노상'], '곳')] },
       { l: '유료', ic: 'coin', col: '#C0602B', bg: '#FDEBDD', v: fmt(m.paid, 0), u: '곳', chips: [['무료 ' + fmt(m.free, 0) + '곳', 'good']] }
     ]);
-    panel('인구 1천명당 공영주차면', '강원 18개 시·군 · 면 · 누르면 그 지역', I ? rankList(I, regPick, regSel) : el('div', { class: 'empty', text: '자료 없음' }));
+    panel('공영주차면 수', '강원 18개 시·군 · 면 · 누르면 그 지역', I ? rankList(I, regPick, regSel) : el('div', { class: 'empty', text: '자료 없음' }));
     var who = isMe ? [D.me, '강원 평균'] : [SN, D.me, '강원 평균'];
     var share = function (o, k) { return o && o.lots ? o[k] / o.lots * 100 : null; };
     var cats = [['무료', 'free'], ['유료', 'paid'], ['노상', '노상'], ['노외', '노외']];
@@ -1221,19 +1220,19 @@ function startApp() {
       { l: '승용차', ic: 'car', col: '#1F6FD1', bg: '#E4EEFB', v: fmt(g(m, 'passenger'), 0), u: '대', chips: [['전체의 ' + fmt(g(m, 'passenger') / tot * 100, 1) + '%', 'navy'], meChip(g(me, 'passenger'), '대')] },
       { l: '화물차', ic: 'suitcase', col: '#C0602B', bg: '#FDEBDD', v: fmt(g(m, 'truck'), 0), u: '대', chips: [['전체의 ' + fmt(g(m, 'truck') / tot * 100, 1) + '%', 'violet'], meChip(g(me, 'truck'), '대')] },
       { l: '승합·특수', ic: 'car', col: '#2E8B57', bg: '#E2F3E9', v: fmt(g(m, 'van') + g(m, 'special'), 0), u: '대', chips: [['승합 ' + fmt(g(m, 'van'), 0), ''], ['특수 ' + fmt(g(m, 'special'), 0), '']] },
-      { l: '인구 1천명당', ic: 'people', col: '#7A4FC4', bg: '#EFE9FB', v: I && I.me ? fmt(I.me.value, 0) : '–', u: '대', chips: [rankChip(I), regSel && I0 && I0.me ? meChip(I0.me.value, '대') : null] }
+      { l: '강원 평균', sub: '18개 시·군', ic: 'people', col: '#7A4FC4', bg: '#EFE9FB', v: fmt(avgOf(R, function (o) { return g(o, 'total'); }), 0), u: '대', chips: [rankChip(I), meChip(g(me, 'total'), '대')] }
     ]);
-    panel('인구 1천명당 자동차', '강원 18개 시·군 · 대 · 누르면 그 지역', I ? rankList(I, regPick, regSel) : el('div', { class: 'empty', text: '자료 없음' }));
+    panel('자동차 등록대수', '강원 18개 시·군 · 대 · 누르면 그 지역', I ? rankList(I, regPick, regSel) : el('div', { class: 'empty', text: '자료 없음' }));
     var kinds = [['승용', 'passenger'], ['화물', 'truck'], ['승합', 'van'], ['특수', 'special']];
     var who = isMe ? [D.me, '강원 평균'] : [SN, D.me, '강원 평균'];
     var share = function (o, k) { var t = g(o, 'total'); return t ? g(o, k) / t * 100 : null; };
     var gcol = groupCols(kinds.map(function (k) { return k[0]; }), cmpSeries(who, function (n) {
       return kinds.map(function (k) { return n === '강원 평균' ? avgOf(R, function (o) { return share(o, k[1]); }) : share(R[n], k[1]); }); }));
-    var per = function (n) { var p = popOf(n); return p ? g(R[n], 'total') / p * 1000 : null; };
+    var per = function (n) { return g(R[n], 'total'); };
     panel('차종 구성 비교', '전체 중 비중(%) · ' + who.map(fullName).join(' · '), [gcol,
       el('div', { class: 'chips', style: 'justify-content:center;margin-top:8px;flex-wrap:wrap' }, who.map(function (n, i) {
         var v = n === '강원 평균' ? avgOf(R, function (o, k) { return per(k); }) : per(n);
-        return el('span', { class: 'chip', style: 'background:' + cmpColor(n) + '22;color:' + (n === '강원 평균' ? '#1B5E3A' : cmpColor(n)) + ';font-weight:800', text: fullName(n) + ' 1천명당 ' + fmt(v, 0) + '대' }); }))]);
+        return el('span', { class: 'chip', style: 'background:' + cmpColor(n) + '22;color:' + (n === '강원 평균' ? '#1B5E3A' : cmpColor(n)) + ';font-weight:800', text: fullName(n) + ' ' + fmt(v, 0) + '대' }); }))]);
     var T = V.trend || [];
     if (isMe && T.length > 1) {
       panel('자동차 등록 추이 · ' + D.me + '시', T[0][0].slice(0, 4) + '년 ' + Number(T[0][0].slice(4)) + '월 ~ ' + ymLabel(T[T.length - 1][0]) + ' · 대',
@@ -1248,17 +1247,17 @@ function startApp() {
     var I0 = ind('ev'), I = indFor(I0, SN), m = R[SN] || {}, me = R[D.me] || {};
     lifeTitle(fullName(SN) + ' 전기차 충전 인프라', (E.at || '') + ' 환경공단 충전소 정보' + selHint());
     cardsRow([
-      { l: '충전기', ic: 'plug', v: fmt(m.total, 0), u: '기', chips: [rankChip(I), I && I.me ? ['1만명당 ' + fmt(I.me.value, 1) + '기', 'violet'] : null] },
+      { l: '충전기', ic: 'plug', v: fmt(m.total, 0), u: '기', chips: [rankChip(I), null] },
       { l: '급속', ic: 'bolt', col: '#C0602B', bg: '#FDEBDD', v: fmt(m.fast, 0), u: '기', chips: [m.total ? ['전체의 ' + fmt(m.fast / m.total * 100, 1) + '%', 'violet'] : null, meChip(me.fast, '기')] },
       { l: '완속', ic: 'plug', col: '#2E8B57', bg: '#E2F3E9', v: fmt(m.slow, 0), u: '기', chips: [meChip(me.slow, '기')] },
       { l: '충전소', ic: 'pin', col: '#1F6FD1', bg: '#E4EEFB', v: fmt(m.stations, 0), u: '곳', chips: [meChip(me.stations, '곳')] },
       { l: '지금 충전 중', ic: 'car', col: '#7A4FC4', bg: '#EFE9FB', v: fmt(m.busy, 0), u: '기', chips: [m.total ? ['이용률 ' + fmt(m.busy / m.total * 100, 1) + '%', 'navy'] : null, meChip(me.busy, '기')] }
     ]);
-    panel('인구 1만명당 충전기', '강원 18개 시·군 · 기 · 누르면 그 지역', I ? rankList(I, regPick, regSel) : el('div', { class: 'empty', text: '자료 없음' }));
+    panel('충전기 수', '강원 18개 시·군 · 기 · 누르면 그 지역', I ? rankList(I, regPick, regSel) : el('div', { class: 'empty', text: '자료 없음' }));
     var who = isMe ? [D.me, '강원 평균'] : [SN, D.me, '강원 평균'];
     var items = [['충전기', 'total'], ['급속', 'fast'], ['완속', 'slow'], ['충전소', 'stations']];
-    var per = function (o, n, k) { var p = popOf(n); return p && o ? o[k] / p * 10000 : null; };
-    panel('인구 1만명당 비교', who.map(fullName).join(' · '), groupCols(items.map(function (x) { return x[0]; }), cmpSeries(who, function (n) {
+    var per = function (o, n, k) { return o && o[k] != null ? o[k] : null; };
+    panel('충전 인프라 비교', who.map(fullName).join(' · ') + ' · 기/곳', groupCols(items.map(function (x) { return x[0]; }), cmpSeries(who, function (n) {
       return items.map(function (x) { return n === '강원 평균' ? avgOf(R, function (o, k) { return per(o, k, x[1]); }) : per(R[n], n, x[1]); }); })));
     panel('충전기 수 · 강원 18개 시·군', '기 · 누르면 그 지역', colChart(Object.keys(R).map(function (n) { return [n, R[n].total]; }), regPick, SN, 0));
   }

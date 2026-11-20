@@ -153,9 +153,9 @@ def collect(state, S, C):
             except Exception as e:  # noqa: BLE001
                 fail(state, key, e)
     if L.get('hospitals'):
-        set_ind(state, 'medical', per({k: v['total'] for k, v in L['hospitals']['regions'].items()}, 10000), L['hospitals']['at'] + ' 기준 요양기관(약국 제외)')
+        set_ind(state, 'medical', {k: v['total'] for k, v in L['hospitals']['regions'].items()}, L['hospitals']['at'] + ' 기준 요양기관(약국 제외)')
     if L.get('ev'):
-        set_ind(state, 'ev', per({k: v['total'] for k, v in L['ev']['regions'].items()}, 10000), L['ev']['at'] + ' 기준 충전기')
+        set_ind(state, 'ev', {k: v['total'] for k, v in L['ev']['regions'].items()}, L['ev']['at'] + ' 기준 충전기')
     try:
         L['air'] = life.air(C)
         ok(state, 'air', L['air']['time'])
@@ -173,7 +173,7 @@ def collect(state, S, C):
     except Exception as e:  # noqa: BLE001
         fail(state, 'cars', e)
     if L.get('cars'):
-        set_ind(state, 'cars', per({k: v.get('total', {}).get('all') for k, v in L['cars']['regions'].items() if v.get('total', {}).get('all')}, 1000),
+        set_ind(state, 'cars', {k: v.get('total', {}).get('all') for k, v in L['cars']['regions'].items() if v.get('total', {}).get('all')},
                 '%s년 %d월 자동차 등록대수' % (L['cars']['ym'][:4], int(L['cars']['ym'][4:])))
     if stale('tsafe', 6) or not (L.get('tsafe') or {}).get('road') or '--force-life' in sys.argv:
         try:
@@ -188,7 +188,7 @@ def collect(state, S, C):
         except Exception as e:  # noqa: BLE001
             fail(state, 'parking', e)
     if L.get('parking'):
-        set_ind(state, 'parking', per({k: v['spaces'] for k, v in L['parking']['regions'].items() if v.get('spaces')}, 1000), '%s 기준 공영주차장(표준데이터)' % L['parking']['at'])
+        set_ind(state, 'parking', {k: v['spaces'] for k, v in L['parking']['regions'].items() if v.get('spaces')}, '%s 기준 공영주차장(표준데이터)' % L['parking']['at'])
     if stale('taxi', 6) or not L.get('taxi') or '--force-life' in sys.argv:
         try:
             L['taxi'] = {'at': now().strftime('%Y-%m-%d'), 'regions': tour.taxi(C)}
@@ -196,7 +196,7 @@ def collect(state, S, C):
         except Exception as e:  # noqa: BLE001
             fail(state, 'taxi', e)
     if L.get('taxi'):
-        set_ind(state, 'taxi', per({k: v['total'] for k, v in L['taxi']['regions'].items() if v.get('total')}, 1000), '%s 기준 택시업체 표준데이터(면허 대수)' % L['taxi']['at'])
+        set_ind(state, 'taxi', {k: v['total'] for k, v in L['taxi']['regions'].items() if v.get('total')}, '%s 기준 택시업체 표준데이터(면허 대수)' % L['taxi']['at'])
     if stale('bus', 6) or not L.get('bus') or '--force-life' in sys.argv:
         try:
             L['bus'] = dict(tour.bus_stops(C), at=now().strftime('%Y-%m-%d'))
@@ -204,10 +204,10 @@ def collect(state, S, C):
         except Exception as e:  # noqa: BLE001
             fail(state, 'bus', e)
     if L.get('bus'):
-        set_ind(state, 'bus_stops', per({k: v['stops'] for k, v in L['bus']['regions'].items()}, 10000), '%s 기준 시내버스 정류장(국토부)' % L['bus']['ymd'])
+        set_ind(state, 'bus_stops', {k: v['stops'] for k, v in L['bus']['regions'].items()}, '%s 기준 시내버스 정류장(국토부)' % L['bus']['ymd'])
     T = L.get('tsafe') or {}
     if T.get('acc'):
-        set_ind(state, 'accidents', {k: v.get('A1') / pops[k] * 100000 for k, v in T['acc']['regions'].items() if v.get('A1') is not None and pops.get(k)},
+        set_ind(state, 'accidents', {k: v.get('A1') for k, v in T['acc']['regions'].items() if v.get('A1') is not None},
                 '%s년 교통사고(행정안전부)' % T['acc']['year'])
     # 관광지 집중률·단기예보(매번), 관광지·축제 목록(주 1회)
     for key, fn in (('cnctr', tour.concentration), ('weather', tour.weather)):
