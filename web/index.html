@@ -409,7 +409,7 @@ function startApp() {
     view.style.gridTemplateRows = '44px minmax(0, 1fr)';
     view.appendChild(el('div', { class: 'title' }, [
       el('h1', { text: '강원 ' + D.regions.length + '개 시·군 중 ' + D.me + '시의 위치' }),
-      el('span', { text: '순위 = 값이 높은 순(1위가 가장 큼) · 색 = 좋고 나쁨(초록 강점 · 주황 개선 필요) · 누르면 세부 현황' })
+      el('span', { text: '순위 = 좋은 쪽이 1위(낮을수록 좋은 지표는 낮은 곳이 1위) · 막대가 높을수록 좋음 · 누르면 세부 현황' })
     ]));
     var GO = { pop_change: ['admin', 'compare'], working_age: ['admin', 'compare'], elderly: ['admin', 'compare'], medical: ['welfare'], ev: ['traffic', 'ev'], cars: ['traffic', 'cars'],
       accidents: ['traffic', 'safe'], parking: ['traffic', 'park'], bus_stops: ['traffic', 'busst'], taxi: ['traffic', 'taxi'], visitors: ['tour', 'now'], tour_exp: ['tour', 'dem'], budget: ['finance'], fin_indep: ['finance'] };
