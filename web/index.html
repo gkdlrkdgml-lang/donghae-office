@@ -914,8 +914,13 @@ function startApp() {
 
   function baseLayer() {
     var vk = (D.map || {}).vworld;
-    return vk ? window.L.tileLayer('https://api.vworld.kr/req/wmts/1.0.0/' + vk + '/Base/{z}/{y}/{x}.png', { attribution: '© 국토교통부 브이월드', maxZoom: 19 })
-      : window.L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap 기여자', maxZoom: 19 });
+    function osm() { return window.L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap 기여자', maxZoom: 19 }); }
+    if (!vk) return osm();
+    // 브이월드가 안 열리면(점검·사용량 초과 등) 오픈스트리트맵으로 자동 전환
+    var vw = window.L.tileLayer('https://api.vworld.kr/req/wmts/1.0.0/' + vk + '/Base/{z}/{y}/{x}.png', { attribution: '© 국토교통부 브이월드', maxZoom: 19 }), bad = 0, ok = 0, sw = false;
+    vw.on('tileload', function () { ok++; });
+    vw.on('tileerror', function () { if (sw) return; bad++; if (bad >= 2 && ok === 0 && vw._map) { sw = true; var m = vw._map; m.removeLayer(vw); osm().addTo(m); } });
+    return vw;
   }
   // 지도 그림: 사이트에 미리 받아 둔 그림 → 없으면 지도 서버 → 그래도 안 되면 숨김
   function tileImg(local, remote, style, fade) {
@@ -1426,7 +1431,7 @@ function startApp() {
         if (n <= 45 && !l.dash && !l.nodot) l.values.forEach(function (v, i) { if (v != null) { svg.appendChild(svgEl('circle', { cx: X(i), cy: Y(v), r: 3, fill: '#fff', stroke: l.color, 'stroke-width': 2 })); if (opts.vals || (l.labels === 'last' ? (zoomed || i === lastI(l)) : l.labels) || (zoomed && !opts.noZoomVals)) svg.appendChild(svgEl('text', { x: X(i), y: Y(v) - 10 - (zoomed ? li * 16 : 0), 'text-anchor': 'middle', 'font-size': zoomed ? 15 : 14, 'font-weight': 800, fill: l.color }, opts.fit ? fmt(v, 0) + (opts.unit || '') : fmtK(v))); } });
       });
       box.appendChild(svg);
-      if (lines.length > 1 || lines[0].name) box.appendChild(el('div', { class: 'lleg' }, lines.map(function (l) { return el('span', {}, [el('i', { style: 'background:' + l.color + (l.dash ? ';opacity:.6' : '') }), document.createTextNode(l.name)]); }).concat(!zoomed && !opts.vals && !opts.noZoomVals ? [el('span', { style: 'color:#8A97A8;font-size:12px', text: '⤢ 크게 보기에서 모든 수치' })] : [])));
+      if (lines.length > 1 || lines[0].name) box.appendChild(el('div', { class: 'lleg' }, lines.map(function (l) { return el('span', {}, [el('i', { style: 'background:' + l.color + (l.dash ? ';opacity:.6' : '') }), document.createTextNode(l.name)]); }).concat(!zoomed && !opts.vals && !opts.noZoomVals && lines.some(function (l) { return !l.dash && l.labels !== true; }) ? [el('span', { style: 'color:#8A97A8;font-size:12px', text: '⤢ 크게 보기에서 모든 수치' })] : [])));
     }
     setTimeout(draw, 0);
     return box;
@@ -1698,7 +1703,7 @@ function startApp() {
     ctl.appendChild(sb);
     ctl.appendChild(el('button', { type: 'button', text: '⟳', onclick: function () { t3Ang += 30; setAng(); } }));
     wrap.appendChild(ctl);
-    wrap.appendChild(el('div', { class: 'm3note', style: 'color:#fff;text-shadow:0 0 3px #000', text: '막대 높이·색 = 집중률(높을수록 붐빔, 0~100) · 막대를 누르면 이름과 30일 달력' }));
+    wrap.appendChild(el('div', { class: 'm3note', style: 'color:#1B3A6B;background:rgba(255,255,255,.85);padding:3px 8px;border-radius:6px', text: '막대 높이·색 = 집중률(높을수록 붐빔, 0~100) · 막대를 누르면 이름과 30일 달력' }));
     view.appendChild(el('section', { class: 'nozoom', style: 'grid-row:2;grid-column:1;display:flex;flex-direction:column;padding:8px;background:#0E2238' }, [wrap]));
     // 오른쪽: 순위 + 고른 곳 달력
     var ord = pts.slice().sort(function (a, b) { return (b.v || 0) - (a.v || 0); });
