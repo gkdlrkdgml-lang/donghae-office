@@ -214,6 +214,14 @@ def collect(state, S, C):
         try:
             L[key] = fn()
             ok(state, key, L[key].get('at') or L[key].get('base'))
+            if key == 'cnctr':
+                # 관광지별 집중률을 날짜별로 쌓아 둠(그날 발표된 당일 값) — 행사 전후 비교용
+                H = L.setdefault('cnctr_hist', {})
+                td = now().strftime('%Y%m%d')
+                for n, rows in (L[key].get('spots') or {}).items():
+                    for d, v in rows:
+                        if d == td:
+                            H.setdefault(d, {})[n] = v
         except Exception as e:  # noqa: BLE001
             fail(state, key, e)
     if stale('places', 6) or not (L.get('places') or {}).get('items') or '--force-life' in sys.argv:
