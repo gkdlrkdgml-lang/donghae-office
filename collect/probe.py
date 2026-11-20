@@ -229,34 +229,13 @@ def main():
             say('[KOSIS검색] %s 실패 %s' % (q, e))
     from urllib.parse import unquote as _unq
     _dk = _unq(os.environ.get('DATA_GO_KR_KEY', '').strip())
-    W = 'https://apis.data.go.kr/B500001/waternow/'
-    for op in ('twdClwr/wdr/clwrList', 'twdClwr/wdr/fctList', 'twdOrgwtWdr/riverMtList', 'twdOrgwtWdr/hosoMtList'):
-        for extra in ({'wtwkBsnm': '강원특별자치도 동해시'}, {'wtwkBsnm': '강원특별자치도 동해시', 'stMt': '01', 'edMt': '12'}, {}):
-            try:
-                q = {'serviceKey': _dk, 'pageNo': '1', 'numOfRows': '1000', '_type': 'json'}
-                q.update(extra)
-                j = json.loads(http_get(W + op, q, tries=1))
-                b2 = j['response']['body']
-                it = (b2.get('items') or {}).get('item') or []
-                it = it if isinstance(it, list) else [it]
-                months = sorted(set(str(x.get('inspctMonth') or x.get('inspctQu') or x.get('collDt', '')[:7]) for x in it))
-                say('[물자료] %s %s 총 %s건 · 이번 %d건 · 시기 %s · 사업자 %s · 시설 %s' % (op, extra, b2.get('totalCount'), len(it), months[:3] + ['…'] + months[-3:], sorted(set(str(x.get('wtwkBsnm')) for x in it))[:6], sorted(set(str(x.get('nm') or x.get('itkplNm')) for x in it))[:12]))
-            except Exception as e:  # noqa: BLE001
-                say('[물자료] %s %s 실패 %s' % (op, extra, str(e)[:300]))
-    for ym in ('202609', '202512', '202508'):
-        for extra in ({'SIDO': '강원특별자치도'}, {'SIDO': '강원도'}, {}):
-            try:
-                q = {'serviceKey': _dk, 'pageNo': '1', 'numOfRows': '5', '_type': 'json', 'YM': ym}
-                q.update(extra)
-                t = http_get('https://apis.data.go.kr/B551940/TourismResourceStatsService/getPchrgTrrsrtVisitorList', q, tries=1)
-                say('[관광] %s %s → %s' % (ym, extra, t[:600]))
-            except Exception as e:  # noqa: BLE001
-                say('[관광] %s %s 실패 %s' % (ym, extra, str(e)[:300]))
-    for op, prm in (('storeListInDong', {'divId': 'signguCd', 'key': '51170'}), ('storeListByDate', {'key': '20261115'})):
+    for op, prm in [('storeListInDong', {'divId': 'signguCd', 'key': '51170'})] + [('storeListByDate', {'key': d}) for d in ('20261120', '20261110', '20261031', '20261015', '20261001', '20260930', '20260915', '20260901', '20260815', '20260701', '20260601')]:
         try:
-            q = dict(prm); q.update({'serviceKey': _dk, 'type': 'json', 'numOfRows': '2', 'pageNo': '1'})
+            q = dict(prm); q.update({'serviceKey': _dk, 'type': 'json', 'numOfRows': '1000', 'pageNo': '1'})
             j = json.loads(http_get('https://apis.data.go.kr/B553077/api/open/sdsc2/' + op, q, tries=1))
-            say('[상가자료] %s → %s' % (op, json.dumps(j, ensure_ascii=False)[:1800]))
+            bd = j.get('body') or {}
+            it = bd.get('items') or []
+            say('[상가자료] %s %s → %s 총 %s · 이번 %d · 변경구분 %s · 강원 %d · 동해 %d · 예 %s' % (op, prm, j.get('header', {}).get('resultMsg'), bd.get('totalCount'), len(it), sorted(set(str(x.get('chgGb')) for x in it)), sum(1 for x in it if x.get('ctprvnCd') == '51'), sum(1 for x in it if x.get('signguCd') == '51170'), json.dumps(it[:1], ensure_ascii=False)[:500]))
         except Exception as e:  # noqa: BLE001
             say('[상가자료] %s 실패 %s' % (op, str(e)[:300]))
     if os.environ.get('PROBE_FULL') != '1':
