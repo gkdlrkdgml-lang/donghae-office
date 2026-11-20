@@ -270,13 +270,15 @@ def collect(state, S, C):
     except Exception as e:  # noqa: BLE001
         log('행사 파일 읽기 실패: %s' % e)
     vm = L.get('visit_months') or {}
-    if len(vm) >= 12:
-        last12 = sorted(vm)[-12:]
+    if vm:
+        # 올해 1월부터 다 찬 마지막 달까지 누계(1월에는 지난해 1~12월)
+        lastm = sorted(vm)[-1]
+        ytd = [ym for ym in sorted(vm) if ym[:4] == lastm[:4]]
         tot = {}
-        for ym in last12:
+        for ym in ytd:
             for k, d in vm[ym].items():
                 tot[k] = tot.get(k, 0) + d.get('outside', 0) + d.get('foreign', 0)
-        set_ind(state, 'visitors', per(tot, 1), '%s~%s 외지인·외국인 방문(연인원)' % (last12[0], last12[-1]))
+        set_ind(state, 'visitors', per(tot, 1), '%s년 1~%d월 누계 외지인·외국인 방문(연인원)' % (lastm[:4], int(lastm[4:])))
 
     # 4) 재정자립도 → 11번 (순위는 당초, 최종은 같은 해 비교용)
     try:

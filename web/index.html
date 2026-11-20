@@ -1340,7 +1340,7 @@ function startApp() {
       { l: '최근 12개월', ic: 'camera', col: '#2E8B57', bg: '#E2F3E9', v: fmt(y12, 0), u: '명', chips: [rankChip(I), I && I.me ? ['인구 1명당 ' + fmt(I.me.value, 1) + '명', 'violet'] : null] },
       { l: '현지인', sub: fullName(SN) + ' 주민 이동', ic: 'people', col: '#C0602B', bg: '#FDEBDD', v: fmt(cur.local, 0), u: '명' }
     ]);
-    panel('인구 1명당 연간 방문자', '강원 18개 시·군 · 명 · 누르면 그 지역', I ? rankList(I, regPick, regSel) : el('div', { class: 'empty', text: '12개월 자료가 쌓이면 표시' }));
+    panel('인구 1명당 방문자 · 올해 누계', ((I0 || {}).basis || '') + ' · 명 · 누르면 그 지역', I ? rankList(I, regPick, regSel) : el('div', { class: 'empty', text: '12개월 자료가 쌓이면 표시' }));
     var m12 = ms.slice(-12), mlab = m12.map(function (ym) { return Number(ym.slice(4)) + '월'; });
     var tl = [{ name: fullName(SN), color: cmpColor(SN), values: m12.map(function (ym) { return vis((VM[ym] || {})[SN]); }), width: 3.5, area: true, labels: true }];
     if (regSel) tl.push({ name: D.me + '시', color: cmpColor(D.me), values: m12.map(function (ym) { return vis((VM[ym] || {})[D.me]); }), width: 2.5 });
