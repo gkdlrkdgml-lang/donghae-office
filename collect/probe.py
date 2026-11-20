@@ -214,6 +214,18 @@ def main():
             say('[KOSIS검색] %s → %s' % (q, ' | '.join('%s/%s %s(%s~%s %s)' % (x.get('ORG_ID'), x.get('TBL_ID'), x.get('TBL_NM'), x.get('STRT_PRD_DE'), x.get('END_PRD_DE'), x.get('PRD_SE', '')) for x in j if str(x.get('ORG_ID')) in ('117', '322', '331', '350', '101', '110'))[:2500] if isinstance(j, list) else str(j)[:300]))
         except Exception as e:  # noqa: BLE001
             say('[KOSIS검색] %s 실패 %s' % (q, e))
+    _dk = os.environ.get('DATA_GO_KR_KEY', '').strip()
+    base = 'https://apis.data.go.kr/B553077/api/open/sdsc2/'
+    for op, prm in (('storeListInDong', {'divId': 'signguCd', 'key': '51170'}),
+                    ('storeListByDate', {'key': '20261118'}),
+                    ('storeListByDate', {'key': '20261001'}),
+                    ('storeListByDate', {'key': '20260901'})):
+        try:
+            q = dict(prm); q.update({'serviceKey': _dk, 'type': 'json', 'numOfRows': '3', 'pageNo': '1'})
+            t = http_get(base + op, q, tries=1)
+            say('[상가] %s %s → %s' % (op, prm, t[:1800].replace(_dk, '***')))
+        except Exception as e:  # noqa: BLE001
+            say('[상가] %s %s 실패 %s' % (op, prm, e))
     if os.environ.get('PROBE_FULL') != '1':
         return
     probe('admm_population', {'url': 'https://apis.data.go.kr/1741000/admmPpltnHhStus/selectAdmmPpltnHhStus', 'key_env': 'DATA_GO_KR_KEY',
