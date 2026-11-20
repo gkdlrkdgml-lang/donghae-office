@@ -216,6 +216,26 @@ def collect(state, S, C):
             ok(state, 'economy', '%s년 %d개 시·군' % (L['economy']['year'], len(L['economy']['active'].get(L['economy']['year'], {}))))
         except Exception as e:  # noqa: BLE001
             fail(state, 'economy', e)
+    if stale('eco_ind', 30) or '--force-life' in sys.argv:
+        try:
+            L['eco_ind'] = sources.economy_industry(S, C)
+            ok(state, 'eco_ind', '%s년' % L['eco_ind']['year'])
+        except Exception as e:  # noqa: BLE001
+            fail(state, 'eco_ind', e)
+    if stale('social', 30) or '--force-life' in sys.argv:
+        try:
+            L['social'] = sources.social(S, C)
+            ok(state, 'social', '시설 %s · 수급 %s' % (L['social'].get('fac_year'), L['social'].get('rcp_year')))
+        except Exception as e:  # noqa: BLE001
+            fail(state, 'social', e)
+    SO = L.get('social') or {}
+    if SO.get('facilities'):
+        set_ind(state, 'soc_fac', {k: v.get('total') for k, v in SO['facilities'].items() if v.get('total') is not None}, '%s년 사회복지시설(행정안전부)' % SO.get('fac_year'))
+    if SO.get('recipients'):
+        set_ind(state, 'soc_rcp', {k: v.get('recipients_rate') for k, v in SO['recipients'].items() if v.get('recipients_rate') is not None}, '%s년 기초생활보장 수급자 비율(행정안전부)' % SO.get('rcp_year'))
+        set_ind(state, 'soc_dis', {k: v.get('disabled_rate') for k, v in SO['recipients'].items() if v.get('disabled_rate') is not None}, '%s년 등록장애인 비율(행정안전부)' % SO.get('rcp_year'))
+    if SO.get('elderly'):
+        set_ind(state, 'soc_old', {k: v.get('per1000') for k, v in SO['elderly'].items() if v.get('per1000') is not None}, '%s년 노인 천명당 노인여가복지시설(통계청)' % SO.get('old_year'))
     EC = L.get('economy') or {}
     if EC.get('year'):
         y = EC['year']
@@ -395,7 +415,7 @@ def build(state, S, C):
     # 분야 화면이 비면 메뉴에서 숨김
     has_fin = any(i['id'] == 'fin_indep' for i in out['indicators'])
     L = out.get('life') or {}
-    need = {'economy': L.get('economy'), 'welfare': L.get('hospitals'), 'traffic': L.get('ev') or L.get('cars'), 'env': L.get('air'), 'tour': L.get('visit_months')}
+    need = {'social': L.get('social'), 'economy': L.get('economy'), 'welfare': L.get('hospitals'), 'traffic': L.get('ev') or L.get('cars'), 'env': L.get('air'), 'tour': L.get('visit_months')}
     out['menu'] = [m for m in out['menu'] if not (m['id'] == 'finance' and not has_fin) and not (m['id'] in ('admin', 'compare') and not out['admin'])
                    and not (m['id'] in need and not need[m['id']])]
     return out

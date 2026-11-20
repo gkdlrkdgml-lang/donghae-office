@@ -24,6 +24,11 @@
       "show": true
     },
     {
+      "id": "social",
+      "label": "복지",
+      "show": true
+    },
+    {
       "id": "traffic",
       "label": "교통",
       "show": true
@@ -313,6 +318,54 @@
       "dir": 1,
       "digits": 0,
       "source": "국세청 국세통계(KOSIS)",
+      "show": true,
+      "main": false
+    },
+    {
+      "id": "soc_fac",
+      "no": 23,
+      "field": "복지",
+      "name": "사회복지시설 수",
+      "unit": "곳",
+      "dir": 1,
+      "digits": 0,
+      "source": "KOSIS",
+      "show": true,
+      "main": false
+    },
+    {
+      "id": "soc_rcp",
+      "no": 24,
+      "field": "복지",
+      "name": "기초생활수급자 비율",
+      "unit": "%",
+      "dir": 0,
+      "digits": 2,
+      "source": "KOSIS",
+      "show": true,
+      "main": false
+    },
+    {
+      "id": "soc_dis",
+      "no": 25,
+      "field": "복지",
+      "name": "등록장애인 비율",
+      "unit": "%",
+      "dir": 0,
+      "digits": 2,
+      "source": "KOSIS",
+      "show": true,
+      "main": false
+    },
+    {
+      "id": "soc_old",
+      "no": 26,
+      "field": "복지",
+      "name": "노인 천명당 노인여가복지시설",
+      "unit": "곳",
+      "dir": 1,
+      "digits": 1,
+      "source": "KOSIS",
       "show": true,
       "main": false
     }

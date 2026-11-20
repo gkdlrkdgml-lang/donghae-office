@@ -727,3 +727,92 @@ def economy(S, C, years=5):
         res[key] = by
     yrs = sorted(set(res['active']) & set(res['new']) & set(res['closed']))
     return {'at': now().strftime('%Y-%m-%d'), 'years': yrs, 'year': yrs[-1] if yrs else None, 'active': res['active'], 'new': res['new'], 'closed': res['closed']}
+
+
+def _gw5(rows, key='C1'):
+    """시군구 코드 5자리(32xxx)인 강원 행만."""
+    return [r for r in rows if str(r.get(key, '')).startswith('32') and len(str(r.get(key, ''))) == 5]
+
+
+def economy_industry(S, C):
+    """통계청 기업생멸행정통계: 강원 시·군 산업대분류별 활동·신생·소멸 기업 수(최근 2년)."""
+    rows = _kosis_rows('DT_6BD1132', {'orgId': '101', 'prdSe': 'Y', 'objL1': 'ALL', 'objL2': 'ALL', 'itmId': 'T01+T02+T03+', 'newEstPrdCnt': '1'}, 'eco_ind')
+    last = max((str(r.get('PRD_DE')) for r in rows), default=None)
+    if last:
+        try:
+            p = str(int(last) - 1)
+            rows += _kosis_rows('DT_6BD1132', {'orgId': '101', 'prdSe': 'Y', 'objL1': 'ALL', 'objL2': 'ALL', 'itmId': 'T01+T02+T03+', 'startPrdDe': p, 'endPrdDe': p}, 'eco_ind_prev')
+        except Exception as e:  # noqa: BLE001
+            log('업종 전년 실패: %s' % e)
+    by = {}
+    K = {'T01': 'active', 'T02': 'born', 'T03': 'died'}
+    for r in _gw5(rows):
+        name = match_region(str(r.get('C1_NM', '')).strip(), C['regions'])
+        ind_ = str(r.get('C2_NM', '')).strip()
+        v = to_num(r.get('DT'))
+        k = K.get(str(r.get('ITM_ID')))
+        if name and k and v is not None:
+            by.setdefault(str(r.get('PRD_DE')), {}).setdefault(name, {}).setdefault(ind_, {})[k] = v
+    if not by:
+        raise RuntimeError('업종별 기업 자료 없음')
+    return {'at': now().strftime('%Y-%m-%d'), 'year': max(by), 'years': sorted(by), 'data': by}
+
+
+def social(S, C):
+    """복지: 사회복지시설(행안부), 기초수급자·등록장애인 비율(행안부), 등록장애인 정도·성별(복지부), 노인여가복지시설(통계청)."""
+    res = {'at': now().strftime('%Y-%m-%d')}
+    # 1) 사회복지시설 수·생활인원
+    rows = _kosis_rows('DT_110001_A043', {'orgId': '110', 'prdSe': 'Y', 'objL1': 'ALL', 'objL2': 'ALL', 'itmId': 'ALL', 'newEstPrdCnt': '1'}, 'soc_fac')
+    F = {}
+    cur = None
+    for r in _gw_rows(rows, 'C1_NM', 'C1'):
+        name = match_region(str(r.get('C1_NM', '')).strip(), C['regions'])
+        v = to_num(r.get('DT'))
+        if name and v is not None:
+            F.setdefault(name, {})[str(r.get('C2'))] = v
+            res['fac_year'] = str(r.get('PRD_DE'))
+    FK = {'B002': 'total', 'B003': 'residents', 'B005': '아동', 'B008': '노인', 'B011': '장애인', 'B014': '한부모가족', 'B017': '정신요양', 'B020': '노숙인',
+          'B006': '아동_인원', 'B009': '노인_인원', 'B012': '장애인_인원', 'B015': '한부모가족_인원', 'B018': '정신요양_인원', 'B021': '노숙인_인원'}
+    res['facilities'] = {n: {FK[k]: v for k, v in d.items() if k in FK} for n, d in F.items()}
+    # 2) 기초생활보장 수급자·등록장애인 수·비율
+    rows = _kosis_rows('DT_110001_A045', {'orgId': '110', 'prdSe': 'Y', 'objL1': 'ALL', 'objL2': 'ALL', 'itmId': 'ALL', 'newEstPrdCnt': '1'}, 'soc_rcp')
+    RK = {'H002': 'recipients', 'H003': 'recipients_rate', 'H005': 'disabled', 'H006': 'disabled_rate', 'H007': 'pop'}
+    R = {}
+    for r in _gw_rows(rows, 'C1_NM', 'C1'):
+        name = match_region(str(r.get('C1_NM', '')).strip(), C['regions'])
+        k = RK.get(str(r.get('C2')))
+        v = to_num(r.get('DT'))
+        if name and k and v is not None:
+            R.setdefault(name, {})[k] = v
+            res['rcp_year'] = str(r.get('PRD_DE'))
+    res['recipients'] = R
+    # 3) 등록장애인 장애정도·성별(복지부, 더 최신)
+    try:
+        rows = _kosis_rows('DT_11761_N009', {'orgId': '117', 'prdSe': 'Y', 'objL1': 'ALL', 'objL2': 'ALL', 'objL3': 'ALL', 'itmId': 'ALL', 'newEstPrdCnt': '1'}, 'soc_dis')
+        Dd = {}
+        for r in _gw5(rows):
+            name = match_region(str(r.get('C1_NM', '')).strip(), C['regions'])
+            v = to_num(r.get('DT'))
+            if name and v is not None:
+                Dd.setdefault(name, {})['%s_%s' % (r.get('C2'), r.get('C3'))] = v
+                res['dis_year'] = str(r.get('PRD_DE'))
+        res['disabled'] = {n: {'total': d.get('TT_T001'), 'severe': d.get('01_T001'), 'mild': d.get('02_T001'), 'male': d.get('TT_T002'), 'female': d.get('TT_T003')} for n, d in Dd.items()}
+    except Exception as e:  # noqa: BLE001
+        log('등록장애인 실패: %s' % e)
+    # 4) 노인여가복지시설
+    try:
+        rows = _kosis_rows('DT_1YL20961', {'orgId': '101', 'prdSe': 'Y', 'objL1': 'ALL', 'itmId': 'ALL', 'newEstPrdCnt': '1'}, 'soc_old')
+        O = {}
+        for r in _gw5(rows):
+            name = match_region(str(r.get('C1_NM', '')).strip(), C['regions'])
+            v = to_num(r.get('DT'))
+            k = {'T10': 'per1000', 'T001': 'facilities', 'T002': 'pop60'}.get(str(r.get('ITM_ID')))
+            if name and k and v is not None:
+                O.setdefault(name, {})[k] = v
+                res['old_year'] = str(r.get('PRD_DE'))
+        res['elderly'] = O
+    except Exception as e:  # noqa: BLE001
+        log('노인여가복지시설 실패: %s' % e)
+    if not res['facilities'] and not R:
+        raise RuntimeError('복지 자료 없음')
+    return res

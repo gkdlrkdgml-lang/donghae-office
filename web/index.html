@@ -1860,13 +1860,64 @@ function startApp() {
     panel('신규·폐업 추이 · ' + fullName(SN), ys[0] + '~' + y + '년 · 개', lineChart(lab, [
       { name: '신규', color: '#2E9C6A', values: ys.map(function (k) { return g((E.new || {})[k] || {}, SN); }), width: 3.5, labels: true },
       { name: '폐업', color: '#D9534F', values: ys.map(function (k) { return g((E.closed || {})[k] || {}, SN); }), width: 3, labels: true }], { fit: true, unit: '개' }));
-    var o = A[SN] || {};
-    var kinds = [['일반', o.general, '#1F6FD1'], ['간이', o.simple, '#E8A867'], ['면세', o.exempt, '#5DB88E'], ['법인', o.corp, '#7A4FC4']].filter(function (k) { return k[1]; });
-    panel('가동 사업자 유형 · ' + fullName(SN), y + '년 말 · 개', donut(kinds.map(function (k) { return [k[0] + ' ' + fmt(k[1], 0), k[1], k[2]]; }), fmt(a, 0), '가동 사업자'));
+    // 업종별 신생·소멸 기업 (통계청 기업생멸행정통계)
+    var EI = (D.life || {}).eco_ind || {}, iy = EI.year, ID = ((EI.data || {})[iy] || {})[SN] || {};
+    var inds = Object.keys(ID).filter(function (k) { return k !== '전체' && ((ID[k].born || 0) + (ID[k].died || 0)) > 0; })
+      .sort(function (p, q) { return (ID[q].born + ID[q].died) - (ID[p].born + ID[p].died); }).slice(0, 10);
+    var mx = 1; inds.forEach(function (k) { mx = Math.max(mx, ID[k].born || 0, ID[k].died || 0); });
+    var SH = function (k) { return k.replace(' 및 ', '·').replace('사업시설관리 사업지원 및 임대 서비스업', '사업지원·임대').replace('협회 및 단체 수리 및 기타 개인서비스업', '수리·개인서비스').replace('전문과학기술서비스업', '전문·과학기술').replace('예술 스포츠 및 여가관련 서비스업', '예술·스포츠·여가').replace('보건업 및 사회복지 서비스업', '보건·사회복지').replace('수도 하수 및 폐기물처리 원료재생업', '수도·폐기물').replace('전기 가스 증기 및 공기조절 공급업', '전기·가스').replace('농업 임업 및 어업', '농림어업'); };
+    var hb = el('div', { style: 'display:flex;flex-direction:column;justify-content:space-around;height:100%;gap:4px;padding:2px 6px' });
+    hb.appendChild(el('div', { class: 'lleg' }, [['신생', '#2E9C6A'], ['소멸', '#D9534F']].map(function (x) { return el('span', {}, [el('i', { style: 'background:' + x[1] }), document.createTextNode(x[0])]); })));
+    inds.forEach(function (k) {
+      function bar(v, col) { return el('div', { style: 'display:flex;align-items:center;gap:6px;height:13px' }, [el('div', { style: 'height:100%;border-radius:0 5px 5px 0;background:' + col + ';width:' + ((v || 0) / mx * 78).toFixed(1) + '%;min-width:' + (v ? 3 : 0) + 'px' }), el('b', { style: 'font-size:13.5px;color:' + col, text: fmt(v, 0) })]); }
+      var d = (ID[k].born || 0) - (ID[k].died || 0);
+      hb.appendChild(el('div', { title: k + ' · 활동 ' + fmt(ID[k].active, 0), style: 'display:grid;grid-template-columns:118px 1fr 46px;align-items:center;gap:6px' }, [
+        el('div', { style: 'font-size:14px;font-weight:700;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis', text: SH(k) }),
+        el('div', { style: 'display:flex;flex-direction:column;gap:2px;border-left:2px solid #C9D3E0;padding-left:3px' }, [bar(ID[k].born, '#2E9C6A'), bar(ID[k].died, '#D9534F')]),
+        el('b', { style: 'font-size:13.5px;text-align:right;color:' + (d >= 0 ? '#1F6FD1' : '#C0392B'), text: (d > 0 ? '+' : '') + fmt(d, 0) })]));
+    });
+    var p3 = panel('업종별 신생·소멸 기업 · ' + fullName(SN), (iy || '') + '년 · 통계청 기업생멸행정통계 · 개 · 오른쪽 = 순증', inds.length ? hb : el('div', { class: 'empty', text: '자료 없음' }));
+    p3.style.gridRow = '3 / span 2'; p3.style.gridColumn = '3';
     var who = isMe ? [D.me, '강원 평균'] : [SN, D.me, '강원 평균'];
     function rate(n2, T) { var t = g(A, n2), v = g(T, n2); return t && v != null ? v / t * 100 : null; }
     panel('신규율 · 폐업률 비교', who.map(fullName).join(' · ') + ' · 가동 사업자 대비 %', groupCols(['신규율', '폐업률'], cmpSeries(who, function (n2) {
-      return n2 === '강원 평균' ? [avgOf(N, function (o2, k) { return rate(k, N); }), avgOf(X, function (o2, k) { return rate(k, X); })] : [rate(n2, N), rate(n2, X)]; }), null, true)).style.gridColumn = '2 / span 2';
+      return n2 === '강원 평균' ? [avgOf(N, function (o2, k) { return rate(k, N); }), avgOf(X, function (o2, k) { return rate(k, X); })] : [rate(n2, N), rate(n2, X)]; }), null, true)).style.gridColumn = '2';
+  }
+  // ---------- 복지: 사회복지시설·기초수급자·등록장애인·노인 (KOSIS, 강원 18개 시·군) ----------
+  var socMet = 'soc_rcp';
+  function screenSocial() {
+    var SO = (D.life || {}).social || {}, F = SO.facilities || {}, R = SO.recipients || {}, DS = SO.disabled || {}, O = SO.elderly || {};
+    var SN = (F[regName()] || R[regName()]) ? regName() : D.me, isMe = SN === D.me;
+    var f = F[SN] || {}, r = R[SN] || {}, ds = DS[SN] || {}, o = O[SN] || {}, me = { f: F[D.me] || {}, r: R[D.me] || {}, d: DS[D.me] || {} };
+    var el2 = ind('elderly'), elI = indFor(el2, SN);
+    lifeTitle(fullName(SN) + ' 복지 현황', '행정안전부·보건복지부·통계청(KOSIS) · 매년 자동 갱신' + selHint());
+    view.style.gridTemplateRows = '44px auto minmax(0, 1fr) minmax(0, 1fr)';
+    cardsRow([
+      { l: '사회복지시설', sub: (SO.fac_year || '') + '년', ic: 'house', v: fmt(f.total, 0), u: '곳', chips: [['생활인원 ' + fmt(f.residents, 0) + '명', 'navy'], rankChip(indFor(ind('soc_fac'), SN))] },
+      { l: '기초생활수급자', sub: (SO.rcp_year || '') + '년', ic: 'hand', col: '#C0602B', bg: '#FDEBDD', v: fmt(r.recipients, 0), u: '명', chips: [['인구의 ' + fmt(r.recipients_rate, 2) + '%', 'violet'], meChip(me.r.recipients, '명')] },
+      { l: '등록장애인', sub: (SO.dis_year || SO.rcp_year || '') + '년', ic: 'heart', col: '#1F6FD1', bg: '#E4EEFB', v: fmt(ds.total != null ? ds.total : r.disabled, 0), u: '명', chips: [ds.severe != null ? ['심한 장애 ' + fmt(ds.severe, 0), 'navy'] : null, ['인구의 ' + fmt(r.disabled_rate, 2) + '%', 'violet']] },
+      { l: '고령인구 비율', sub: '65세 이상', ic: 'senior', col: '#7A4FC4', bg: '#EFE9FB', v: elI && elI.me ? fmt(elI.me.value, 1) : '–', u: '%', chips: [rankChip(elI), o.pop60 != null ? ['60세 이상 ' + fmt(o.pop60, 0) + '명', ''] : null] },
+      { l: '노인여가복지시설', sub: '경로당·노인교실 등', ic: 'people', col: '#2E8B57', bg: '#E2F3E9', v: fmt(o.facilities, 0), u: '곳', chips: [o.per1000 != null ? ['노인 천명당 ' + fmt(o.per1000, 1), 'good'] : null, rankChip(indFor(ind('soc_old'), SN))] }
+    ]);
+    var MET = [['soc_rcp', '수급자 비율'], ['soc_dis', '장애인 비율'], ['elderly', '고령인구 비율'], ['soc_fac', '복지시설 수'], ['soc_old', '노인여가시설']].filter(function (m) { return ind(m[0]); });
+    if (!MET.some(function (m) { return m[0] === socMet; })) socMet = MET[0] && MET[0][0];
+    var I0 = ind(socMet), I = indFor(I0, SN);
+    var sw = el('div', { class: 'chips', style: 'flex-wrap:nowrap;gap:6px;margin-bottom:6px' }, MET.map(function (m) {
+      return el('button', { type: 'button', class: 'chip ' + (m[0] === socMet ? 'navy' : ''), style: 'cursor:pointer;border:0;font-weight:800' + (m[0] === socMet ? ';background:#1B3A6B;color:#fff' : ''), text: m[1], onclick: function () { socMet = m[0]; render(); } }); }));
+    var p1 = panel((I0 ? I0.name : '') + ' · 강원 18개 시·군', (I0 ? I0.basis + ' · ' + I0.unit : '') + ' · 누르면 그 지역', [sw, I ? rankList(I, regPick, regSel) : el('div', { class: 'empty', text: '자료 없음' })]);
+    p1.style.gridRow = '3 / span 2';
+    var FT = [['노인', '#7A4FC4'], ['장애인', '#1F6FD1'], ['아동', '#E8A867'], ['한부모가족', '#D6457A'], ['정신요양', '#5DB88E'], ['노숙인', '#8FB2E0']];
+    var parts = FT.filter(function (k) { return f[k[0]]; }).map(function (k) { return [k[0] + ' ' + fmt(f[k[0]], 0) + '곳 · ' + fmt(f[k[0] + '_인원'], 0) + '명', f[k[0]], k[1]]; });
+    panel('사회복지시설 종류 · ' + fullName(SN), (SO.fac_year || '') + '년 · 생활시설 · 곳/생활인원', parts.length ? donut(parts, fmt(f.total, 0) + '곳', '사회복지시설') : el('div', { class: 'empty', text: '자료 없음' }));
+    var dd = [['심한 장애', ds.severe, '#1F6FD1'], ['심하지 않은 장애', ds.mild, '#8FB2E0']].filter(function (k) { return k[1]; });
+    panel('등록장애인 구성 · ' + fullName(SN), (SO.dis_year || '') + '년 · 보건복지부 · 명', [dd.length ? donut(dd.map(function (k) { return [k[0] + ' ' + fmt(k[1], 0), k[1], k[2]]; }), fmt(ds.total, 0), '등록장애인') : el('div', { class: 'empty', text: '자료 없음' }),
+      ds.male != null ? el('div', { class: 'chips', style: 'justify-content:center' }, [el('span', { class: 'chip navy', text: '남 ' + fmt(ds.male, 0) }), el('span', { class: 'chip violet', text: '여 ' + fmt(ds.female, 0) })]) : null]);
+    var who = isMe ? [D.me, '강원 평균'] : [SN, D.me, '강원 평균'];
+    var p4 = panel('복지 대상 비율 비교', who.map(fullName).join(' · ') + ' · 인구 대비 %', groupCols(['기초생활수급자', '등록장애인', '고령인구'], cmpSeries(who, function (n) {
+      function ev(k) { var x = el2 && el2.ranking.filter(function (q) { return q.name === k; })[0]; return x ? x.value : null; }
+      if (n === '강원 평균') return [avgOf(R, function (q) { return q.recipients_rate; }), avgOf(R, function (q) { return q.disabled_rate; }), el2 ? avgOf(el2.ranking.reduce(function (m, q) { m[q.name] = q; return m; }, {}), function (q) { return q.value; }) : null];
+      return [(R[n] || {}).recipients_rate, (R[n] || {}).disabled_rate, ev(n)]; }), null, true));
+    p4.style.gridColumn = '2 / span 2';
   }
   // 보건 및 의료: 아래 탭(의료 현황 / 실시간 의료기관)
   var welTab = 'now';
@@ -1883,7 +1934,7 @@ function startApp() {
     var title = view.querySelector('.title');
     if (title) title.insertBefore(tabsBar(tabs, welTab, function (k) { welTab = k; }), title.children[1] || null);
   }
-  var SCREENS = { main: screenMain, admin: screenAdminTabs, welfare: screenWelfareTabs, traffic: screenTrafficTabs, env: screenEnv, tour: screenTourTabs, economy: screenEconomy, finance: screenFinance, frame: screenFrame };
+  var SCREENS = { main: screenMain, admin: screenAdminTabs, welfare: screenWelfareTabs, social: screenSocial, traffic: screenTrafficTabs, env: screenEnv, tour: screenTourTabs, economy: screenEconomy, finance: screenFinance, frame: screenFrame };
   function render() {
     view.textContent = '';
     view.className = '';
