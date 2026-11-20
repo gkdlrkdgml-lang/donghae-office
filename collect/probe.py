@@ -152,7 +152,7 @@ def main():
             say('[찾기 %s] %s' % (nm, code))
     _kk = os.environ.get('KOSIS_KEY', '')
     import sources as _s9
-    for org, tb in (('101', 'DT_1ES3A03_A01S'),):
+    for org, tb in ():
         try:
             meta = _s9.kosis_meta({'key_env': 'KOSIS_KEY', 'meta_url': 'https://kosis.kr/openapi/statisticsData.do', 'params': {'orgId': org, 'tblId': tb}})
             objs = {}
@@ -164,11 +164,11 @@ def main():
             say('[경제주기] %s: %s' % (tb, t[:300]))
         except Exception as e:  # noqa: BLE001
             say('[경제메타] %s 실패 %s' % (tb, e))
-    for q in ():
+    for q in ('수급자 시군구별', '시군구별 수급자', '기초생활보장 시군구', '생계급여 시군구', '의료급여 시군구', '노인복지시설 현황', '노인주거복지시설', '재가노인복지시설', '장애인복지시설 현황', '어린이집 현황 시군구', '기초연금 수급자 시군구', '장애인연금 시군구', '복지대상자 시군구', '사회보장 시군구'):
         try:
             t = http_get('https://kosis.kr/openapi/statisticsSearch.do', {'method': 'getList', 'apiKey': _kk, 'searchNm': q, 'format': 'json', 'jsonVD': 'Y', 'resultCount': '20'})
             j = json.loads(t)
-            say('[KOSIS검색] %s → %s' % (q, ' | '.join('%s/%s %s(%s~%s %s)' % (x.get('ORG_ID'), x.get('TBL_ID'), x.get('TBL_NM'), x.get('STRT_PRD_DE'), x.get('END_PRD_DE'), x.get('PRD_SE', '')) for x in j)[:3000] if isinstance(j, list) else str(j)[:300]))
+            say('[KOSIS검색] %s → %s' % (q, ' | '.join('%s/%s %s(%s~%s %s)' % (x.get('ORG_ID'), x.get('TBL_ID'), x.get('TBL_NM'), x.get('STRT_PRD_DE'), x.get('END_PRD_DE'), x.get('PRD_SE', '')) for x in j if str(x.get('ORG_ID')) in ('117', '322', '331', '350', '101', '110'))[:2500] if isinstance(j, list) else str(j)[:300]))
         except Exception as e:  # noqa: BLE001
             say('[KOSIS검색] %s 실패 %s' % (q, e))
     if os.environ.get('PROBE_FULL') != '1':
