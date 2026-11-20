@@ -1742,10 +1742,18 @@ function startApp() {
     view.style.gridTemplateRows = '44px auto minmax(0, 1fr)';
     view.appendChild(el('div', { class: 'title' }, [el('h1', { text: D.me + '시 행사·축제 분석' }), el('span', { class: 'basis', text: '행사: 관광공사·문화축제/공연행사 표준데이터·문화정보원 · 방문자: 데이터랩 일별' })]));
     var st = S && S.st;
+    var pe = S ? (S.eds || []).filter(function (e) { return e.st && e.st.fest; }).slice(0, 2) : [];
+    var fdays = S ? Math.round((ymdDate(S.end) - ymdDate(S.start)) / 864e5) + 1 : 0;
+    var fc = (!st || !st.fest) && pe.length ? (function () {
+      var av = pe.reduce(function (t, e) { return t + e.st.fest.avg; }, 0) / pe.length, ups = pe.filter(function (e) { return e.st.up != null; });
+      return { avg: av, sum: av * fdays, up: ups.length ? ups.reduce(function (t, e) { return t + e.st.up; }, 0) / ups.length : null, n: pe.length };
+    })() : null;
     var cards = [
       { l: '등록된 행사·축제', ic: 'camera', v: fmt(F.length, 0), u: '건', chips: [['진행 중 ' + F.filter(function (f) { return f.state === '진행 중'; }).length, 'good'], ['예정 ' + F.filter(function (f) { return f.state === '예정'; }).length, 'navy']] },
       { l: '다가오는 행사', sub: next ? mdw(next.start) : '', ic: 'pin', col: '#C0602B', bg: '#FDEBDD', v: next ? next.title : '없음', u: '', small: true },
+      fc ? { l: '예상 하루 평균', sub: '지난 ' + fc.n + '회 평균 · ' + S.title, ic: 'people', col: '#7A4FC4', bg: '#EFE9FB', v: fmtK(fc.avg), u: '명', chips: [fc.up != null ? ['평시보다 ' + (fc.up >= 0 ? '+' : '') + fmt(fc.up, 1) + '% 예상', 'violet'] : null, ['예상치', '']] } :
       { l: '축제 기간 하루 평균', sub: S ? S.title : '', ic: 'people', col: '#1F6FD1', bg: '#E4EEFB', v: st && st.fest ? fmtK(st.fest.avg) : '–', u: '명', chips: [st && st.up != null ? ['평시(직전 2주)보다 ' + (st.up >= 0 ? '+' : '') + fmt(st.up, 1) + '%', st.up >= 0 ? 'good' : 'bad'] : null] },
+      fc ? { l: '예상 축제 기간 방문자', sub: fdays + '일 · 지난 회차 하루 평균 × 일수', ic: 'trend', col: '#2E8B57', bg: '#E2F3E9', v: fmtK(fc.sum), u: '명', chips: [['예상치', '']] } :
       { l: '축제 기간 방문자', sub: st && st.fest ? st.fest.n + '일 합계' : '', ic: 'trend', col: '#2E8B57', bg: '#E2F3E9', v: st && st.fest ? fmtK(st.fest.sum) : '–', u: '명', chips: [st && st.prev[0] ? [(st.prev[0].real ? '지난 회차보다 ' : '전년 같은 기간보다 ') + '' + ((st.fest.sum / st.prev[0].sum - 1) * 100 >= 0 ? '+' : '') + fmt((st.fest.sum / st.prev[0].sum - 1) * 100, 1) + '%', 'violet'] : null] }
     ];
     cardsRow(cards);
@@ -1770,7 +1778,18 @@ function startApp() {
     });
     panel('행사·축제 목록', fullList ? '전체 ' + allN + '건 · 누르면 분석 · 효과 = 평시 대비' : allN + '건 중 ' + Math.min(LIM, allN) + '건 · 「크게 보기」를 누르면 전체 목록', el('table', { class: 'dt big ftab' }, [el('thead', {}, [el('tr', {}, ['행사', '기간', '상태', '효과'].map(function (h, j) { return el('th', { class: j === 3 ? 'r' : '', text: h }); }))]), tb]));
     // 전후 일별
-    if (!S || !st || !st.fest) { panel(S ? S.title : '축제 분석', '', el('div', { class: 'empty', text: S && S.state !== '종료' ? '축제가 끝나고 방문자 자료가 나오면 분석합니다' : '방문자 자료가 없는 기간입니다' })); return; }
+    if ((!S || !st || !st.fest) && fc) {
+      var L2 = [], lab2 = [], j0 = 14, j1 = 14 + fdays - 1, CL = ['#E8873F', '#9AA8BA'];
+      for (var k = -14; k <= fdays - 1 + 14; k++) lab2.push(k < 0 ? 'D' + k : k < fdays ? (k + 1) + '일차' : 'D+' + (k - fdays + 1));
+      pe.forEach(function (e, n) { var v = []; for (var k2 = -14; k2 <= fdays - 1 + 14; k2++) { var d2 = addDays(e.start, k2); v.push(VD[d2] ? vday(VD[d2]) : null); }
+        L2.push({ name: e.start.slice(0, 4) + '년 (' + mdLabel(e.start) + '~' + mdLabel(e.end) + ')', color: CL[n], values: v, width: n ? 2 : 3, dash: n ? '4 4' : null, area: !n }); });
+      var ins2 = pe.map(function (e) { return '<b>' + e.start.slice(0, 4) + '년</b> 축제 기간 하루 평균 ' + fmtK(e.st.fest.avg) + '명 · 평시보다 ' + (e.st.up >= 0 ? '+' : '') + fmt(e.st.up, 1) + '% · ' + e.st.fest.n + '일 ' + fmtK(e.st.fest.sum) + '명'; });
+      ins2.push('<b>올해 예상</b> 하루 평균 약 ' + fmtK(fc.avg) + '명, ' + fdays + '일 약 ' + fmtK(fc.sum) + '명 <span style="color:var(--sub)">※ 지난 회차 평균으로 낸 예상치이며 실제 값이 아닙니다. 축제가 끝나고 방문자 자료가 나오면 실제 분석으로 바뀝니다.</span>');
+      panel(S.title + ' · 지난 회차 분석과 올해 예상', mdw(S.start) + ' ~ ' + mdw(S.end) + ' 예정 · 지난 회차 앞뒤 2주 · 외지인+외국인 명', [lineChart(lab2, L2, { bands: [[j0, j1, '축제 기간']], step: 3 }),
+        el('div', { class: 'ins' }, ins2.map(function (h2) { return el('div', { html: h2 }); }))]);
+      return;
+    }
+    if (!S || !st || !st.fest) { panel(S ? S.title : '축제 분석', '', el('div', { class: 'empty', text: S && S.state !== '종료' ? '지난 회차 자료가 없어 예상할 수 없습니다 · 축제가 끝나고 방문자 자료가 나오면 분석합니다' : '방문자 자료가 없는 기간입니다' })); return; }
     var lab = [], cur = [], p1 = [], p2 = [], a = addDays(S.start, -14), b = addDays(S.end, 14), i0 = null, i1 = null;
     var e1 = S.eds[0], e2 = S.eds[1];
     function shOf(e, n) { return e ? Math.round((ymdDate(e.start) - ymdDate(S.start)) / 864e5) : -364 * n; }
