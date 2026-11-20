@@ -195,7 +195,7 @@ def main():
     except Exception as e:  # noqa: BLE001
         say('[사회보장 swagger] 실패 %s' % e)
     import sources as _s9
-    for org, tb in (('106', 'DT_106N_06_0100043'), ('106', 'DT_106N_07_0100050'), ('106', 'DT_106N_06_0100050'), ('110', 'DT_110020_A006'), ('110', 'DT_110020_B006'), ('106', 'DT_106N_07_0100058')):
+    for org, tb in ():
         try:
             meta = _s9.kosis_meta({'key_env': 'KOSIS_KEY', 'meta_url': 'https://kosis.kr/openapi/statisticsData.do', 'params': {'orgId': org, 'tblId': tb}})
             objs = {}
@@ -219,7 +219,7 @@ def main():
             say('[물자료] %s %s: %s' % (tb, {k: v for k, v in prm.items() if k.startswith('obj')}, ' | '.join('%s %s %s %s=%s%s' % (r.get('PRD_DE'), r.get('C1_NM'), r.get('C2_NM', ''), r.get('ITM_NM'), r.get('DT'), r.get('UNIT_NM', '')) for r in j[:60]) if isinstance(j, list) else str(j)[:300]))
         except Exception as e:  # noqa: BLE001
             say('[물메타] %s 실패 %s' % (tb, e))
-    for q in ('유수율', '누수율', '수돗물 음용률'):
+    for q in ():
         try:
             t = http_get('https://kosis.kr/openapi/statisticsSearch.do', {'method': 'getList', 'apiKey': _kk, 'searchNm': q, 'format': 'json', 'jsonVD': 'Y', 'resultCount': '20'})
             j = json.loads(t)
@@ -227,15 +227,30 @@ def main():
         except Exception as e:  # noqa: BLE001
             say('[KOSIS검색] %s 실패 %s' % (q, e))
     _dk = os.environ.get('DATA_GO_KR_KEY', '').strip()
-    base = 'https://apis.data.go.kr/B553077/api/open/sdsc2/'
-    for op, prm in (('storeListInDong', {'divId': 'signguCd', 'key': '51170'}),
-                    ('storeListByDate', {'key': '20261118'})):
+    import re as _re
+    for pk, base in (('15134145', 'https://apis.data.go.kr/B500001/waternow/twdClwr'), ('15134425', 'https://apis.data.go.kr/B500001/waternow/twdOrgwtWdr')):
+        ops = []
         try:
-            q = dict(prm); q.update({'serviceKey': _dk, 'type': 'json', 'numOfRows': '3', 'pageNo': '1'})
-            t = http_get(base + op, q, tries=1)
-            say('[상가] %s %s → %s' % (op, prm, t[:1800].replace(_dk, '***')))
+            h = http_get('https://www.data.go.kr/data/%s/openapi.do' % pk, {}, tries=1)
+            ops = sorted(set(_re.findall(r'/(?:B500001/waternow/)?(?:twdClwr|twdOrgwtWdr)/([A-Za-z0-9_]+)', h)))
+            say('[물API] %s 페이지 작업: %s' % (pk, ops))
+            for m in _re.finditer(r'(swagger[^"\']{0,200}|oprtinUrl[^,]{0,200}|operationNm[^,]{0,120})', h):
+                say('[물API] %s 단서 %s' % (pk, m.group(0)[:200]))
         except Exception as e:  # noqa: BLE001
-            say('[상가] %s %s 실패 %s' % (op, prm, e))
+            say('[물API] %s 페이지 실패 %s' % (pk, e))
+        try:
+            h = http_get('https://www.data.go.kr/tcs/dss/selectApiDataDetailView.do', {'publicDataPk': pk}, tries=1)
+            ops2 = sorted(set(_re.findall(r'(?:twdClwr|twdOrgwtWdr)/([A-Za-z0-9_]+)', h)))
+            say('[물API] %s 상세 작업: %s / 길이 %d' % (pk, ops2, len(h)))
+            ops = sorted(set(ops) | set(ops2))
+        except Exception as e:  # noqa: BLE001
+            say('[물API] %s 상세 실패 %s' % (pk, e))
+        for op in (ops or ['']):
+            try:
+                t = http_get(base + ('/' + op if op else ''), {'serviceKey': _dk, 'pageNo': '1', 'numOfRows': '5', '_type': 'json', 'wtwkBsnm': '동해시', 'stMt': '09', 'edMt': '10'}, tries=1)
+                say('[물API] %s %s → %s' % (pk, op, t[:1500].replace(_dk, '***')))
+            except Exception as e:  # noqa: BLE001
+                say('[물API] %s %s 실패 %s' % (pk, op, str(e)[:400]))
     if os.environ.get('PROBE_FULL') != '1':
         return
     probe('admm_population', {'url': 'https://apis.data.go.kr/1741000/admmPpltnHhStus/selectAdmmPpltnHhStus', 'key_env': 'DATA_GO_KR_KEY',
