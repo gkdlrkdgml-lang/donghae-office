@@ -813,6 +813,23 @@ def social(S, C):
         res['elderly'] = O
     except Exception as e:  # noqa: BLE001
         log('노인여가복지시설 실패: %s' % e)
+    # 5) 장기요양기관(건강보험공단): 계·재가·노인의료복지시설, 기관수·정원
+    try:
+        rows = _kosis_rows('DT_35006_N021', {'orgId': '350', 'prdSe': 'Y', 'objL1': 'ALL', 'objL2': '001+002+003+', 'itmId': '002+003+', 'newEstPrdCnt': '1'}, 'soc_ltc')
+        LT = {}
+        for r in rows:
+            code = str(r.get('C1', ''))
+            if not code.startswith('15350AC400I1') or code == '15350AC400I1':
+                continue
+            name = match_region(str(r.get('C1_NM', '')).strip(), C['regions'])
+            v = to_num(r.get('DT'))
+            if name and v is not None:
+                k = {'001': 'all', '002': 'home', '003': 'facility'}.get(str(r.get('C2')), str(r.get('C2')))
+                LT.setdefault(name, {})[k + ('_n' if str(r.get('ITM_ID')) == '002' else '_cap')] = v
+                res['ltc_year'] = str(r.get('PRD_DE'))
+        res['ltc'] = LT
+    except Exception as e:  # noqa: BLE001
+        log('장기요양기관 실패: %s' % e)
     if not res['facilities'] and not R:
         raise RuntimeError('복지 자료 없음')
     return res

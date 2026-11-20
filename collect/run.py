@@ -223,7 +223,7 @@ def collect(state, S, C):
             ok(state, 'eco_ind', '%s년' % L['eco_ind']['year'])
         except Exception as e:  # noqa: BLE001
             fail(state, 'eco_ind', e)
-    if stale('social', 30) or '--force-life' in sys.argv:
+    if stale('social', 30) or 'ltc' not in (L.get('social') or {}) or '--force-life' in sys.argv:
         try:
             L['social'] = sources.social(S, C)
             ok(state, 'social', '시설 %s · 수급 %s' % (L['social'].get('fac_year'), L['social'].get('rcp_year')))
