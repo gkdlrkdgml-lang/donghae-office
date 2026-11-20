@@ -134,12 +134,18 @@ def main():
         for c, g in (('51', '51170'), ('42', '42170'), ('32', '32040')):
             q = dict(extra, ctpv_cd=c, sgg_cd=g, dataType='JSON')
             tries.append(('%s %s/%s' % (base.split('/')[0], c, g), 'https://apis.data.go.kr/1613000/' + base, q))
+    tries = []
+    for base in ['http://openapi.tour.go.kr/openapi/service/TourismResourceStatsService/getPchrgTrrsrtVisitorList',
+                 'https://openapi.tour.go.kr/openapi/service/TourismResourceStatsService/getPchrgTrrsrtVisitorList'] + \
+                ['https://apis.data.go.kr/%s/TourismResourceStatsService/getPchrgTrrsrtVisitorList' % o for o in ('B551011', 'B551014', 'B553077', '1371000', 'B490007', 'B552015', 'B553662', 'B551010')]:
+        for sd in ('강원특별자치도', '강원도'):
+            tries.append(('stat %s %s' % (base.split('//')[1][:40], sd), base, {'YM': '202506', 'SIDO': sd, 'GUNGU': '동해시', '_type': 'json'}))
     for nm, url, extra in tries:
         try:
             q = {'serviceKey': kk, 'numOfRows': '5', 'pageNo': '1'}
             q.update(extra)
             t = http_get(url, q, tries=1)
-            say('[찾기 %s] 됨 %s' % (nm, t[:900].replace('\n', ' ')))
+            say('[찾기 %s] 됨 %s' % (nm, t[:2500].replace('\n', ' ')))
         except Exception as e:  # noqa: BLE001
             m = str(e)
             code = 'NO_SERVICE' if 'NO_OPENAPI' in m or '404' in m else 'NOT_REG' if 'NOT_REGISTERED' in m else m[-200:].replace('\n', ' ')
