@@ -1517,7 +1517,7 @@ function startApp() {
         el('span', { class: 'rk', text: String(i + 1) }), el('span', { text: n }),
         el('div', { class: 'bar' }, [el('div', { style: 'width:' + ((v || 0) / mxv * 100).toFixed(1) + '%;background:' + lv[1] })]), el('span', { class: 'v', text: fmt(v, 0) })]));
     });
-    panel('오늘 관광지 순위', mdw(day0) + ' · 집중률', [rk, hot.length ? el('div', { class: 'chips', style: 'margin-top:8px;flex-wrap:wrap' }, [el('span', { class: 'chip bad', text: '안전관리 확인' })].concat(hot.slice(0, 4).map(function (h) { return el('span', { class: 'chip', text: mdLabel(h[0]) + ' ' + h[1] + ' ' + fmt(h[2], 0) }); }))) : null]);
+    panel('오늘 관광지 순위', mdw(day0) + ' · 집중률', [rk]);
   }
   function screenTourPast() {
     var L = D.life || {}, VD = L.visit_days || {}, ks = Object.keys(VD).sort(), last = ks[ks.length - 1];
