@@ -1332,19 +1332,21 @@ function startApp() {
     var yoy = prevY && vis(prevY) ? (vis(cur) - vis(prevY)) / vis(prevY) * 100 : null;
     var ml = function (ym) { return ym ? ym.slice(0, 4) + '년 ' + Number(ym.slice(4)) + '월' : ''; };
     lifeTitle(fullName(SN) + ' 관광 방문자', ml(last) + ' 한국관광공사 데이터랩' + selHint());
-    var y12 = ms.slice(-12).reduce(function (t, ym) { return t + (vis((VM[ym] || {})[SN]) || 0); }, 0);
+    var ytdM = ms.filter(function (ym) { return ym.slice(0, 4) === last.slice(0, 4); });
+    var ytdLab = last.slice(0, 4) + '년 1~' + Number(last.slice(4)) + '월';
+    var y12 = ytdM.reduce(function (t, ym) { return t + (vis((VM[ym] || {})[SN]) || 0); }, 0);
     cardsRow([
       { l: '방문자', sub: ml(last) + ' · 외지인+외국인', ic: 'camera', v: fmt(vis(cur), 0), u: '명', chips: [yoy != null ? ['전년 같은 달 ' + (yoy >= 0 ? '+' : '') + fmt(yoy, 1) + '%', yoy >= 0 ? 'good' : 'bad'] : null, meChip(vis(meCur), '명')] },
       { l: '외지인', ic: 'suitcase', col: '#1F6FD1', bg: '#E4EEFB', v: fmt(cur.outside, 0), u: '명' },
       { l: '외국인', ic: 'globe', col: '#7A4FC4', bg: '#EFE9FB', v: fmt(cur.foreign, 0), u: '명' },
-      { l: '최근 12개월', ic: 'camera', col: '#2E8B57', bg: '#E2F3E9', v: fmt(y12, 0), u: '명', chips: [rankChip(I), I && I.me ? ['인구 1명당 ' + fmt(I.me.value, 1) + '명', 'violet'] : null] },
+      { l: '올해 누계', sub: ytdLab, ic: 'camera', col: '#2E8B57', bg: '#E2F3E9', v: fmt(y12, 0), u: '명', chips: [rankChip(I), I && I.me ? ['인구 1명당 ' + fmt(I.me.value, 1) + '명', 'violet'] : null] },
       { l: '현지인', sub: fullName(SN) + ' 주민 이동', ic: 'people', col: '#C0602B', bg: '#FDEBDD', v: fmt(cur.local, 0), u: '명' }
     ]);
     panel('인구 1명당 방문자 · 올해 누계', ((I0 || {}).basis || '') + ' · 명 · 누르면 그 지역', I ? rankList(I, regPick, regSel) : el('div', { class: 'empty', text: '12개월 자료가 쌓이면 표시' }));
-    var m12 = ms.slice(-12), mlab = m12.map(function (ym) { return Number(ym.slice(4)) + '월'; });
+    var m12 = ytdM, mlab = m12.map(function (ym) { return Number(ym.slice(4)) + '월'; });
     var tl = [{ name: fullName(SN), color: cmpColor(SN), values: m12.map(function (ym) { return vis((VM[ym] || {})[SN]); }), width: 3.5, area: true, labels: true }];
     if (regSel) tl.push({ name: D.me + '시', color: cmpColor(D.me), values: m12.map(function (ym) { return vis((VM[ym] || {})[D.me]); }), width: 2.5 });
-    panel('월별 방문자 · ' + (regSel ? fullName(SN) + ' vs ' + D.me + '시' : D.me + '시'), '외지인+외국인 · 명', lineChart(mlab, tl, { step: 1 }));
+    panel('월별 방문자 · ' + ytdLab + ' · ' + (regSel ? fullName(SN) + ' vs ' + D.me + '시' : D.me + '시'), '외지인+외국인 · 명', lineChart(mlab, tl, { step: 1 }));
     panel('방문자 구성 · ' + fullName(SN) + ' · ' + ml(last), '명', donut([['외지인 ' + fmt(cur.outside, 0), cur.outside || 0, '#1F6FD1'], ['외국인 ' + fmt(cur.foreign, 0), cur.foreign || 0, '#7A4FC4'], ['현지인 ' + fmt(cur.local, 0), cur.local || 0, '#E8A867']], fmt((cur.outside || 0) + (cur.foreign || 0) + (cur.local || 0), 0), '전체'));
   }
 
