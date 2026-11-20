@@ -7,12 +7,11 @@ import math
 
 
 def rank(values, direction, judge):
-    """values: {시군: 값}. direction: 1 높을수록 좋음, -1 낮을수록 좋음, 0 판정 제외(순위는 높은 값 순)."""
+    """values: {시군: 값}. 순위는 늘 값이 높은 순(1위 = 가장 큰 값). direction은 강점/개선 판정에만 씀: 1 높을수록 좋음, -1 낮을수록 좋음, 0 판정 제외."""
     items = [(k, v) for k, v in values.items() if v is not None]
     if not items:
         return [], {}
-    rev = direction != -1
-    items.sort(key=lambda kv: kv[1], reverse=rev)
+    items.sort(key=lambda kv: kv[1], reverse=True)
     n = len(items)
     strong_n = math.ceil(n * judge.get('strong_pct', 25) / 100.0)
     weak_n = math.ceil(n * judge.get('weak_pct', 25) / 100.0)
@@ -24,9 +23,9 @@ def rank(values, direction, judge):
         pct = round((n - r) / (n - 1) * 100, 1) if n > 1 else 100.0
         if direction == 0:
             j = 'excluded'
-        elif r <= strong_n:
+        elif (r <= strong_n) if direction == 1 else (r > n - strong_n):
             j = 'strong'
-        elif r > n - weak_n:
+        elif (r > n - weak_n) if direction == 1 else (r <= weak_n):
             j = 'weak'
         else:
             j = 'middle'

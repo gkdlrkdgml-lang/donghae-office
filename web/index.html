@@ -409,7 +409,7 @@ function startApp() {
     view.style.gridTemplateRows = '44px minmax(0, 1fr)';
     view.appendChild(el('div', { class: 'title' }, [
       el('h1', { text: '강원 ' + D.regions.length + '개 시·군 중 ' + D.me + '시의 위치' }),
-      el('span', { text: '1위 = 도내에서 가장 좋은 쪽 · 막대가 높을수록 좋음 · 누르면 세부 현황' })
+      el('span', { text: '순위 = 값이 높은 순(1위가 가장 큼) · 색 = 좋고 나쁨(초록 강점 · 주황 개선 필요) · 누르면 세부 현황' })
     ]));
     var GO = { pop_change: ['admin', 'compare'], working_age: ['admin', 'compare'], elderly: ['admin', 'compare'], medical: ['welfare'], ev: ['traffic', 'ev'], cars: ['traffic', 'cars'],
       accidents: ['traffic', 'safe'], parking: ['traffic', 'park'], bus_stops: ['traffic', 'busst'], taxi: ['traffic', 'taxi'], visitors: ['tour', 'now'], tour_exp: ['tour', 'dem'], budget: ['finance'], fin_indep: ['finance'] };
@@ -431,7 +431,7 @@ function startApp() {
         el('div', { class: 'ptrack' }, [
           el('div', { class: 'g25', style: 'bottom:75%' }), el('div', { class: 'g25', style: 'bottom:25%' }),
           el('div', { class: 'fill', style: 'height:' + h + '%;background:' + judgeColor(m.judge) }),
-          el('div', { class: 'lbl' }, [(i.dir === 0 && m.rank ? '많은 순 ' : '') + (m.rank ? m.rank + '위' : '–'), el('small', { text: '/ ' + i.n + ' · ' + fmt(m.value, i.digits) + i.unit })])
+          el('div', { class: 'lbl' }, [(m.rank ? m.rank + '위' : '–'), el('small', { text: '/ ' + i.n + ' · ' + fmt(m.value, i.digits) + i.unit })])
         ]),
         el('div', { class: 'pname', text: i.name }),
         el('div', { style: 'text-align:center' }, [el('span', { style: 'display:inline-block;font-size:13px;font-weight:800;padding:2px 8px;border-radius:999px;white-space:nowrap;color:' + dt[1] + ';background:' + dt[2], text: dt[0] })]),
