@@ -151,6 +151,15 @@ def main():
             code = 'NO_SERVICE' if 'NO_OPENAPI' in m or '404' in m else 'NOT_REG' if 'NOT_REGISTERED' in m else m[-200:].replace('\n', ' ')
             say('[찾기 %s] %s' % (nm, code))
     _kk = os.environ.get('KOSIS_KEY', '')
+    from urllib.parse import unquote as _uq9
+    _dk = _uq9(os.environ.get('DATA_GO_KR_KEY', '').strip())
+    for svc in ('general_restaurants', 'rest_cafes', 'lodgings', 'bakeries', 'rural_homestays'):
+        for q in ({'cond[ROAD_NM_ADDR::LIKE]': '동해시'}, {'cond[LOTNO_ADDR::LIKE]': '강원특별자치도 동해시'}):
+            try:
+                t = http_get('https://apis.data.go.kr/1741000/%s/info' % svc, dict(q, serviceKey=_dk, pageNo='1', numOfRows='2', returnType='json'), tries=1)
+                say('[인허가 %s %s] %s' % (svc, list(q)[0], t[:1500].replace('\n', ' ')))
+            except Exception as e:  # noqa: BLE001
+                say('[인허가 %s] 실패 %s' % (svc, str(e)[-300:]))
     try:
         import urllib.request as _ur2
         bd = json.dumps({'dc_search': {'STT_OFR_TBL_NM': 'TTQSNAI01T082143', 'STT_PBL_YR': '2026', 'STT_PBL_MM': '08', 'SCH_TFB_BC_CL': 'BC', 'SCH_CLUS_CL': 'sex', 'SCH_TFB_BC_CD': '00', 'SCH_TFB_BC_NM': '업태전체', 'SCH_SIDO_CD': '51', 'SCH_SIDO_NM': '강원특별자치도', 'SCH_SGG_CD': '00000', 'SCH_SGG_NM': '전체'}}, ensure_ascii=False).encode()
