@@ -8,6 +8,7 @@
 (키 값은 파일에 남기지 않습니다.)
 """
 import json
+import urllib.parse
 import os
 import sys
 
