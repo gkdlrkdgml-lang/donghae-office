@@ -209,6 +209,19 @@ def collect(state, S, C):
     if T.get('acc'):
         set_ind(state, 'accidents', {k: v.get('A1') for k, v in T['acc']['regions'].items() if v.get('A1') is not None},
                 '%s년 교통사고(행정안전부)' % T['acc']['year'])
+    # 경제: 국세청 사업자(연) — 30일마다
+    if stale('economy', 30) or '--force-life' in sys.argv:
+        try:
+            L['economy'] = sources.economy(S, C)
+            ok(state, 'economy', '%s년 %d개 시·군' % (L['economy']['year'], len(L['economy']['active'].get(L['economy']['year'], {}))))
+        except Exception as e:  # noqa: BLE001
+            fail(state, 'economy', e)
+    EC = L.get('economy') or {}
+    if EC.get('year'):
+        y = EC['year']
+        set_ind(state, 'biz_active', {k: v.get('total') for k, v in EC['active'][y].items() if v.get('total')}, '%s년 말 가동사업자(국세청)' % y)
+        set_ind(state, 'biz_new', {k: v.get('total') for k, v in EC['new'][y].items() if v.get('total')}, '%s년 신규 사업자(국세청)' % y)
+        set_ind(state, 'biz_net', {k: v.get('total', 0) - (EC['closed'][y].get(k) or {}).get('total', 0) for k, v in EC['new'][y].items() if k in EC['closed'][y]}, '%s년 신규−폐업(국세청)' % y)
     # 관광지 집중률·단기예보(매번), 관광지·축제 목록(주 1회)
     for key, fn in (('cnctr', tour.concentration), ('weather', tour.weather)):
         try:
@@ -371,11 +384,6 @@ def build(state, S, C):
         'finance': state.get('finance') or {},
         'life': {k: v for k, v in (state.get('life') or {}).items()},
     }
-    try:
-        with open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config', 'economy.json'), encoding='utf-8') as fp:
-            out['economy'] = json.load(fp)
-    except Exception:  # noqa: BLE001
-        out['economy'] = None
     for ind in S['indicators']:
         d = state['indicators'].get(ind['id'])
         if not ind.get('show') or not d or not d.get('values'):
@@ -387,7 +395,7 @@ def build(state, S, C):
     # 분야 화면이 비면 메뉴에서 숨김
     has_fin = any(i['id'] == 'fin_indep' for i in out['indicators'])
     L = out.get('life') or {}
-    need = {'economy': out.get('economy'), 'welfare': L.get('hospitals'), 'traffic': L.get('ev') or L.get('cars'), 'env': L.get('air'), 'tour': L.get('visit_months')}
+    need = {'economy': L.get('economy'), 'welfare': L.get('hospitals'), 'traffic': L.get('ev') or L.get('cars'), 'env': L.get('air'), 'tour': L.get('visit_months')}
     out['menu'] = [m for m in out['menu'] if not (m['id'] == 'finance' and not has_fin) and not (m['id'] in ('admin', 'compare') and not out['admin'])
                    and not (m['id'] in need and not need[m['id']])]
     return out

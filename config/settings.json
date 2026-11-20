@@ -279,6 +279,42 @@
       "digits": 1,
       "source": "KOSIS 지역별고용조사",
       "show": false
+    },
+    {
+      "id": "biz_active",
+      "no": 20,
+      "field": "경제",
+      "name": "가동 사업자",
+      "unit": "개",
+      "dir": 1,
+      "digits": 0,
+      "source": "국세청 국세통계(KOSIS)",
+      "show": true,
+      "main": false
+    },
+    {
+      "id": "biz_new",
+      "no": 21,
+      "field": "경제",
+      "name": "신규 사업자",
+      "unit": "개",
+      "dir": 1,
+      "digits": 0,
+      "source": "국세청 국세통계(KOSIS)",
+      "show": true,
+      "main": false
+    },
+    {
+      "id": "biz_net",
+      "no": 22,
+      "field": "경제",
+      "name": "사업자 순증(신규−폐업)",
+      "unit": "개",
+      "dir": 1,
+      "digits": 0,
+      "source": "국세청 국세통계(KOSIS)",
+      "show": true,
+      "main": false
     }
   ],
   "sources": {

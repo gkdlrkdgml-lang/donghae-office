@@ -701,3 +701,29 @@ def traffic_safety(S, C):
     if not res:
         raise RuntimeError('교통안전 통계를 하나도 받지 못함')
     return res
+
+
+ECO_TBL = {'active': ('DT_133N_A9811', '15133JYB0A'), 'new': ('DT_133001N_9822', 'A04'), 'closed': ('DT_133001N_9816', 'A04')}
+ECO_KIND = {'총계': 'total', '법인': 'corp', '개인사업자': 'indiv', '일반사업자': 'general', '간이사업자': 'simple', '면세사업자': 'exempt'}
+
+
+def economy(S, C, years=5):
+    """국세청(KOSIS) 시·군·구 가동·신규·폐업 사업자(연): 강원 18개 시·군, 최근 years년."""
+    res = {}
+    for key, (tbl, gw) in ECO_TBL.items():
+        rows = _kosis_rows(tbl, {'orgId': '133', 'prdSe': 'Y', 'objL1': 'ALL', 'objL2': 'ALL', 'itmId': 'ALL', 'newEstPrdCnt': str(years)}, 'eco_' + key)
+        by = {}
+        for r in rows:
+            code = str(r.get('C1', ''))
+            if not code.startswith(gw) or code == gw:
+                continue
+            name = match_region(str(r.get('C1_NM', '')).strip(), C['regions'])
+            kind = ECO_KIND.get(str(r.get('C2_NM', '')).strip())
+            v = to_num(r.get('DT'))
+            if name and kind and v is not None:
+                by.setdefault(str(r.get('PRD_DE')), {}).setdefault(name, {})[kind] = v
+        if not by:
+            raise RuntimeError('%s: 강원 시·군 자료 없음' % tbl)
+        res[key] = by
+    yrs = sorted(set(res['active']) & set(res['new']) & set(res['closed']))
+    return {'at': now().strftime('%Y-%m-%d'), 'years': yrs, 'year': yrs[-1] if yrs else None, 'active': res['active'], 'new': res['new'], 'closed': res['closed']}
