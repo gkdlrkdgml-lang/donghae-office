@@ -152,6 +152,14 @@ def main():
             say('[찾기 %s] %s' % (nm, code))
     _kk = os.environ.get('KOSIS_KEY', '')
     try:
+        import urllib.request as _ur2
+        bd = json.dumps({'dc_search': {'STT_OFR_TBL_NM': 'TTQSNAI01T082143', 'STT_PBL_YR': '2026', 'STT_PBL_MM': '08', 'SCH_TFB_BC_CL': 'BC', 'SCH_CLUS_CL': 'sex', 'SCH_TFB_BC_CD': '00', 'SCH_TFB_BC_NM': '업태전체', 'SCH_SIDO_CD': '51', 'SCH_SIDO_NM': '강원특별자치도', 'SCH_SGG_CD': '00000', 'SCH_SGG_NM': '전체'}}, ensure_ascii=False).encode()
+        rq = _ur2.Request('https://tasis.nts.go.kr/wqAction.do?actionId=ATWEPFFA001R04', data=bd, headers={'Content-Type': 'application/json; charset=UTF-8', 'User-Agent': 'Mozilla/5.0', 'Referer': 'https://tasis.nts.go.kr/websquare/websquare.html?w2xPath=/cm/index.xml'})
+        with _ur2.urlopen(rq, timeout=30) as r:
+            say('[TASIS] %s %s' % (r.status, r.read()[:600].decode('utf-8', 'replace')))
+    except Exception as e:  # noqa: BLE001
+        say('[TASIS] 실패 %s' % e)
+    try:
         import urllib.request as _ur
         body = 'datsClCrit=WS&datsClNo=1004&datsNo=22&datTbl=TIP_DPWL_DSRT_DSTP_DSPSN_STN&radioType=1&statYm=202610&statYy=2026&statMm=10&selbox=%ED%95%B4%EB%8B%B9%EC%9B%94&statCtprvCd=51&statSggCd=5117000000&meaCol=REG_DSPSN_NT&chartType=bar&spdmRtYN=N&dimCols=DSDGR_NM%20AS%20DIMCOL0&grpCol0=DSDGR_NM&DIMCOL0=DSDGR_NM&ordCol0=DSDGR_NM_ORD0'
         rq = _ur.Request('https://www.bokjiro.go.kr/ssis-tbu/twatga/sociGuaStat/selectChartData.do', data=body.encode(), headers={'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8', 'User-Agent': 'Mozilla/5.0', 'Referer': 'https://www.bokjiro.go.kr/ssis-tbu/twatga/sociGuaStat/SociGuaStatDetailIframe.do?datsNo=22&datsClNo=1041&datsClCrit=WS'})
