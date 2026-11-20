@@ -1072,10 +1072,9 @@ function startApp() {
     var kinds = Object.keys(k).map(function (x) { return [x, k[x]]; }).sort(function (a, b) { return b[1] - a[1]; });
     var pal = ['#1F6FD1', '#2E8B57', '#E8A867', '#7A4FC4', '#D6457A', '#8FB2E0', '#5DB88E', '#B8C4D4', '#C0602B', '#556274'];
     panel('종별 구성 · ' + full, '곳', donut(kinds.map(function (x, i) { return [x[0] + ' ' + x[1], x[1], pal[i % pal.length]]; }), fmt(m.total, 0) + '곳', '의료기관'));
-    if (!isMe) { panel('의료기관 수 · 강원 18개 시·군', '곳', colChart(Object.keys(R).map(function (n) { return [n, R[n].total]; }), pick, SN, 0)); return; }
     var tb = el('tbody');
-    (H.mine || []).slice(0, 14).forEach(function (x) { tb.appendChild(el('tr', {}, [el('td', { text: x.name }), el('td', { text: x.kind }), el('td', { text: x.dong || '' }), el('td', { class: 'r', text: fmt(x.doctors, 0) })])); });
-    panel('의사 수가 많은 기관', '동해시 · 명', el('table', { class: 'dt big' }, [el('thead', {}, [el('tr', {}, ['기관', '종별', '동', '의사'].map(function (h, j) { return el('th', { class: j === 3 ? 'r' : '', text: h }); }))]), tb]));
+    (isMe || !m.top ? (H.mine || []) : m.top.map(function (t) { return { name: t[0], kind: t[1], dong: t[2], doctors: t[3] }; })).slice(0, 14).forEach(function (x) { tb.appendChild(el('tr', {}, [el('td', { text: x.name }), el('td', { text: x.kind }), el('td', { text: x.dong || '' }), el('td', { class: 'r', text: fmt(x.doctors, 0) })])); });
+    panel('의사 수가 많은 기관 · ' + full, '명', el('table', { class: 'dt big' }, [el('thead', {}, [el('tr', {}, ['기관', '종별', '동', '의사'].map(function (h, j) { return el('th', { class: j === 3 ? 'r' : '', text: h }); }))]), tb]));
   }
 
   // ---------- 교통 ----------

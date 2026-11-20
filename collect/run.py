@@ -146,7 +146,7 @@ def collect(state, S, C):
     def per(vals, mult):
         return {k: v / pops[k] * mult for k, v in vals.items() if pops.get(k)}
     for key, fn, days in (('hospitals', life.hospitals, 6), ('ev', life.ev_chargers, 6)):
-        nopharm = key == 'hospitals' and not any('약국' in (v.get('kinds') or {}) for v in ((L.get('hospitals') or {}).get('regions') or {}).values())
+        nopharm = key == 'hospitals' and not any('약국' in (v.get('kinds') or {}) and 'top' in v for v in ((L.get('hospitals') or {}).get('regions') or {}).values())
         if stale(key, days) or nopharm or '--force-life' in sys.argv:
             try:
                 L[key] = fn(C)

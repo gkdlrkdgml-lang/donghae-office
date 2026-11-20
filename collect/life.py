@@ -36,6 +36,7 @@ def hospitals(C):
         if name == C['me']:
             mine.append({'name': r.get('yadmNm'), 'kind': kind, 'dong': r.get('emdongNm'), 'doctors': int(to_num(r.get('drTotCnt')) or 0),
                          'lat': to_num(r.get('YPos')), 'lng': to_num(r.get('XPos'))})
+        d.setdefault('top', []).append([r.get('yadmNm'), kind, r.get('emdongNm') or '', int(to_num(r.get('drTotCnt')) or 0)])
     if len(out) < 15:
         raise RuntimeError('의료기관 응답에서 강원 시·군을 다 찾지 못함(%d)' % len(out))
     # 약국(심평원 약국정보서비스) — 실패하면 약국 없이 진행
@@ -60,6 +61,8 @@ def hospitals(C):
                 log('약국(의료원) %s 실패: %s' % (reg['name'], str(e2)[:120]))
                 break
     mine.sort(key=lambda x: -x['doctors'])
+    for d in out.values():
+        d['top'] = sorted(d.get('top', []), key=lambda x: -x[3])[:14]
     return {'regions': out, 'mine': mine[:40], 'at': now().strftime('%Y-%m-%d')}
 
 
