@@ -1463,6 +1463,17 @@ function startApp() {
     var dayAvg = {};
     names.forEach(function (n) { SP[n].forEach(function (x) { if (x[0] >= day0) { var a = dayAvg[x[0]] || (dayAvg[x[0]] = [0, 0]); a[0] += x[1]; a[1]++; } }); });
     var peakDay = Object.keys(dayAvg).sort(function (a, b) { return dayAvg[b][0] / dayAvg[b][1] - dayAvg[a][0] / dayAvg[a][1]; })[0];
+    var HOL = { '20261225': '성탄절', '20270101': '신정', '20270206': '설 연휴', '20270207': '설날', '20270208': '설 연휴', '20270209': '대체공휴일', '20270301': '삼일절', '20270505': '어린이날', '20270513': '부처님오신날', '20270606': '현충일', '20270815': '광복절', '20270816': '대체공휴일' };
+    var peakWhy = (function () {
+      if (!peakDay) return null;
+      var w = ymdDate(peakDay).getDay(), av = function (d) { return dayAvg[d][0] / dayAvg[d][1]; };
+      var wd = Object.keys(dayAvg).filter(function (d) { var x = ymdDate(d).getDay(); return x > 0 && x < 6 && !HOL[d]; });
+      var base = wd.length ? wd.reduce(function (t, d) { return t + av(d); }, 0) / wd.length : null;
+      var why = HOL[peakDay] ? HOL[peakDay] : (w === 6 ? '토요일' : w === 0 ? '일요일' : '평일');
+      var ev = (((L.events || {}).items) || []).filter(function (e) { return e.start <= peakDay && (e.end || e.start) >= peakDay; }).map(function (e) { return e.title; });
+      var top = names.slice().sort(function (a2, b2) { return (at(b2, peakDay) || 0) - (at(a2, peakDay) || 0); })[0];
+      return { why: why, x: base ? av(peakDay) / base : null, ev: ev, top: top, topv: at(top, peakDay) };
+    })();
     view.style.gridTemplateColumns = 'minmax(0, 1.25fr) minmax(0, 1fr) minmax(0, .85fr)';
     view.style.gridTemplateRows = '44px auto minmax(0, 1fr)';
     view.appendChild(el('div', { class: 'title' }, [el('h1', { text: D.me + '시 관광지 혼잡 예측' }), el('span', { class: 'basis', text: '한국관광공사 관광지 집중률 예측 · ' + (CN.at || '') + ' 발표 · 30일' })]));
@@ -1476,7 +1487,7 @@ function startApp() {
       { l: '오늘 가장 붐빌 곳', sub: mdw(day0), ic: 'pin', v: ord[0] || '–', u: '', chips: [ord[0] ? ['집중률 ' + fmt(at(ord[0], day0), 1), 'navy'] : null] },
       { l: '혼잡 예상', sub: '집중률 90 이상 · 30일', ic: 'cloud', col: '#D9534F', bg: '#FDE7E4', v: fmt(hot.length, 0), u: '건', chips: [hot[0] ? [mdLabel(hot[0][0]) + ' ' + hot[0][1], 'bad'] : ['없음', 'good']] },
       { l: '이번 주말 최고', sub: wkTop ? mdw(wkTop[0]) : '', ic: 'camera', col: '#C0602B', bg: '#FDEBDD', v: wkTop ? wkTop[1] : '–', u: '', chips: [wkTop ? ['집중률 ' + fmt(wkTop[2], 1), 'violet'] : null] },
-      { l: '30일 중 가장 붐빌 날', ic: 'trend', col: '#7A4FC4', bg: '#EFE9FB', v: peakDay ? mdLabel(peakDay) : '–', u: peakDay ? '(' + WD[ymdDate(peakDay).getDay()] + ')' : '', chips: [peakDay ? ['평균 집중률 ' + fmt(dayAvg[peakDay][0] / dayAvg[peakDay][1], 1), 'violet'] : null] },
+      { l: '30일 중 가장 붐빌 날', sub: peakWhy ? '사유: ' + peakWhy.why + (peakWhy.ev.length ? ' · ' + peakWhy.ev[0] : '') + (peakWhy.x ? ' · 평일의 ' + fmt(peakWhy.x, 1) + '배' : '') : '', ic: 'trend', col: '#7A4FC4', bg: '#EFE9FB', v: peakDay ? mdLabel(peakDay) : '–', u: peakDay ? '(' + WD[ymdDate(peakDay).getDay()] + ')' : '', chips: [peakDay ? ['평균 집중률 ' + fmt(dayAvg[peakDay][0] / dayAvg[peakDay][1], 1), 'violet'] : null, peakWhy && peakWhy.top ? [peakWhy.top + ' ' + fmt(peakWhy.topv, 0), 'navy'] : null] },
       { l: '오늘 날씨', sub: '동해 천곡동', ic: 'sun', col: '#1F6FD1', bg: '#E4EEFB', v: sl0 ? sl0.TMP : '–', u: '°C', chips: [tmx != null ? ['최고 ' + Math.round(tmx) + '° · 최저 ' + Math.round(tmn) + '°', 'navy'] : null, sl0 ? [wxIcon(sl0) + ' 비 ' + (sl0.POP || 0) + '%', ''] : null] }
     ]);
     // 지도
