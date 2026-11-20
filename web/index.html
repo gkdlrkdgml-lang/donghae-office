@@ -891,6 +891,14 @@ function startApp() {
   function panel(title, small, body) { var sct = el('section', {}, [el('div', { class: 'sh' }, [el('h2', { text: title }), el('small', { text: small || '' })])]); (Array.isArray(body) ? body : [body]).forEach(function (b) { if (b) sct.appendChild(b); }); view.appendChild(sct); return sct; }
 
 
+  // 지도 그림: 사이트에 미리 받아 둔 그림 → 없으면 지도 서버 → 그래도 안 되면 숨김
+  function tileImg(local, remote, style, fade) {
+    var im = el('img', { alt: '', style: style });
+    im.onload = function () { if (fade) im.style.opacity = 1; };
+    im.onerror = function () { if (im.dataset.tried) { im.remove(); return; } im.dataset.tried = 1; im.src = remote; };
+    im.src = local;
+    return im;
+  }
   // ---------- 행정: 행정동 3D 지도 ----------
   var m3Metric = 'pop', m3Ang = -24, m3Sel = null, m3Spin = true, m3Raf = null;
   // 행정동 중심(근사 위경도) · 바탕은 CARTO 지도 타일(z12)
@@ -930,7 +938,7 @@ function startApp() {
     var plane = el('div', { class: 'm3plane', style: 'width:' + PW + 'px;height:' + PH + 'px;margin:' + (-PH / 2) + 'px 0 0 ' + (-PW / 2) + 'px' });
     var map = el('div', { class: 'm3map' });
     for (var tx = tx0; tx <= tx1; tx++) for (var ty = ty0; ty <= ty1; ty++) {
-      map.appendChild(el('img', { src: 'https://' + 'abcd'[(tx + ty) % 4] + '.basemaps.cartocdn.com/rastertiles/voyager/' + M3Z + '/' + tx + '/' + ty + '@2x.png', alt: '', style: 'left:' + ((tx - tx0) * 256 - ox) + 'px;top:' + ((ty - ty0) * 256 - oy) + 'px' }));
+      map.appendChild(tileImg('img/tiles/c_' + M3Z + '_' + tx + '_' + ty + '.png', 'https://' + 'abcd'[(tx + ty) % 4] + '.basemaps.cartocdn.com/rastertiles/voyager/' + M3Z + '/' + tx + '/' + ty + '@2x.png', 'left:' + ((tx - tx0) * 256 - ox) + 'px;top:' + ((ty - ty0) * 256 - oy) + 'px'));
     }
     plane.appendChild(map);
     plane.appendChild(el('div', { class: 'm3veil' }));
@@ -1601,8 +1609,8 @@ function startApp() {
     for (var tx = tx0; tx <= tx1; tx++) for (var ty = ty0; ty <= ty1; ty++) {
       var pos = 'left:' + ((tx - tx0) * 256 - ox) + 'px;top:' + ((ty - ty0) * 256 - oy) + 'px';
       // 아래: 일반 지도(바다 등 위성 사진이 없는 곳을 채움), 위: 브이월드 위성지도
-      map.appendChild(el('img', { src: 'https://' + 'abcd'[(tx + ty) % 4] + '.basemaps.cartocdn.com/rastertiles/voyager/' + Z + '/' + tx + '/' + ty + '@2x.png', alt: '', style: pos }));
-      if (key) map.appendChild(el('img', { src: 'https://api.vworld.kr/req/wmts/1.0.0/' + key + '/Satellite/' + Z + '/' + ty + '/' + tx + '.jpeg', alt: '', style: pos + ';opacity:0;transition:opacity .4s', onload: function () { this.style.opacity = 1; }, onerror: function () { this.remove(); } }));
+      map.appendChild(tileImg('img/tiles/c_' + Z + '_' + tx + '_' + ty + '.png', 'https://' + 'abcd'[(tx + ty) % 4] + '.basemaps.cartocdn.com/rastertiles/voyager/' + Z + '/' + tx + '/' + ty + '@2x.png', pos));
+      if (key) { var si = tileImg('img/tiles/s_' + Z + '_' + tx + '_' + ty + '.jpg', 'https://api.vworld.kr/req/wmts/1.0.0/' + key + '/Satellite/' + Z + '/' + ty + '/' + tx + '.jpeg', pos + ';opacity:0;transition:opacity .4s', true); map.appendChild(si); }
     }
     plane.appendChild(map);
     var labels = [];

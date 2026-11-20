@@ -34,11 +34,12 @@ jobs:
         run: |
           # 키를 아직 안 넣었으면 시연용 값으로 화면만 띄웁니다(키를 넣으면 자동으로 실제 수집).
           if [ -z "$DATA_GO_KR_KEY" ]; then python collect/run.py --demo; else python collect/run.py; fi
+          python collect/tiles.py || true
       - name: 결과 저장(커밋)
         run: |
           git config user.name "donghae-office-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add web/data
+          git add web/data web/img/tiles
           git diff --cached --quiet || git commit -m "데이터 갱신 $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M')"
           for i in 1 2 3; do git push && break; git pull --rebase -X theirs || true; sleep 5; done
       - uses: actions/upload-pages-artifact@v3
