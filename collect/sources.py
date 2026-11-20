@@ -1002,15 +1002,15 @@ def licenses(C, code='4211000'):
     y0 = str(int(now().strftime('%Y')) - 1)
     for svc, nm in LICENSE_SVCS:
         rows, page = [], 1
-        while page <= 30:
-            t = http_get('https://apis.data.go.kr/1741000/%s/info' % svc, {'serviceKey': key, 'pageNo': str(page), 'numOfRows': '1000', 'returnType': 'json',
-                                                                         'cond[OPN_ATMY_GRP_CD::EQ]': code}, tries=2)
+        while page <= 80:
+            t = http_get('https://apis.data.go.kr/1741000/%s/info' % svc, {'serviceKey': key, 'pageNo': str(page), 'numOfRows': '300', 'returnType': 'json',
+                                                                         'cond[OPN_ATMY_GRP_CD::EQ]': code}, tries=3, timeout=90)
             body = (json.loads(t).get('response') or {}).get('body') or {}
             items = (body.get('items') or {}).get('item') or []
             if isinstance(items, dict):
                 items = [items]
             rows += items
-            if len(items) < 1000 or len(rows) >= int(body.get('totalCount') or 0):
+            if len(items) < 300 or len(rows) >= int(body.get('totalCount') or 0):
                 break
             page += 1
         rows = [r for r in rows if str(r.get('OPN_ATMY_GRP_CD')) == code]
