@@ -278,7 +278,7 @@ def collect(state, S, C):
         for ym in ytd:
             for k, d in vm[ym].items():
                 tot[k] = tot.get(k, 0) + d.get('outside', 0) + d.get('foreign', 0)
-        set_ind(state, 'visitors', per(tot, 1), '%s년 1~%d월 누계 외지인·외국인 방문(연인원)' % (lastm[:4], int(lastm[4:])))
+        set_ind(state, 'visitors', {k: v / 10000 for k, v in tot.items() if v}, '%s년 1~%d월 누계 외지인·외국인 방문(연인원)' % (lastm[:4], int(lastm[4:])))
 
     # 4) 재정자립도 → 11번 (순위는 당초, 최종은 같은 해 비교용)
     try:

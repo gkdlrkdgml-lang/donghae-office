@@ -39,6 +39,13 @@
   section h2 { margin: 0; font-size: 20px; color: var(--navy); }
   .sh { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
   .sh small { font-size: 13px; color: var(--sub); }
+  /* 제목·설명은 한 줄: 제목은 그대로, 설명이 길면 … 으로 줄임(마우스를 올리면 전체) */
+  .sh { flex-wrap: nowrap; min-width: 0; }
+  .sh h2 { white-space: nowrap; flex: 0 0 auto; }
+  .sh small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1 1 auto; text-align: right; }
+  .sh .zbtn { flex: 0 0 auto; white-space: nowrap; }
+  .pc .pl, .pc .pv, .chip { white-space: nowrap; }
+  .pc .pl { overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
   .kpis { grid-column: 1 / -1; display: grid; gap: 12px; }
 .kpi { background: var(--panel); border: 1px solid var(--line); box-shadow: 0 2px 6px rgba(20,30,50,.06); border-radius: 12px; padding: 14px 18px 14px 22px; display: flex; flex-direction: column; gap: 6px; min-width: 0; position: relative; overflow: hidden; }
   .kpi::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; background: var(--blue); }
@@ -238,7 +245,7 @@
   .cal div.today { outline: 3px solid var(--navy); }
   .calleg { display: flex; gap: 10px; font-size: 13px; color: var(--sub); flex-wrap: wrap; }
   .calleg i { display: inline-block; width: 14px; height: 14px; border-radius: 4px; vertical-align: -2px; margin-right: 4px; }
-  .tmap { flex: 1; min-height: 0; border-radius: 10px; overflow: hidden; background: #EEF3F8; }
+  .tmap { flex: 1; min-height: 0; border-radius: 10px; overflow: hidden; background: #EEF3F8; position: relative; z-index: 0; isolation: isolate; }
   .tmap .leaflet-tooltip { font: inherit; font-size: 13px; font-weight: 700; padding: 1px 6px; }
   .ins { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
   .ins div { background: #F3F7FD; border-left: 4px solid var(--blue); border-radius: 8px; padding: 8px 12px; font-size: 15.5px; line-height: 1.35; }
@@ -1339,10 +1346,10 @@ function startApp() {
       { l: '방문자', sub: ml(last) + ' · 외지인+외국인', ic: 'camera', v: fmt(vis(cur), 0), u: '명', chips: [yoy != null ? ['전년 같은 달 ' + (yoy >= 0 ? '+' : '') + fmt(yoy, 1) + '%', yoy >= 0 ? 'good' : 'bad'] : null, meChip(vis(meCur), '명')] },
       { l: '외지인', ic: 'suitcase', col: '#1F6FD1', bg: '#E4EEFB', v: fmt(cur.outside, 0), u: '명' },
       { l: '외국인', ic: 'globe', col: '#7A4FC4', bg: '#EFE9FB', v: fmt(cur.foreign, 0), u: '명' },
-      { l: '올해 누계', sub: ytdLab, ic: 'camera', col: '#2E8B57', bg: '#E2F3E9', v: fmt(y12, 0), u: '명', chips: [rankChip(I), I && I.me ? ['인구 1명당 ' + fmt(I.me.value, 1) + '명', 'violet'] : null] },
+      { l: '올해 누계', sub: ytdLab, ic: 'camera', col: '#2E8B57', bg: '#E2F3E9', v: fmt(y12, 0), u: '명', chips: [rankChip(I), meChip(I0 && I0.me ? I0.me.value : null, '만명', 1)] },
       { l: '현지인', sub: fullName(SN) + ' 주민 이동', ic: 'people', col: '#C0602B', bg: '#FDEBDD', v: fmt(cur.local, 0), u: '명' }
     ]);
-    panel('인구 1명당 방문자 · 올해 누계', ((I0 || {}).basis || '') + ' · 명 · 누르면 그 지역', I ? rankList(I, regPick, regSel) : el('div', { class: 'empty', text: '12개월 자료가 쌓이면 표시' }));
+    panel('올해 누계 방문자 · 강원 18개 시·군', ((I0 || {}).basis || '') + ' · 만명 · 누르면 그 지역', I ? rankList(I, regPick, regSel) : el('div', { class: 'empty', text: '12개월 자료가 쌓이면 표시' }));
     var m12 = ytdM, mlab = m12.map(function (ym) { return Number(ym.slice(4)) + '월'; });
     var tl = [{ name: fullName(SN), color: cmpColor(SN), values: m12.map(function (ym) { return vis((VM[ym] || {})[SN]); }), width: 3.5, area: true, labels: true }];
     if (regSel) tl.push({ name: D.me + '시', color: cmpColor(D.me), values: m12.map(function (ym) { return vis((VM[ym] || {})[D.me]); }), width: 2.5 });
@@ -1633,8 +1640,7 @@ function startApp() {
         b.appendChild(el('i', { class: f[0], style: 'background:' + shade(col, f[1]) + ';' + (f[0] === 'fr' || f[0] === 'bk' ? 'height:' + h + 'px' : 'width:' + h + 'px') }));
       });
       b.appendChild(el('i', { class: 'tp', style: 'background:' + shade(col, 1.1) + ';transform:translateZ(' + h + 'px);' + (on ? 'outline:4px solid #fff' : '') }));
-      var big = on || v >= 70;
-      var lb = el('div', { class: 'm3lb', style: big ? '' : 'transform-origin:bottom center' }, [el('b', { text: p.name, style: 'color:#fff;text-shadow:0 0 4px #000,0 0 3px #000;' + (big ? '' : 'font-size:15px') }), el('span', { style: 'background:' + col + ';color:' + clv(v)[2] + ';' + (big ? '' : 'font-size:13px;padding:0 6px'), text: fmt(v, 0) })]);
+      var lb = el('div', { class: 'm3lb', style: on ? '' : 'display:none' }, [el('b', { text: p.name, style: 'color:#fff;text-shadow:0 0 4px #000,0 0 3px #000' }), el('span', { style: 'background:' + col + ';color:' + clv(v)[2], text: '집중률 ' + fmt(v, 0) })]);
       lb._h = h; labels.push(lb); b.appendChild(lb);
       plane.appendChild(b);
     });
@@ -1658,7 +1664,7 @@ function startApp() {
     ctl.appendChild(sb);
     ctl.appendChild(el('button', { type: 'button', text: '⟳', onclick: function () { t3Ang += 30; setAng(); } }));
     wrap.appendChild(ctl);
-    wrap.appendChild(el('div', { class: 'm3note', style: 'color:#fff;text-shadow:0 0 3px #000', text: '막대 높이·색 = 집중률(높을수록 붐빔, 0~100) · 70 이상은 큰 글씨 · 막대를 누르면 오른쪽에 30일 달력' }));
+    wrap.appendChild(el('div', { class: 'm3note', style: 'color:#fff;text-shadow:0 0 3px #000', text: '막대 높이·색 = 집중률(높을수록 붐빔, 0~100) · 막대를 누르면 이름과 30일 달력' }));
     view.appendChild(el('section', { class: 'nozoom', style: 'grid-row:2;grid-column:1;display:flex;flex-direction:column;padding:8px;background:#0E2238' }, [wrap]));
     // 오른쪽: 순위 + 고른 곳 달력
     var ord = pts.slice().sort(function (a, b) { return (b.v || 0) - (a.v || 0); });
@@ -1800,11 +1806,12 @@ function startApp() {
     });
     try { (SCREENS[current] || screenMain)(); }
     catch (e) { view.textContent = ''; view.appendChild(el('div', { class: 'empty', style: 'font-size:24px;padding:60px', text: '이 화면을 그리지 못했습니다: ' + e.message })); }
-    addZoom();
+    addZoom(); fullTitles();
   }
 
   // ---------- 크게 보기: 각 칸 제목 오른쪽 버튼, 다시 누르거나 Esc로 닫기 ----------
   var zoomIdx = null;
+  function fullTitles() { Array.prototype.forEach.call(view.querySelectorAll('.sh small'), function (x) { x.title = x.textContent; }); }
   function addZoom() {
     var old = document.getElementById('zoomBack'); if (old) old.remove();
     var secs = view.querySelectorAll('section:not(.detail):not(.nozoom)');
