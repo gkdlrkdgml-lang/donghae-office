@@ -409,20 +409,32 @@ function startApp() {
     view.style.gridTemplateRows = '44px minmax(0, 1fr)';
     view.appendChild(el('div', { class: 'title' }, [
       el('h1', { text: '강원 ' + D.regions.length + '개 시·군 중 ' + D.me + '시의 위치' }),
-      el('span', { text: '핵심지표 ' + list.length + '개 · 막대 높이 = 도내 백분위 · 점선 = 상·하위 25%' })
+      el('span', { text: '1위 = 도내에서 가장 좋은 쪽 · 막대가 높을수록 좋음 · 누르면 세부 현황' })
     ]));
+    var GO = { pop_change: ['admin', 'compare'], working_age: ['admin', 'compare'], elderly: ['admin', 'compare'], medical: ['welfare'], ev: ['traffic', 'ev'], cars: ['traffic', 'cars'],
+      accidents: ['traffic', 'safe'], parking: ['traffic', 'park'], bus_stops: ['traffic', 'busst'], taxi: ['traffic', 'taxi'], visitors: ['tour', 'now'], tour_exp: ['tour', 'dem'], budget: ['finance'], fin_indep: ['finance'] };
+    function open(i) {
+      var t = GO[i.id]; if (!t) return;
+      if (t[0] === 'admin') admTab = t[1]; else if (t[0] === 'traffic') trTab = t[1]; else if (t[0] === 'tour') tourTab = t[1];
+      go(t[0]);
+    }
+    function dirTag(i) {
+      return i.dir === 1 ? ['▲ 높을수록 좋음', '#2E9C6A', '#E2F3E9'] : i.dir === -1 ? ['▼ 낮을수록 좋음', '#1F6FD1', '#E4EEFB'] : ['좋고 나쁨 판정 안 함', '#6B7686', '#EEF1F5'];
+    }
     var pillars = el('div', { class: 'pillars' });
     list.forEach(function (i) {
       var m = i.me || {};
       var h = m.pct == null ? 0 : Math.max(4, m.pct);
-      pillars.appendChild(el('div', { class: 'pillar' }, [
-        el('div', { class: 'pfield', text: i.field }),
+      var dt = dirTag(i);
+      pillars.appendChild(el('div', { class: 'pillar', style: 'cursor:pointer', title: '누르면 ' + i.field + ' 세부 현황', onclick: function () { open(i); } }, [
+        el('div', { class: 'pfield', text: i.field + ' ›' }),
         el('div', { class: 'ptrack' }, [
           el('div', { class: 'g25', style: 'bottom:75%' }), el('div', { class: 'g25', style: 'bottom:25%' }),
           el('div', { class: 'fill', style: 'height:' + h + '%;background:' + judgeColor(m.judge) }),
-          el('div', { class: 'lbl' }, [m.rank ? m.rank + '위' : '–', el('small', { text: '/ ' + i.n + ' · ' + fmt(m.value, i.digits) + i.unit })])
+          el('div', { class: 'lbl' }, [(i.dir === 0 && m.rank ? '많은 순 ' : '') + (m.rank ? m.rank + '위' : '–'), el('small', { text: '/ ' + i.n + ' · ' + fmt(m.value, i.digits) + i.unit })])
         ]),
         el('div', { class: 'pname', text: i.name }),
+        el('div', { style: 'text-align:center' }, [el('span', { style: 'display:inline-block;font-size:13px;font-weight:800;padding:2px 8px;border-radius:999px;white-space:nowrap;color:' + dt[1] + ';background:' + dt[2], text: dt[0] })]),
         el('div', { style: 'text-align:center' }, [el('span', { class: 'tag ' + (m.judge || 'middle'), text: judgeLabel(m.judge) })])
       ]));
     });
@@ -435,8 +447,8 @@ function startApp() {
       var box = el('div', { class: 'list' });
       if (!items.length) box.appendChild(el('div', { class: 'empty', text: '해당 지표 없음' }));
       items.forEach(function (i) {
-        box.appendChild(el('div', { class: 'item' }, [
-          el('div', {}, [el('b', { text: i.name }), el('div', { style: 'font-size:13.5px;color:#556274', text: i.source + ' · ' + i.basis })]),
+        box.appendChild(el('div', { class: 'item', style: 'cursor:pointer', title: '누르면 세부 현황', onclick: function () { open(i); } }, [
+          el('div', {}, [el('b', { text: i.name + ' ›' }), el('div', { style: 'font-size:13.5px;color:#556274', text: dirTag(i)[0] + ' · ' + i.source + ' · ' + i.basis })]),
           el('span', { class: 'tag ' + j, text: i.me.rank + '위 / ' + i.n })
         ]));
       });
