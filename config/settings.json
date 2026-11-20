@@ -462,6 +462,45 @@
       "show": true,
       "main": false,
       "note": "㎥당 요금 ÷ ㎥당 생산원가 · 높을수록 적자가 적음"
+    },
+    {
+      "id": "shop_total",
+      "no": 36,
+      "field": "경제",
+      "name": "영업 중인 상가",
+      "unit": "곳",
+      "dir": 0,
+      "digits": 0,
+      "source": "소상공인시장진흥공단 상가(상권)정보",
+      "show": true,
+      "main": false,
+      "note": "소상공인 상가정보 기준 업소 수 · 많은 곳이 1위, 판정 안 함"
+    },
+    {
+      "id": "shop_new",
+      "no": 37,
+      "field": "경제",
+      "name": "올해 새로 연 상가",
+      "unit": "곳",
+      "dir": 1,
+      "digits": 0,
+      "source": "소상공인시장진흥공단 상가(상권)정보",
+      "show": true,
+      "main": false,
+      "note": "올해 새로 등록돼 지금 영업 중인 상가"
+    },
+    {
+      "id": "shop_close",
+      "no": 38,
+      "field": "경제",
+      "name": "분기 중 폐업 상가",
+      "unit": "곳",
+      "dir": -1,
+      "digits": 0,
+      "source": "소상공인시장진흥공단 상가(상권)정보",
+      "show": true,
+      "main": false,
+      "note": "지난 분기 목록에 있다가 이번 분기에 사라진 상가 · 적을수록 좋음"
     }
   ],
   "sources": {

@@ -1955,11 +1955,53 @@ function startApp() {
   var ecoTab = 'biz';
   function screenEconomyTabs() {
     var L = D.life || {}, tabs = [['biz', '사업자 · 고용']];
+    if (L.stores) tabs.push(['store', '상가 신규·폐업 · 18개 시·군']);
     if (L.licenses) tabs.push(['shop', '음식점·숙박 개업·폐업']);
     if (!tabs.some(function (t) { return t[0] === ecoTab; })) ecoTab = 'biz';
-    if (ecoTab === 'shop') screenShop(); else screenEconomy();
+    if (ecoTab === 'shop') screenShop(); else if (ecoTab === 'store') screenStores(); else screenEconomy();
     var title = view.querySelector('.title');
     if (title && tabs.length > 1) title.insertBefore(tabsBar(tabs, ecoTab, function (k) { ecoTab = k; }), title.children[1] || null);
+  }
+  var stoMet = 'shop_new';
+  function screenStores() {
+    var S = (D.life || {}).stores || {}, R = S.regions || {}, sy = S.stdrYm || '', Y = sy.slice(0, 4), Mo = Number(sy.slice(4));
+    var SN = R[regName()] ? regName() : D.me, isMe = SN === D.me, r = R[SN] || {}, me = R[D.me] || {};
+    var CH = (S.changes || []).slice(-1)[0], ch = CH ? (CH.regions || {})[SN] : null;
+    function sg(v) { return (v > 0 ? '+' : '') + fmt(v, 0); }
+    lifeTitle(fullName(SN) + ' 상가 신규·폐업', '소상공인시장진흥공단 상가(상권)정보 · ' + Y + '년 ' + Mo + '월 기준(분기마다 갱신) · 매주 자동 확인' + selHint());
+    view.style.gridTemplateColumns = 'minmax(0, 1fr) minmax(0, 1.25fr)';
+    view.style.gridTemplateRows = '44px auto minmax(0, 1fr) minmax(0, 1fr)';
+    var top = Object.keys(r.new_cat || {}).sort(function (a, b) { return r.new_cat[b] - r.new_cat[a]; })[0];
+    cardsRow([
+      { l: '영업 중인 상가', sub: Y + '년 ' + Mo + '월', ic: 'house', col: '#1B3A6B', bg: '#E8EEF7', v: fmt(r.total, 0), u: '곳', chips: [rankChip(indFor(ind('shop_total'), SN)), isMe ? null : [D.me + '보다 ' + sg(r.total - me.total), '']] },
+      { l: '올해 새로 연 상가', sub: Y + '년 1~' + Mo + '월 · 지금 영업 중', ic: 'doorIn', col: '#2E8B57', bg: '#E2F3E9', v: fmt(r.new, 0), u: '곳', chips: [rankChip(indFor(ind('shop_new'), SN)), ['전체의 ' + fmt(r.total ? r.new / r.total * 100 : 0, 1) + '%', '']] },
+      ch ? { l: '분기 중 폐업', sub: CH.from + ' → ' + CH.to, ic: 'doorOut', col: '#D9534F', bg: '#FDE7E4', v: fmt(ch.close, 0), u: '곳', chips: [rankChip(indFor(ind('shop_close'), SN)), ['같은 기간 신규 ' + fmt(ch.open, 0) + ' · 순증 ' + sg(ch.open - ch.close), ch.open >= ch.close ? 'good' : 'bad']] }
+         : { l: '분기 중 폐업', sub: '다음 분기 갱신 때부터', ic: 'doorOut', col: '#D9534F', bg: '#FDE7E4', v: '집계 시작', u: '', chips: [[Y + '년 ' + Mo + '월 목록을 기준으로 저장', ''], ['다음 갱신 때 사라진 가게 = 폐업', '']] },
+      top ? { l: '올해 가장 많이 연 업종', sub: Y + '년 1~' + Mo + '월', ic: 'trend', col: '#7A4FC4', bg: '#EFE9FB', v: top, u: '', chips: [[fmt(r.new_cat[top], 0) + '곳', 'violet']] } : null
+    ]);
+    var MET = [['shop_new', '올해 새로 연 상가'], ['shop_close', '분기 중 폐업'], ['shop_total', '영업 중']].filter(function (m) { return ind(m[0]); });
+    if (!MET.some(function (m) { return m[0] === stoMet; })) stoMet = MET[0] && MET[0][0];
+    var I0 = ind(stoMet), I = I0 ? indFor(I0, SN) : null;
+    var sw = el('div', { class: 'chips', style: 'flex-wrap:nowrap;gap:6px;margin-bottom:6px' }, MET.map(function (m) {
+      return el('button', { type: 'button', class: 'chip', style: 'cursor:pointer;border:0;font-weight:800' + (m[0] === stoMet ? ';background:#1B3A6B;color:#fff' : ''), text: m[1], onclick: function () { stoMet = m[0]; render(); } }); }));
+    var p1 = panel((I0 ? I0.name : '') + ' · 강원 18개 시·군', (I0 ? I0.basis : '') + ' · 누르면 그 지역', [sw, I ? rankList(I, regPick, regSel) : el('div', { class: 'empty', text: '자료 없음' })]);
+    p1.style.gridRow = '3 / span 2';
+    // 월별 새로 등록
+    var lab = [], a = [], b = [];
+    for (var m = 1; m <= Mo; m++) { var k = Y + ('0' + m).slice(-2); lab.push(m + '월'); a.push((r.new_m || {})[k] || 0); b.push((me.new_m || {})[k] || 0); }
+    var ser = [{ name: fullName(SN), color: '#2E9C6A', values: a, width: 3.5, labels: true }];
+    if (!isMe) ser.push({ name: fullName(D.me), color: '#1B3A6B', values: b, width: 2.5, dash: '5 4' });
+    panel('월별 새로 연 상가 · ' + Y + '년', '등록한 달 기준 · 지금 영업 중인 곳만 · 곳', lineChart(lab, ser, { fit: true, unit: '곳' }));
+    // 업종별 표
+    var cats = Object.keys(r.cat || {}).sort(function (x, y) { return r.cat[y] - r.cat[x]; });
+    var hd = ['업종', '영업 중', '올해 신규', '신규 비율'].concat(ch ? ['분기 폐업'] : []);
+    var tb = el('tbody', {}, cats.map(function (c) {
+      var n = (r.new_cat || {})[c] || 0, t = r.cat[c];
+      var tds = [el('td', { html: '<b>' + c + '</b>' }), el('td', { class: 'r', text: fmt(t, 0) }), el('td', { class: 'r', html: '<b style="color:#2E9C6A">' + fmt(n, 0) + '</b>' }), el('td', { class: 'r', text: fmt(t ? n / t * 100 : 0, 1) + '%' })];
+      if (ch) tds.push(el('td', { class: 'r', html: '<b style="color:#D9534F">' + fmt((ch.close_cat || {})[c] || 0, 0) + '</b>' }));
+      return el('tr', {}, tds);
+    }));
+    panel('업종별 상가 · ' + fullName(SN), Y + '년 ' + Mo + '월 · 곳', el('table', { class: 'dt big' }, [el('thead', {}, [el('tr', {}, hd.map(function (h, j) { return el('th', { class: j ? 'r' : '', text: h }); }))]), tb]));
   }
   function screenShop() {
     var LC = (D.life || {}).licenses || {}, K = LC.kinds || {}, names = Object.keys(K);

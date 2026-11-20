@@ -229,6 +229,12 @@ def collect(state, S, C):
             ok(state, 'social', '시설 %s · 수급 %s' % (L['social'].get('fac_year'), L['social'].get('rcp_year')))
         except Exception as e:  # noqa: BLE001
             fail(state, 'social', e)
+    if stale('stores', 7) or '--force-stores' in sys.argv:
+        try:
+            L['stores'] = sources.stores(C, os.path.join(WEB_DATA, 'stores_snap.json'))
+            ok(state, 'stores', '%s 기준 %d개 시·군' % (L['stores']['stdrYm'], len(L['stores']['regions'])))
+        except Exception as e:  # noqa: BLE001
+            fail(state, 'stores', e)
     if stale('water', 30) or '--force-life' in sys.argv or '--force-water' in sys.argv:
         try:
             L['water'] = sources.water(C)
@@ -290,6 +296,14 @@ def collect(state, S, C):
         set_ind(state, 'biz_active', {k: v.get('total') for k, v in EC['active'][y].items() if v.get('total')}, '%s년 말 가동사업자(국세청)' % y)
         set_ind(state, 'biz_new', {k: v.get('total') for k, v in EC['new'][y].items() if v.get('total')}, '%s년 신규 사업자(국세청)' % y)
         set_ind(state, 'biz_net', {k: v.get('total', 0) - (EC['closed'][y].get(k) or {}).get('total', 0) for k, v in EC['new'][y].items() if k in EC['closed'][y]}, '%s년 신규−폐업(국세청)' % y)
+    SR = L.get('stores') or {}
+    if SR.get('regions'):
+        sy = SR['stdrYm']
+        set_ind(state, 'shop_total', {k: v['total'] for k, v in SR['regions'].items()}, '%s년 %d월 영업 중인 상가(소상공인 상가정보)' % (sy[:4], int(sy[4:])))
+        set_ind(state, 'shop_new', {k: v['new'] for k, v in SR['regions'].items()}, '%s년 1~%d월 새로 등록된 상가(소상공인 상가정보)' % (sy[:4], int(sy[4:])))
+        if SR.get('changes'):
+            c = SR['changes'][-1]
+            set_ind(state, 'shop_close', {k: v['close'] for k, v in c['regions'].items()}, '%s→%s 사라진 상가(소상공인 상가정보)' % (c['from'], c['to']))
     WT = (L.get('water') or {}).get('tables') or {}
 
     def wpick(tk, prefix, label):
@@ -496,7 +510,7 @@ def build(state, S, C):
     # 분야 화면이 비면 메뉴에서 숨김
     has_fin = any(i['id'] == 'fin_indep' for i in out['indicators'])
     L = out.get('life') or {}
-    need = {'water': L.get('water'), 'social': L.get('social'), 'economy': L.get('economy'), 'welfare': L.get('hospitals'), 'traffic': L.get('ev') or L.get('cars'), 'env': L.get('air'), 'tour': L.get('visit_months')}
+    need = {'stores': L.get('stores'), 'water': L.get('water'), 'social': L.get('social'), 'economy': L.get('economy'), 'welfare': L.get('hospitals'), 'traffic': L.get('ev') or L.get('cars'), 'env': L.get('air'), 'tour': L.get('visit_months')}
     out['menu'] = [m for m in out['menu'] if not (m['id'] == 'finance' and not has_fin) and not (m['id'] in ('admin', 'compare') and not out['admin'])
                    and not (m['id'] in need and not need[m['id']])]
     return out

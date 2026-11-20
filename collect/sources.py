@@ -7,7 +7,7 @@ import os
 import urllib.parse
 
 from common import (http_get, parse_body, find_items, check_error, pick, to_num,
-                    match_region, read_manual, save_raw, ym_shift, now, log)
+                    match_region, read_manual, save_raw, ym_shift, now, log, load_json, save_json)
 
 
 def _call(src, extra, raw_name):
@@ -1114,4 +1114,68 @@ def water(C):
             out['errors'][key] = str(e)[:300]
     if not out['tables']:
         raise RuntimeError('상하수도 표를 하나도 받지 못함: %s' % out['errors'])
+    return out
+
+
+STORE_URL = 'https://apis.data.go.kr/B553077/api/open/sdsc2/storeListInDong'
+
+
+def stores(C, snap_path):
+    """소상공인 상가(상권)정보: 강원 18개 시·군 가게 목록(분기마다 갱신).
+    - 지금 영업 중인 가게 수·업종별 수
+    - 올해 새로 등록된 가게(상가업소번호 7~12번째 자리 = 등록 연월)
+    - 지난 분기 목록과 비교한 신규·폐업(분기가 바뀔 때 계산, 첫 수집은 기준만 저장)"""
+    key = urllib.parse.unquote(os.environ.get('DATA_GO_KR_KEY', '').strip())
+    if not key:
+        raise RuntimeError('DATA_GO_KR_KEY 없음')
+    cur_ids, out, stdr = {}, {'at': now().strftime('%Y-%m-%d'), 'regions': {}}, None
+    for r in C['regions']:
+        ids, page, total = {}, 1, None
+        while True:
+            t = http_get(STORE_URL, {'serviceKey': key, 'divId': 'signguCd', 'key': r['sgg'], 'type': 'json', 'numOfRows': '1000', 'pageNo': str(page)}, tries=3, timeout=60)
+            j = json.loads(t)
+            hd, bd = j.get('header') or {}, j.get('body') or {}
+            stdr = stdr or hd.get('stdrYm')
+            total = int(bd.get('totalCount') or 0)
+            for x in bd.get('items') or []:
+                ids[str(x.get('bizesId'))] = str(x.get('indsLclsNm') or '').strip()
+            if page * 1000 >= total or not bd.get('items'):
+                break
+            page += 1
+        if not ids:
+            continue
+        y = (stdr or '')[:4]
+        cat, new_cat, new_m = {}, {}, {}
+        for i, c in ids.items():
+            cat[c] = cat.get(c, 0) + 1
+            ym = i[6:12]
+            if ym[:4] == y:
+                new_cat[c] = new_cat.get(c, 0) + 1
+                new_m[ym] = new_m.get(ym, 0) + 1
+        out['regions'][r['name']] = {'total': len(ids), 'cat': cat, 'new': sum(new_cat.values()), 'new_cat': new_cat, 'new_m': new_m}
+        cur_ids[r['name']] = ids
+    if not out['regions']:
+        raise RuntimeError('상가 목록을 받지 못함')
+    out['stdrYm'] = stdr
+    # 지난 분기 목록과 비교
+    prev = load_json(snap_path) if os.path.exists(snap_path) else None
+    out['changes'] = (prev or {}).get('changes') or []
+    if prev and prev.get('stdrYm') and prev.get('stdrYm') != stdr:
+        ch = {'from': prev['stdrYm'], 'to': stdr, 'regions': {}}
+        for name, ids in cur_ids.items():
+            p = prev['ids'].get(name) or {}
+            if not p:
+                continue
+            opened = [i for i in ids if i not in p]
+            closed = [i for i in p if i not in ids]
+            oc, cc = {}, {}
+            for i in opened:
+                oc[ids[i]] = oc.get(ids[i], 0) + 1
+            for i in closed:
+                cc[p[i]] = cc.get(p[i], 0) + 1
+            ch['regions'][name] = {'open': len(opened), 'close': len(closed), 'open_cat': oc, 'close_cat': cc, 'prev_total': len(p)}
+        out['changes'] = [c for c in out['changes'] if c.get('to') != stdr] + [ch]
+        out['changes'] = out['changes'][-8:]
+    if not prev or prev.get('stdrYm') != stdr:
+        save_json(snap_path, {'stdrYm': stdr, 'ids': cur_ids, 'changes': out['changes']})
     return out
