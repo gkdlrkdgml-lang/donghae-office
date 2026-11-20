@@ -177,7 +177,7 @@
   .col b { font-size: 15px; white-space: nowrap; letter-spacing: -0.4px; }
   .cols.tight .col b { font-size: 13px; }
   /* 한눈에 보기: 지표 기둥 */
-  .gcols .gz { display: none; } section.zoom .gcols .gz { display: block; }
+  .gcols .gz { display: none; } section.zoom .gcols .gz { display: block; } section.zoom .zhint { display: none; }
   .pillars { display: flex; gap: 18px; align-items: stretch; flex: 1 1 auto; min-height: 0; }
   .pillar { flex: 1 1 0; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
   .ptrack { flex: 1 1 auto; background: var(--track); border-radius: 8px; position: relative; overflow: hidden; }
@@ -1431,7 +1431,7 @@ function startApp() {
         if (n <= 45 && !l.dash && !l.nodot) l.values.forEach(function (v, i) { if (v != null) { svg.appendChild(svgEl('circle', { cx: X(i), cy: Y(v), r: 3, fill: '#fff', stroke: l.color, 'stroke-width': 2 })); if (opts.vals || (l.labels === 'last' ? (zoomed || i === lastI(l)) : l.labels) || (zoomed && !opts.noZoomVals)) svg.appendChild(svgEl('text', { x: X(i), y: Y(v) - 10 - (zoomed ? li * 16 : 0), 'text-anchor': 'middle', 'font-size': zoomed ? 15 : 14, 'font-weight': 800, fill: l.color }, opts.fit ? fmt(v, 0) + (opts.unit || '') : fmtK(v))); } });
       });
       box.appendChild(svg);
-      if (lines.length > 1 || lines[0].name) box.appendChild(el('div', { class: 'lleg' }, lines.map(function (l) { return el('span', {}, [el('i', { style: 'background:' + l.color + (l.dash ? ';opacity:.6' : '') }), document.createTextNode(l.name)]); }).concat(!zoomed && !opts.vals && !opts.noZoomVals && lines.some(function (l) { return !l.dash && l.labels !== true; }) ? [el('span', { style: 'color:#8A97A8;font-size:12px', text: '⤢ 크게 보기에서 모든 수치' })] : [])));
+      if (lines.length > 1 || lines[0].name) box.appendChild(el('div', { class: 'lleg' }, lines.map(function (l) { return el('span', {}, [el('i', { style: 'background:' + l.color + (l.dash ? ';opacity:.6' : '') }), document.createTextNode(l.name)]); }).concat(!zoomed && !opts.vals && !opts.noZoomVals && lines.some(function (l) { return !l.dash && l.labels !== true; }) ? [el('span', { style: 'color:#8A97A8;font-size:12px', text: '⤢ 크게 보기를 누르면 데이터 수치를 보실 수 있습니다' })] : [])));
     }
     setTimeout(draw, 0);
     return box;
@@ -1441,7 +1441,7 @@ function startApp() {
     if (labels == null) labels = series.length <= 3 && cats.length <= 6;
     var mx = 1; series.forEach(function (s) { s.values.forEach(function (v) { if (v > mx) mx = v; }); });
     var w = el('div', { class: 'gcols' });
-    w.appendChild(el('div', { class: 'lleg' }, series.map(function (s) { return el('span', {}, [el('i', { style: 'background:' + s.color }), document.createTextNode(s.name)]); })));
+    w.appendChild(el('div', { class: 'lleg' }, series.map(function (s) { return el('span', {}, [el('i', { style: 'background:' + s.color }), document.createTextNode(s.name)]); }).concat(labels ? [] : [el('span', { class: 'zhint', style: 'color:#8A97A8;font-size:12px', text: '⤢ 크게 보기를 누르면 데이터 수치를 보실 수 있습니다' })])));
     cats.forEach(function (c, ci) {
       var bars = el('div', { class: 'bars' });
       series.forEach(function (s) { var v = s.values[ci]; bars.appendChild(el('i', { title: s.name + ' ' + c + ' ' + fmt(v, 0), style: 'height:' + (v == null ? 0 : v / mx * 100).toFixed(1) + '%;background:' + s.color + (v == null ? ';visibility:hidden' : '') }, [el('b', { class: labels ? '' : 'gz', text: v == null ? '' : v >= 1000 ? fmtK(v) : fmt(v, v < 100 ? 1 : 0), style: 'color:' + s.color })])); });
