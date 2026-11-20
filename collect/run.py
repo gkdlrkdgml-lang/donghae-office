@@ -229,6 +229,16 @@ def collect(state, S, C):
             ok(state, 'social', '시설 %s · 수급 %s' % (L['social'].get('fac_year'), L['social'].get('rcp_year')))
         except Exception as e:  # noqa: BLE001
             fail(state, 'social', e)
+    if stale('employ', 15) or '--force-life' in sys.argv:
+        try:
+            L['employ'] = sources.employment(S, C)
+            ok(state, 'employ', L['employ']['period'])
+        except Exception as e:  # noqa: BLE001
+            fail(state, 'employ', e)
+    EM = L.get('employ') or {}
+    if EM.get('period'):
+        pdl = EM['period']
+        set_ind(state, 'emp_rate', {k: v.get('rate_1564') for k, v in EM['data'][pdl].items() if v.get('rate_1564') is not None}, '%s년 %s반기 15~64세 고용률(통계청 지역별고용조사)' % (pdl[:4], '상' if pdl.endswith('01') or '1/2' in pdl else '하'))
     SO = L.get('social') or {}
     if SO.get('facilities'):
         set_ind(state, 'soc_fac', {k: v.get('total') for k, v in SO['facilities'].items() if v.get('total') is not None}, '%s년 사회복지시설(행정안전부)' % SO.get('fac_year'))

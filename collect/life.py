@@ -49,7 +49,16 @@ def hospitals(C):
             d['total'] += 1
             d['kinds']['약국'] = d['kinds'].get('약국', 0) + 1
     except Exception as e:  # noqa: BLE001
-        log('약국 실패: %s' % e)
+        log('약국(심평원) 실패: %s — 국립중앙의료원 약국 목록으로 다시' % str(e)[:120])
+        for reg in C['regions']:
+            try:
+                prow = _call(_src('https://apis.data.go.kr/B552657/ErmctInsttInfoInqireService/getParmacyListInfoInqire', {'Q0': '강원특별자치도', 'Q1': reg['full'], 'numOfRows': '500', 'pageNo': '1'}), {}, 'pharmacy_' + reg['name'])
+                if reg['name'] in out and prow:
+                    out[reg['name']]['total'] += len(prow)
+                    out[reg['name']]['kinds']['약국'] = len(prow)
+            except Exception as e2:  # noqa: BLE001
+                log('약국(의료원) %s 실패: %s' % (reg['name'], str(e2)[:120]))
+                break
     mine.sort(key=lambda x: -x['doctors'])
     return {'regions': out, 'mine': mine[:40], 'at': now().strftime('%Y-%m-%d')}
 

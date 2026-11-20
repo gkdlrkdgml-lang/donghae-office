@@ -1845,13 +1845,16 @@ function startApp() {
     function yo(cur, prev) { return cur != null && prev ? (cur / prev - 1) * 100 : null; }
     function ch(v, goodUp) { return v == null ? null : ['전년 대비 ' + (v > 0 ? '+' : '') + fmt(v, 1) + '%', Math.abs(v) < 0.05 ? '' : (v > 0) === goodUp ? 'good' : 'bad']; }
     var a = g(A, SN), n = g(N, SN), x = g(X, SN), net = n - x;
-    lifeTitle(fullName(SN) + ' 사업자 현황 · ' + y + '년', '국세청 국세통계(KOSIS) · 가동=연말 기준, 신규·폐업=연간 · 매년 자동 갱신' + selHint());
+    lifeTitle(fullName(SN) + ' 경제 현황', '사업자: 국세청 ' + y + '년(연간 최신) · 고용: 통계청 지역별고용조사(반기 최신) · 업종: 통계청 기업생멸 · 자동 갱신' + selHint());
     view.style.gridTemplateRows = '44px auto minmax(0, 1fr) minmax(0, 1fr)';
     cardsRow([
       { l: '가동 사업자', sub: '법인 ' + fmt(g(A, SN, 'corp'), 0) + ' · 개인 ' + fmt(g(A, SN, 'indiv'), 0), ic: 'bank', v: fmt(a, 0), u: '개', chips: [ch(yo(a, g(pA, SN)), true), meChip(g(A, D.me), '개')] },
       { l: '신규 등록', sub: y + '년', ic: 'trend', col: '#2E8B57', bg: '#E2F3E9', v: fmt(n, 0), u: '개', chips: [ch(yo(n, g(pN, SN)), true), rankChip(I)] },
       { l: '폐업', sub: y + '년', ic: 'doorOut', col: '#D9534F', bg: '#FDE7E4', v: fmt(x, 0), u: '개', chips: [ch(yo(x, g(pX, SN)), false), meChip(g(X, D.me), '개')] },
       { l: '순증', sub: '신규 − 폐업', ic: 'people', col: '#1F6FD1', bg: '#E4EEFB', v: (net > 0 ? '+' : '') + fmt(net, 0), u: '개', chips: [[py ? py + '년 ' + ((g(pN, SN) - g(pX, SN)) > 0 ? '+' : '') + fmt(g(pN, SN) - g(pX, SN), 0) : '', 'navy']] },
+      (function () { var EM = (D.life || {}).employ || {}, pd = EM.period, e = ((EM.data || {})[pd] || {})[SN] || {}, ei = indFor(ind('emp_rate'), SN);
+        return { l: '고용률', sub: pd ? pd.slice(0, 4) + '년 ' + (pd.indexOf('1/2') >= 0 || pd.slice(-2) === '01' ? '상' : '하') + '반기 · 15~64세' : '15~64세', ic: 'people', col: '#7A4FC4', bg: '#EFE9FB', v: fmt(e.rate_1564, 1), u: '%',
+          chips: [e.emp_all != null ? ['취업자 ' + fmt(e.emp_all * 1000, 0) + '명', 'navy'] : null, e.rate_1529 != null ? ['청년(15~29) ' + fmt(e.rate_1529, 1) + '%', 'violet'] : rankChip(ei)] }; })(),
       { l: '폐업률', sub: '폐업 ÷ 가동', ic: 'gauge', col: '#C0602B', bg: '#FDEBDD', v: a ? fmt(x / a * 100, 1) : '–', u: '%', chips: [['강원 평균 ' + fmt(avgOf(X, function (o, k) { return A[k] && A[k].total ? o.total / A[k].total * 100 : null; }), 1) + '%', '']] }
     ]);
     var p1 = panel('신규 사업자 · 강원 18개 시·군', y + '년 · 개 · 누르면 그 지역', I ? rankList(I, regPick, regSel) : el('div', { class: 'empty', text: '자료 없음' }));

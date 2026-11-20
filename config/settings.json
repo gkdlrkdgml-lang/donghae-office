@@ -368,6 +368,18 @@
       "source": "KOSIS",
       "show": true,
       "main": false
+    },
+    {
+      "id": "emp_rate",
+      "no": 27,
+      "field": "경제",
+      "name": "고용률(15~64세)",
+      "unit": "%",
+      "dir": 1,
+      "digits": 1,
+      "source": "통계청 지역별고용조사",
+      "show": true,
+      "main": false
     }
   ],
   "sources": {

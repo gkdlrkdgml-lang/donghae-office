@@ -816,3 +816,25 @@ def social(S, C):
     if not res['facilities'] and not R:
         raise RuntimeError('복지 자료 없음')
     return res
+
+
+def employment(S, C):
+    """지역별고용조사(반기): 강원 시·군 취업자·고용률(전체, 15~64세, 15~29세), 최근 4개 반기."""
+    rows = _kosis_rows('DT_1ES3A03_A01S', {'orgId': '101', 'prdSe': 'H', 'objL1': 'ALL', 'objL2': '000+060+010+', 'itmId': 'T00+T12+', 'newEstPrdCnt': '4'}, 'emp')
+    by = {}
+    AG = {'000': 'all', '060': '1564', '010': '1529'}
+    for r in rows:
+        code = str(r.get('C1', ''))
+        if not (code.startswith('32') and len(code) == 4):
+            continue
+        name = match_region(str(r.get('C1_NM', '')).strip().split()[-1], C['regions'])
+        ag = AG.get(str(r.get('C2')))
+        v = to_num(r.get('DT'))
+        if not name or not ag or v is None:
+            continue
+        k = ('emp_' if str(r.get('ITM_ID')) == 'T00' else 'rate_') + ag
+        by.setdefault(str(r.get('PRD_DE')), {}).setdefault(name, {})[k] = v
+    if not by:
+        raise RuntimeError('고용 자료 없음')
+    ps = sorted(by)
+    return {'at': now().strftime('%Y-%m-%d'), 'period': ps[-1], 'periods': ps, 'data': by}
