@@ -229,45 +229,36 @@ def main():
             say('[KOSIS검색] %s 실패 %s' % (q, e))
     from urllib.parse import unquote as _unq
     _dk = _unq(os.environ.get('DATA_GO_KR_KEY', '').strip())
-    import re as _re
-    for pk, base in (('15134145', 'https://apis.data.go.kr/B500001/waternow/twdClwr'), ('15134425', 'https://apis.data.go.kr/B500001/waternow/twdOrgwtWdr'), ('15158788', '')):
-        ops = []
-        try:
-            h = http_get('https://www.data.go.kr/data/%s/openapi.do' % pk, {}, tries=1)
-            mj = _re.search(r'swaggerJson = `(.*?)`', h, _re.S)
-            ops = []
-            if mj:
-                try:
-                    sj = json.loads(mj.group(1))
-                    if not base:
-                        base = 'https://' + str(sj.get('host', 'apis.data.go.kr')) + str(sj.get('basePath', ''))
-                        say('[물API] %s 기본주소 %s' % (pk, base))
-                    for pth, v in (sj.get('paths') or {}).items():
-                        ops.append(pth.strip('/'))
-                        for meth, d in (v.items() if isinstance(v, dict) else []):
-                            if not isinstance(d, dict):
-                                continue
-                            say('[물API] %s 경로 %s %s: %s | 인자 %s' % (pk, meth, pth, d.get('summary'), [(x.get('name'), x.get('required')) if isinstance(x, dict) else x for x in d.get('parameters', [])]))
-                            rs = json.dumps(d.get('responses', {}), ensure_ascii=False)
-                            say('[물API] %s 응답항목 %s' % (pk, ','.join(sorted(set(_re.findall(r'"([a-zA-Z]{3,})": \{"type"', rs))))[:900]))
-                except Exception as e2:  # noqa: BLE001
-                    say('[물API] swagger 해석 실패 %s %s' % (e2, mj.group(1)[:300]))
-            say('[물API] %s 페이지 작업: %s' % (pk, ops))
-        except Exception as e:  # noqa: BLE001
-            say('[물API] %s 페이지 실패 %s' % (pk, e))
-        for op in (ops or ['']):
+    W = 'https://apis.data.go.kr/B500001/waternow/'
+    for op in ('twdClwr/wdr/clwrList', 'twdClwr/wdr/fctList', 'twdOrgwtWdr/riverMtList', 'twdOrgwtWdr/hosoMtList'):
+        for extra in ({'wtwkBsnm': '강원특별자치도 동해시'}, {'wtwkBsnm': '강원특별자치도 동해시', 'stMt': '01', 'edMt': '12'}, {}):
             try:
-                t = http_get(base + ('/' + op if op else ''), ({'serviceKey': _dk, 'pageNo': '1', 'numOfRows': '5', '_type': 'json', 'YM': '202609', 'SIDO': '강원특별자치도', 'GUNGU': '동해시'} if pk == '15158788' else {'serviceKey': _dk, 'pageNo': '1', 'numOfRows': '5', '_type': 'json', 'stMt': '08', 'edMt': '10'}), tries=1)
-                say('[물API] %s %s → %s' % (pk, op, t[:1500].replace(_dk, '***')))
+                q = {'serviceKey': _dk, 'pageNo': '1', 'numOfRows': '1000', '_type': 'json'}
+                q.update(extra)
+                j = json.loads(http_get(W + op, q, tries=1))
+                b2 = j['response']['body']
+                it = (b2.get('items') or {}).get('item') or []
+                it = it if isinstance(it, list) else [it]
+                months = sorted(set(str(x.get('inspctMonth') or x.get('inspctQu') or x.get('collDt', '')[:7]) for x in it))
+                say('[물자료] %s %s 총 %s건 · 이번 %d건 · 시기 %s · 사업자 %s · 시설 %s' % (op, extra, b2.get('totalCount'), len(it), months[:3] + ['…'] + months[-3:], sorted(set(str(x.get('wtwkBsnm')) for x in it))[:6], sorted(set(str(x.get('nm') or x.get('itkplNm')) for x in it))[:12]))
             except Exception as e:  # noqa: BLE001
-                say('[물API] %s %s 실패 %s' % (pk, op, str(e)[:400]))
-    for op, prm in (('storeListInDong', {'divId': 'signguCd', 'key': '51170'}),):
+                say('[물자료] %s %s 실패 %s' % (op, extra, str(e)[:300]))
+    for ym in ('202609', '202512', '202508'):
+        for extra in ({'SIDO': '강원특별자치도'}, {'SIDO': '강원도'}, {}):
+            try:
+                q = {'serviceKey': _dk, 'pageNo': '1', 'numOfRows': '5', '_type': 'json', 'YM': ym}
+                q.update(extra)
+                t = http_get('https://apis.data.go.kr/B551940/TourismResourceStatsService/getPchrgTrrsrtVisitorList', q, tries=1)
+                say('[관광] %s %s → %s' % (ym, extra, t[:600]))
+            except Exception as e:  # noqa: BLE001
+                say('[관광] %s %s 실패 %s' % (ym, extra, str(e)[:300]))
+    for op, prm in (('storeListInDong', {'divId': 'signguCd', 'key': '51170'}), ('storeListByDate', {'key': '20261115'})):
         try:
-            q = dict(prm); q.update({'serviceKey': _dk, 'type': 'json', 'numOfRows': '3', 'pageNo': '1'})
-            t = http_get('https://apis.data.go.kr/B553077/api/open/sdsc2/' + op, q, tries=1)
-            say('[상가] %s → %s' % (op, t[:1500].replace(_dk, '***')))
+            q = dict(prm); q.update({'serviceKey': _dk, 'type': 'json', 'numOfRows': '2', 'pageNo': '1'})
+            j = json.loads(http_get('https://apis.data.go.kr/B553077/api/open/sdsc2/' + op, q, tries=1))
+            say('[상가자료] %s → %s' % (op, json.dumps(j, ensure_ascii=False)[:1800]))
         except Exception as e:  # noqa: BLE001
-            say('[상가] %s 실패 %s' % (op, str(e)[:300]))
+            say('[상가자료] %s 실패 %s' % (op, str(e)[:300]))
     if os.environ.get('PROBE_FULL') != '1':
         return
     probe('admm_population', {'url': 'https://apis.data.go.kr/1741000/admmPpltnHhStus/selectAdmmPpltnHhStus', 'key_env': 'DATA_GO_KR_KEY',
