@@ -24,6 +24,11 @@
       "show": true
     },
     {
+      "id": "welfare",
+      "label": "보건 및 의료",
+      "show": true
+    },
+    {
       "id": "social",
       "label": "복지",
       "show": true
@@ -36,11 +41,6 @@
     {
       "id": "finance",
       "label": "예산",
-      "show": true
-    },
-    {
-      "id": "welfare",
-      "label": "보건 및 의료",
       "show": true
     },
     {
