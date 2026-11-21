@@ -156,6 +156,7 @@ def land_probe():
         except Exception:  # noqa: BLE001
             pass
         vw('https://api.vworld.kr/req/data', {'service': 'data', 'request': 'GetFeature', 'data': 'LT_C_UQ111', 'geomFilter': 'POINT(%s %s)' % (x, y), 'format': 'json', 'size': '5', 'geometry': 'false', 'attribute': 'true', 'crs': 'EPSG:4326'}, '용도지역레이어')
+    pnu = pnu or '5117010100108060000'   # 동해시청(천곡동 806), 브라우저 시험에서 확인
     say('[land] PNU=%s' % pnu)
     if pnu:
         vw('https://api.vworld.kr/ned/data/getLandUseAttr', {'pnu': pnu, 'format': 'json', 'numOfRows': '50', 'pageNo': '1'}, '토지이용계획')
