@@ -182,8 +182,23 @@ def land_probe():
                 say('[land] 조례검색 %s 실패 %s' % (q, str(e)[:300]))
 
 
+def ordin_probe():
+    oc = os.environ.get('LAW_OC', '').strip()
+    t = http_get('https://www.law.go.kr/DRF/lawService.do', {'OC': oc, 'target': 'ordin', 'MST': '2091767', 'type': 'JSON'}, tries=2, timeout=60)
+    os.makedirs(os.path.join(ROOT, 'probe_out'), exist_ok=True)
+    open(os.path.join(ROOT, 'probe_out', 'ordin.json'), 'w', encoding='utf-8').write(t)
+    say('[ordin] 길이 %d 앞 %s' % (len(t), t[:600].replace('\n', ' ')))
+    import re
+    for kw in ('건폐율', '용적률'):
+        for m in list(re.finditer(kw, t))[:3]:
+            say('[ordin] %s … %s' % (kw, t[max(0, m.start() - 200): m.start() + 900].replace('\n', ' ')))
+
+
 def main():
     load_env()
+    if os.environ.get('PROBE_ONLY') == 'ordin':
+        ordin_probe()
+        return
     if os.environ.get('PROBE_ONLY') == 'land':
         land_probe()
         return

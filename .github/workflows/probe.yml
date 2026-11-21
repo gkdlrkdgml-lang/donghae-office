@@ -32,5 +32,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: probe-result
-          path: probe_결과.txt
+          path: |
+            probe_결과.txt
+            probe_out
           if-no-files-found: ignore
