@@ -250,30 +250,28 @@ window.DHLand = (function () {
     // ① 신호등 + 요약
     var hl = headline(d);
     var p1 = H.panel('종합 판정', p.addr || d.q, [
-      el('div', { style: 'display:flex;align-items:center;gap:18px;margin:6px 0 10px' }, [
-        el('div', { style: 'width:92px;height:92px;border-radius:50%;flex:none;background:' + S.c + ';box-shadow:0 0 0 8px ' + S.bg }),
-        el('div', {}, [el('div', { style: 'font-size:32px;font-weight:900;color:' + S.c, text: { GREEN: '초록', YELLOW: '노랑', RED: '빨강' }[ev.status] }), el('div', { style: 'font-size:19px;font-weight:800;color:#1B3A6B', text: S.t })])]),
-      el('ol', { style: 'margin:0;padding-left:22px;font-size:17px;line-height:1.55;color:#1D2733' }, hl.map(function (t) { return el('li', { text: t }); })),
-      el('div', { class: 'chips', style: 'margin-top:10px;flex-wrap:wrap;gap:6px' }, ev.reasons.filter(function (r) { return r.level === 'RED' || r.level === 'YELLOW'; }).map(function (r) {
+      el('div', { style: 'display:flex;align-items:center;gap:18px;margin:4px 0 8px' }, [
+        el('div', { style: 'width:64px;height:64px;border-radius:50%;flex:none;background:' + S.c + ';box-shadow:0 0 0 7px ' + S.bg }),
+        el('div', {}, [el('div', { style: 'font-size:28px;font-weight:900;color:' + S.c, text: { GREEN: '초록', YELLOW: '노랑', RED: '빨강' }[ev.status] }), el('div', { style: 'font-size:19px;font-weight:800;color:#1B3A6B', text: S.t })])]),
+      el('ol', { style: 'margin:0;padding-left:22px;font-size:16px;line-height:1.45;color:#1D2733' }, hl.map(function (t) { return el('li', { text: t }); })),
+      el('div', { class: 'chips', style: 'margin-top:8px;flex-wrap:wrap;gap:6px;max-height:27px;overflow:hidden' }, ev.reasons.filter(function (r) { return r.level === 'RED' || r.level === 'YELLOW'; }).map(function (r) {
         return el('span', { class: 'chip', style: 'background:' + LV[r.level].bg + ';color:' + LV[r.level].c + ';font-weight:800', text: r.tag }); })),
       el('div', { class: 'chips', style: 'margin-top:auto;padding-top:10px;gap:8px' }, [
         el('a', { class: 'chip navy', href: eumUrl(d.pnu), target: '_blank', rel: 'noopener', style: 'text-decoration:none;font-weight:800', text: '토지이음 원본 ↗' }),
         el('button', { type: 'button', class: 'chip violet', style: 'cursor:pointer;border:0;font-weight:800', text: '1장 브리핑 인쇄', onclick: function () { briefing(d); } }),
+        annexFor(ev.zone) ? el('a', { class: 'chip', href: annexFor(ev.zone).url, target: '_blank', rel: 'noopener', style: 'text-decoration:none;font-weight:800', text: '조례 별표(허용 용도) ↗' }) : null,
         el('span', { class: 'chip', text: 'PNU ' + d.pnu })])]);
     p1.style.gridRow = '3';
     // ② 4대 요약 카드
     var B = ev.buildings, b0 = B[0];
-    function kv(rows) { return el('div', { style: 'overflow:auto;min-height:0' }, [el('table', { class: 'dt', style: 'font-size:15px' }, [el('tbody', {}, rows.filter(Boolean).map(function (r) { return el('tr', {}, [el('td', { style: 'color:#556274;white-space:nowrap', text: r[0] }), el('td', { class: 'r', html: '<b>' + r[1] + '</b>' })]); }))])]); }
-    var p2 = H.panel('토지 · 규모 · 도로 · 건물', '자료 기준: 토지특성 ' + ((d.ch[0] || {}).stdrYear || '–') + '년 · 공시지가 ' + (ev.priceYear || '–') + '년', kv([
+    function kv(rows) { return el('div', { style: 'min-height:0' }, [el('table', { class: 'dt', style: 'font-size:15px' }, [el('tbody', {}, rows.filter(Boolean).map(function (r) { return el('tr', {}, [el('td', { style: 'color:#556274;white-space:nowrap', text: r[0] }), el('td', { class: 'r', html: '<b>' + r[1] + '</b>' })]); }))])]); }
+    var p2 = H.panel('토지 · 규모 · 도로', '자료 기준: 토지특성 ' + ((d.ch[0] || {}).stdrYear || '–') + '년 · 공시지가 ' + (ev.priceYear || '–') + '년', kv([
       ['용도지역', ev.zones.join(' · ') || '–'], ['지목 · 면적', (ev.jimok || '–') + ' · ' + fmt(ev.area) + '㎡'],
       ['공시지가', ev.price ? fmt(ev.price) + '원/㎡ (총 약 ' + fmt(ev.price * ev.area / 1e8, 1) + '억원)' : '–'],
       ['건폐율 · 용적률(조례)', ev.rule ? fmt(ev.rule.bcr) + '% · ' + fmt(ev.rule.far) + '%' : '–'],
       ['최대 바닥 · 연면적', ev.rule ? '약 ' + fmt(ev.area * ev.rule.bcr / 100) + '㎡ · 약 ' + fmt(ev.area * ev.rule.far / 100) + '㎡ <small>예상치</small>' : '–'],
       ['도로접면', ev.road || '–'], ['지형', ((d.ch[0] || {}).tpgrphHgCodeNm || '–') + ' · ' + ((d.ch[0] || {}).tpgrphFrmCodeNm || '–')],
       ['이용상황', (d.ch[0] || {}).ladUseSittnNm || '–'], ['소유 구분', (d.lad[0] || {}).posesnSeCodeNm || '–'],
-      ['건축물', B.length ? B.length + '동 · ' + (b0.use || '') + ' ' + (b0.floors ? '지상 ' + b0.floors + '층' : '') : '없음(대장 미등재)'],
-      b0 ? ['사용승인 · 경과', (b0.approve || '–') + (b0.age != null ? ' · ' + b0.age + '년' : '')] : null,
-      b0 ? ['구조 · 연면적', (b0.struct || '–') + ' · ' + fmt(b0.tot) + '㎡'] : null,
       ['위반건축물 여부', 'API 미제공 항목 <small>(세움터 확인)</small>']]));
     p2.style.gridRow = '4';
     // ③ 지도(필지 경계)
@@ -294,27 +292,24 @@ window.DHLand = (function () {
     p4.style.gridRow = '4'; p4.style.gridColumn = '2';
     // ⑤ 판정 근거
     var order = { RED: 0, YELLOW: 1, INFO: 2, GREEN: 3 };
-    var list = el('div', { style: 'display:flex;flex-direction:column;gap:8px;overflow:auto;min-height:0' }, ev.reasons.slice().sort(function (a, b) { return order[a.level] - order[b.level]; }).map(function (r) {
-      var L = LV[r.level], det = el('details', { style: 'border-left:5px solid ' + L.c + ';background:' + L.bg + ';border-radius:8px;padding:8px 12px' }, [
+    var list = el('div', { class: 'landlist', style: 'display:flex;flex-direction:column;gap:8px;min-height:0' }, ev.reasons.slice().sort(function (a, b) { return order[a.level] - order[b.level]; }).map(function (r) {
+      var L = LV[r.level], det = el('details', { 'data-fit': '1', style: 'border-left:5px solid ' + L.c + ';background:' + L.bg + ';border-radius:8px;padding:8px 12px' }, [
         el('summary', { style: 'cursor:pointer;font-size:16px;font-weight:800;color:#1B3A6B', html: '<span style="color:' + L.c + '">●</span> [' + r.area + '] ' + r.tag }),
         el('div', { style: 'font-size:15px;margin-top:6px', text: r.detail }),
         el('div', { style: 'font-size:15px;margin-top:4px;font-weight:700', text: '→ ' + r.impact }),
         r.cite ? el('div', { style: 'font-size:13px;margin-top:4px;color:#556274', text: '근거: ' + r.cite }) : null]);
       if (r.area === '토지' && /건폐율/.test(r.detail) && artText('bcr')) det.appendChild(el('div', { style: 'font-size:12px;margin-top:6px;color:#38475A;white-space:pre-wrap;max-height:120px;overflow:auto;background:#fff;padding:6px;border-radius:6px', text: '[조례 원문] ' + artText('bcr') + '\n\n' + artText('far') }));
       return det; }));
-    var ax = annexFor(ev.zone);
-    var p5 = H.panel('판정 근거 · 확인할 것', '빨강·노랑부터 · 눌러서 근거 조문 보기', [list,
-      el('div', { class: 'chips', style: 'margin-top:8px;gap:6px;flex-wrap:wrap' }, [ax ? el('a', { class: 'chip navy', href: ax.url, target: '_blank', rel: 'noopener', style: 'text-decoration:none', text: '별표 원문: ' + ax.title.replace(/<.*?>/g, '').slice(0, 34) + ' ↗' }) : null]
-        .concat(d.errs.map(function (e) { return el('span', { class: 'chip bad', text: e }); })))]);
+    var p5 = H.panel('판정 근거 · 확인할 것', '빨강·노랑부터 · 눌러서 근거 조문 보기', [list].concat(d.errs.length ? [el('div', { class: 'chips', style: 'margin-top:8px;gap:6px;flex-wrap:wrap' }, d.errs.map(function (e) { return el('span', { class: 'chip bad', text: e }); }))] : []));
     p5.style.gridRow = '4'; p5.style.gridColumn = '3';
     // ⑥ 건물 정보(건축물대장): 어떤 건물인지, 언제 지었는지
     var d8 = function (v) { v = String(v || '').trim(); return v.length >= 8 ? v.slice(0, 4) + '.' + v.slice(4, 6) + '.' + v.slice(6, 8) : '–'; };
     var bbody;
     if (d.bld && d.bld._err) bbody = el('div', { class: 'empty', style: 'color:#D9534F', text: '건축물대장 조회 실패: ' + d.bld._err });
     else if (!B.length) bbody = el('div', { class: 'empty', text: '건축물대장에 등록된 건물이 없습니다(나대지 또는 미등재).' });
-    else bbody = el('div', { style: 'overflow:auto;min-height:0;display:flex;flex-direction:column;gap:8px' }, B.map(function (b) {
+    else bbody = el('div', { class: 'landlist', style: 'min-height:0;display:flex;flex-direction:column;gap:8px' }, B.map(function (b) {
       var oldC = b.age != null && b.age >= 30 ? '#D9534F' : '#1B3A6B';
-      return el('div', { style: 'border:1px solid #DDE3EC;border-radius:10px;padding:8px 12px' }, [
+      return el('div', { 'data-fit': '1', style: 'border:1px solid #DDE3EC;border-radius:10px;padding:8px 12px' }, [
         el('div', { style: 'display:flex;justify-content:space-between;gap:8px;align-items:baseline' }, [
           el('div', { style: 'font-size:18px;font-weight:900;color:#1B3A6B', text: (b.name || '(건물명 없음)') + (b.main ? ' · ' + b.main : '') }),
           el('div', { style: 'font-size:17px;font-weight:900;color:' + oldC, text: b.age != null ? b.age + '년 경과' : '' })]),

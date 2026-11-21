@@ -41,6 +41,8 @@
   .title span { font-size: 14px; color: var(--sub); }
   section { background: var(--panel); border: 1px solid var(--line); box-shadow: 0 1px 2px rgba(20,30,50,.05); border-radius: 12px; padding: 16px 20px; min-height: 0; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
   section h2 { margin: 0; font-size: 20px; color: var(--navy); }
+  section.zoom .landlist { overflow: auto; }
+  .fitmore { position: absolute; left: 20px; right: 20px; bottom: 6px; text-align: center; font-size: 13px; font-weight: 700; color: var(--blue); cursor: pointer; background: linear-gradient(rgba(255,255,255,0), #fff 40%); padding-top: 6px; }
   .sh { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
   .sh small { font-size: 13px; color: var(--sub); }
   /* 제목·설명은 한 줄: 제목은 그대로, 설명이 길면 … 으로 줄임(마우스를 올리면 전체) */
@@ -2393,11 +2395,33 @@ function startApp() {
     try { (SCREENS[current] || screenMain)(); }
     catch (e) { view.textContent = ''; view.appendChild(el('div', { class: 'empty', style: 'font-size:24px;padding:60px', text: '이 화면을 그리지 못했습니다: ' + e.message })); }
     addZoom(); fullTitles();
+    requestAnimationFrame(function () { requestAnimationFrame(fitRows); });
   }
 
   // ---------- 크게 보기: 각 칸 제목 오른쪽 버튼, 다시 누르거나 Esc로 닫기 ----------
   var zoomIdx = null;
   function fullTitles() { Array.prototype.forEach.call(view.querySelectorAll('.sh small'), function (x) { x.title = x.textContent; }); }
+  // 평상시: 칸에 다 들어가는 줄만 보여 주고 「외 N개 · 크게 보기」 안내. 크게 보기(.zoom)에서는 전부 표시.
+  function fitRows() {
+    Array.prototype.forEach.call(view.querySelectorAll('section'), function (sec) {
+      if (sec.classList.contains('zoom') || sec.classList.contains('detail') || sec.classList.contains('nozoom')) return;
+      var rows = sec.querySelectorAll('tbody > tr, [data-fit]');
+      if (!rows.length) return;
+      var limit = sec.getBoundingClientRect().bottom - 12, hid = 0;
+      var last = rows[rows.length - 1].getBoundingClientRect();
+      if (last.bottom <= limit + 1) return;            // 다 들어가면 그대로
+      limit -= 24;                                     // 안내 줄 자리
+      var vis = [];
+      Array.prototype.forEach.call(rows, function (r) { if (r.getBoundingClientRect().bottom > limit) { r.style.display = 'none'; hid++; } else vis.push(r); });
+      if (!hid) return;
+      // 동해 줄이 잘렸으면 마지막 보이는 줄 대신 동해 줄을 보여 줌
+      var meRow = Array.prototype.filter.call(rows, function (r) { var c = r.cells && r.cells[0]; return r.style.display === 'none' && c && (c.textContent.trim() === D.me || c.textContent.trim() === D.me + '시'); })[0];
+      if (meRow && vis.length > 1) { vis[vis.length - 1].style.display = 'none'; meRow.style.display = ''; }
+      sec.style.position = sec.style.position || 'relative';
+      var zb = sec.querySelector('.zbtn');
+      sec.appendChild(el('div', { class: 'fitmore', text: '외 ' + hid + '개 더 · ⤢ 크게 보기로 전체 보기', onclick: function (ev) { ev.stopPropagation(); if (zb) zb.click(); } }));
+    });
+  }
   function addZoom() {
     var old = document.getElementById('zoomBack'); if (old) old.remove();
     var secs = view.querySelectorAll('section:not(.detail):not(.nozoom)');
