@@ -22,6 +22,7 @@
   .brand { display: flex; align-items: center; gap: 12px; font-size: 20px; font-weight: 700; color: var(--navy); }
   .brand .slogan { font-size: 15px; font-weight: 600; color: var(--blue); padding-left: 14px; margin-left: 2px; border-left: 2px solid var(--line); }
   .brand .emblem { height: 34px; width: auto; display: block; }
+  .brand .emblink { display: block; cursor: default; -webkit-tap-highlight-color: transparent; outline: none; }
   .brand i { width: 38px; height: 38px; border-radius: 8px; background: var(--blue); display: inline-block; }
   nav { display: flex; gap: 4px; }
   nav button { font: inherit; font-size: 16px; color: var(--sub); background: none; border: 0; padding: 8px 11px; white-space: nowrap; border-radius: 6px; cursor: pointer; min-height: 40px; }
@@ -267,7 +268,7 @@
 <body>
 <div id="stage">
   <header>
-    <div class="brand"><img class="emblem" src="img/emblem.png" alt="동해시 상징마크"><span id="appTitle">동해시 AI 시장실</span><span id="appSlogan" class="slogan"></span></div>
+    <div class="brand"><a href="admin.html" class="emblink" aria-label="관리자" tabindex="-1"><img class="emblem" src="img/emblem.png" alt="동해시 상징마크"></a><span id="appTitle">동해시 AI 시장실</span><span id="appSlogan" class="slogan"></span></div>
     <nav id="nav" aria-label="화면 메뉴"></nav>
     <div class="hright"><span id="badges"></span><span id="updated"></span><span id="clock"></span></div>
   </header>
