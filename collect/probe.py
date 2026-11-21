@@ -67,8 +67,36 @@ def probe(name, src, extra):
         say('  첫 줄: ' + json.dumps(items[0], ensure_ascii=False)[:800])
 
 
+def kepco_probe():
+    kp = os.environ.get('KEPCO_KEY', '').strip()
+    say('[한전] 키 길이 %d' % len(kp))
+    if not kp:
+        return
+    B = 'https://bigdata.kepco.co.kr/openapi/v1/'
+    tests = [('코드-시도', 'commonCode.do', {'codeTy': 'metroCd'}),
+             ('코드-시군', 'commonCode.do', {'codeTy': 'cityCd'}),
+             ('코드-계약', 'commonCode.do', {'codeTy': 'cntrCd'}),
+             ('코드-발전원', 'commonCode.do', {'codeTy': 'genSrcCd'})]
+    for y, m in (('2026', '10'), ('2026', '09'), ('2026', '06'), ('2025', '12')):
+        tests += [('가구평균 %s%s' % (y, m), 'powerUsage/houseAve.do', {'year': y, 'month': m, 'metroCd': '51'}),
+                  ('계약종별 %s%s' % (y, m), 'powerUsage/contractType.do', {'year': y, 'month': m, 'metroCd': '51'}),
+                  ('산업분류 %s%s' % (y, m), 'powerUsage/industryType.do', {'year': y, 'month': m, 'metroCd': '51'})]
+    for y in ('2026', '2025'):
+        tests += [('신재생 %s' % y, 'renewEnergy.do', {'year': y, 'metroCd': '51'})]
+    for nm, path, prm in tests:
+        try:
+            q = dict(prm); q.update({'apiKey': kp, 'returnType': 'json'})
+            t = http_get(B + path, q, tries=1, timeout=30)
+            say('[한전] %s → %s' % (nm, t[:1500].replace(kp, '***').replace('\n', ' ')))
+        except Exception as e:  # noqa: BLE001
+            say('[한전] %s 실패 %s' % (nm, str(e)[:250]))
+
+
 def main():
     load_env()
+    if os.environ.get('PROBE_ONLY') == 'kepco':
+        kepco_probe()
+        return
     S, C = settings(), codes()
     ym = ym_shift('%04d%02d' % (now().year, now().month), -2)
     me = [r for r in C['regions'] if r['name'] == C['me']][0]
