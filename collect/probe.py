@@ -92,8 +92,24 @@ def kepco_probe():
             say('[한전] %s 실패 %s' % (nm, str(e)[:250]))
 
 
+def supabase_probe():
+    import admin_sync, urllib.request as ur
+    key = os.environ.get('SUPABASE_SERVICE_KEY', '').strip()
+    h = {'apikey': key, 'Accept': 'application/json', 'User-Agent': 'donghae-office-collector/1.0'}
+    for path in ('profiles?select=login_id,name,dept,role,scopes,created_at&order=created_at',
+                 'entries?select=id,ref_date,section,author_name,deleted,created_at&order=created_at.desc&limit=20'):
+        try:
+            with ur.urlopen(ur.Request(admin_sync._url() + '/rest/v1/' + path, headers=h), timeout=30) as r:
+                say('[supabase] %s → %s' % (path.split('?')[0], r.read().decode('utf-8')[:3000]))
+        except Exception as e:  # noqa: BLE001
+            say('[supabase] %s 실패 %s' % (path.split('?')[0], e))
+
+
 def main():
     load_env()
+    if os.environ.get('PROBE_ONLY') == 'supabase':
+        supabase_probe()
+        return
     if os.environ.get('PROBE_ONLY') == 'kepco':
         kepco_probe()
         return
