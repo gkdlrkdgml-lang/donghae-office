@@ -6,6 +6,9 @@
 <link rel="icon" href="img/emblem.png">
 <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
 <script src="vendor/leaflet/leaflet.js"></script>
+<script src="vendor/supabase/supabase.js"></script>
+<script src="admin-config.js"></script>
+<script src="land.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   :root {
@@ -19,13 +22,13 @@
   #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; background: var(--bg);
            display: grid; grid-template-rows: 64px minmax(0, 1fr); }
   header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 28px; border-bottom: 1px solid var(--line); background: #FFFFFF; }
-  .brand { display: flex; align-items: center; gap: 12px; font-size: 20px; font-weight: 700; color: var(--navy); }
+  .brand { display: flex; align-items: center; gap: 12px; white-space: nowrap; font-size: 20px; font-weight: 700; color: var(--navy); }
   .brand .slogan { font-size: 15px; font-weight: 600; color: var(--blue); padding-left: 14px; margin-left: 2px; border-left: 2px solid var(--line); }
   .brand .emblem { height: 34px; width: auto; display: block; }
   .brand .emblink { display: block; cursor: default; -webkit-tap-highlight-color: transparent; outline: none; }
   .brand i { width: 38px; height: 38px; border-radius: 8px; background: var(--blue); display: inline-block; }
   nav { display: flex; gap: 4px; }
-  nav button { font: inherit; font-size: 16px; color: var(--sub); background: none; border: 0; padding: 8px 11px; white-space: nowrap; border-radius: 6px; cursor: pointer; min-height: 40px; }
+  nav button { font: inherit; font-size: 15px; color: var(--sub); background: none; border: 0; padding: 8px 7px; white-space: nowrap; border-radius: 6px; cursor: pointer; min-height: 40px; }
   nav button[aria-current="page"] { background: var(--blue); color: #fff; font-weight: 700; }
   .hright { display: flex; align-items: center; gap: 14px; font-size: 14px; color: var(--sub); }
   .badge { padding: 5px 10px; border-radius: 999px; font-size: 13px; }
@@ -2379,7 +2382,7 @@ function startApp() {
   function screenWelfareTabs() {
     screenWelfare();
   }
-  var SCREENS = { main: screenMain, admin: screenAdminTabs, welfare: screenWelfareTabs, social: screenSocial, traffic: screenTrafficTabs, env: screenEnvTabs, water: screenWater, power: screenPower, tour: screenTourTabs, economy: screenEconomyTabs, finance: screenFinance, frame: screenFrame };
+  var SCREENS = { main: screenMain, admin: screenAdminTabs, welfare: screenWelfareTabs, social: screenSocial, traffic: screenTrafficTabs, env: screenEnvTabs, water: screenWater, power: screenPower, land: function () { window.DHLand.screen({ el: el, panel: panel, view: view, render: render, D: D, baseLayer: baseLayer, rankList: rankList }); }, tour: screenTourTabs, economy: screenEconomyTabs, finance: screenFinance, frame: screenFrame };
   function render() {
     view.textContent = '';
     view.className = '';
@@ -2414,6 +2417,7 @@ function startApp() {
 
   // ---------- 리모컨(무선 키보드) ----------
   document.addEventListener('keydown', function (e) {
+    if (e.target && /^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)) return;   // 글자 입력 중에는 화면 넘김 안 함
     if (e.key === 'Escape' && (zoomIdx != null || finDetail || admDetail || envDetail)) { zoomIdx = null; finDetail = null; admDetail = null; envDetail = null; render(); return; }
     var i = order.indexOf(current);
     if (e.key === 'ArrowRight') go(order[(i + 1) % order.length]);
