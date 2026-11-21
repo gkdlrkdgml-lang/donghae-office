@@ -593,25 +593,27 @@ function startApp() {
   // ---------- 2-1. 행정(인구 현황) ----------
   function screenAdmin() {
     var A = D.admin, me = A.regions[D.me] || {};
+    var LV = D.admin_live || {}, cmpL = A.live ? Number(A.live.official_ym.slice(4)) + '월 대비' : '전월 대비';
     var Y = A.youth || {}, MG = A.migration || {}, pcI = ind('pop_change'), elI = ind('elderly'), waI = ind('working_age');
     view.style.gridTemplateColumns = 'minmax(0, 1fr) 420px';
     view.style.gridTemplateRows = '44px minmax(0, 1fr)';
     view.appendChild(el('div', { class: 'title' }, [
       el('h1', { text: D.me + '시 인구 현황' }),
       el('span', { class: 'hint', text: '칸을 누르면 자세히 볼 수 있습니다' }),
-      el('span', { class: 'basis', text: ymLabel(A.ym) + ' 주민등록 기준' })
-    ]));
+      LV.vital ? el('span', { class: 'basis', style: 'background:#2E8B57', text: (function (v) { var x = v.v; return (x.from ? x.from.slice(5).replace('-', '.') + '~' : '') + (x.to || v.date).slice(5).replace('-', '.') + ' 출생 ' + fmt(x.birth, 0) + ' · 사망 ' + fmt(x.death, 0) + ' · 전입 ' + fmt(x['in'], 0) + ' · 전출 ' + fmt(x.out, 0); })(LV.vital) }) : null,
+      el('span', { class: 'basis', text: A.live ? A.live.date.slice(0, 4) + '년 ' + Number(A.live.date.slice(5, 7)) + '월 ' + Number(A.live.date.slice(8)) + '일 시 집계(관리자 입력) · 다른 시·군 ' + ymLabel(A.live.official_ym) + ' 주민등록' : ymLabel(A.ym) + ' 주민등록 기준' })
+    ].filter(Boolean)));
     var L = el('div', { class: 'popL' });
     // 1줄: 전체·남·여·세대·증감률
     var r1 = el('div', { class: 'pr1' });
     var dm = me.prev_m ? me.total - me.prev_m : null;
     r1.appendChild(el('div', { class: 'pc hero' }, [el('div', { class: 'pl', text: '전체 인구' }), el('div', { class: 'pv', html: fmt(me.total, 0) + '<small>명</small>' }),
-      el('div', { class: 'pd' }, [el('span', { text: '전월 대비' }), delta(dm)]),
+      el('div', { class: 'pd' }, [el('span', { text: cmpL }), delta(dm)]),
       el('div', { class: 'ps', text: '1년 전보다 ' + (me.prev ? (me.total - me.prev >= 0 ? '+' : '') + fmt(me.total - me.prev, 0) + '명' : '–') })]));
     function card(lbl, ic, col, bg, val, unit, d, du, sub) {
       r1.appendChild(el('div', { class: 'pc' }, [el('div', { class: 'pl', text: lbl }), icon(ic, col, bg),
         el('div', { class: 'pv', style: 'color:' + col, html: val + '<small>' + unit + '</small>' }),
-        el('div', { class: 'pd' }, [el('span', { text: '전월 대비' }), delta(d, du)]), sub ? el('div', { class: 'ps', text: sub }) : null].filter(Boolean)));
+        el('div', { class: 'pd' }, [el('span', { text: cmpL }), delta(d, du)]), sub ? el('div', { class: 'ps', text: sub }) : null].filter(Boolean)));
     }
     card('남자', 'male', '#1F6FD1', '#E4EEFB', fmt(me.male, 0), '명', me.prev_m_male ? me.male - me.prev_m_male : null);
     card('여자', 'female', '#D6457A', '#FCE6EE', fmt(me.female, 0), '명', me.prev_m_female ? me.female - me.prev_m_female : null);
@@ -627,7 +629,7 @@ function startApp() {
       r2.appendChild(el('div', { class: 'pc wide' }, [icon(ic, col, bg, 96), el('div', {}, [
         el('div', { class: 'pl' }, [lbl, el('small', { text: sub })]),
         el('div', { class: 'wrow' }, [el('div', { class: 'pv', style: 'color:' + col, html: val + '<small>명</small>' }),
-          el('div', { class: 'pd' }, [el('span', { text: '전월 대비' }), delta(d)])]),
+          el('div', { class: 'pd' }, [el('span', { text: cmpL }), delta(d)])]),
         extra ? el('div', { class: 'ps', text: extra }) : null].filter(Boolean))]));
     }
     var yc = Y.cur || {}, yp = Y.prev || {};
@@ -646,7 +648,7 @@ function startApp() {
       function mc(lbl, sub, ic, col, bg, v, d) {
         mrow.appendChild(el('div', { class: 'mc' }, [el('div', { class: 'pl', text: lbl }), sub ? el('div', { class: 'msub', text: sub }) : null, icon(ic, col, bg, 70),
           el('div', { class: 'pv', style: 'color:' + col, html: (v > 0 && (lbl === '순이동' || lbl === '자연증감') ? '+' : '') + fmt(v, 0) + '<small>명</small>' }),
-          el('div', { class: 'pd' }, [el('span', { text: '전월 대비' }), delta(d)])].filter(Boolean)));
+          el('div', { class: 'pd' }, [el('span', { text: cmpL }), delta(d)])].filter(Boolean)));
       }
       if (bc && dc) {
         mc('출생', '출생 신고', 'baby', '#2E8B57', '#E2F3E9', bc.total, bp ? bc.total - bp.total : null);
@@ -2043,6 +2045,9 @@ function startApp() {
         return { l: '새로 연 사업자', sub: ymL + ' · 6개월 미만', ic: 'doorIn', col: '#2E8B57', bg: '#E2F3E9', v: fmt(yg.cur, 0), u: '개', chips: [['1년 전 같은 달 ' + fmt(yg.prev_y, 0) + ' (' + sg(d0) + ')', d0 >= 0 ? 'good' : 'bad'], ['전월 ' + fmt(yg.prev_m, 0), '']] }; })(),
       { l: '고용률', sub: pd ? pd.slice(0, 4) + '년 ' + (pd.slice(-2) === '01' ? '상' : '하') + '반기 · 15~64세' : '15~64세', ic: 'people', col: '#7A4FC4', bg: '#EFE9FB', v: fmt(e.rate_1564, 1), u: '%',
         chips: [e.emp_all != null ? ['취업자 ' + fmt(e.emp_all * 1000, 0) + '명', 'navy'] : null, e.rate_1529 != null ? ['청년(15~29) ' + fmt(e.rate_1529, 1) + '%', 'violet'] : null] },
+      (function () { var E = ((D.admin_live || {}).employ || {}); if (!E.v || !isMe) return null; var x = E.v;
+        return { l: x.rate != null ? '고용률(시 집계)' : '일자리 사업', sub: E.date + (x.note ? ' · ' + x.note : ''), ic: 'people', col: '#0F8A8A', bg: '#DDF3F2', v: x.rate != null ? fmt(x.rate, 1) : fmt(x.job_people, 0), u: x.rate != null ? '%' : '명',
+          chips: [x.employed != null ? ['취업자 ' + fmt(x.employed, 0) + '명', ''] : null, x.jobs != null ? ['일자리 ' + fmt(x.jobs, 0) + '개', 'good'] : null, x.rate != null && x.job_people != null ? ['사업 참여 ' + fmt(x.job_people, 0) + '명', ''] : null] }; })(),
       (function () { var ye0 = ((TS.prev_ye || {})[SN] || {})['00']; if (c['00'] == null || ye0 == null) return null; var v = c['00'] - ye0;
         return { l: '올해 순증 사업자', sub: TS.ym.slice(0, 4) + '년 1~' + Number(TS.ym.slice(4)) + '월', ic: 'trend', col: '#1F6FD1', bg: '#E4EEFB', v: sg(v), u: '개',
           chips: [rankChip(indFor(ind('biz_net'), SN)), meChip(((TS.cur || {})[D.me] || {})['00'] - (((TS.prev_ye || {})[D.me] || {})['00']), '개')] }; })(),

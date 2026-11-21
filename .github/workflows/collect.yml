@@ -5,6 +5,11 @@ on:
     - cron: '7 21 * * *'   # 매일 06:07 (한국시간). 정각은 GitHub이 붐벼서 7분 뒤로.
     - cron: '47 23,2,5,8,11 * * *'   # 날씨·혼잡 예측 갱신: 08:47, 11:47, 14:47, 17:47, 20:47
   workflow_dispatch:        # Actions 탭에서 "Run workflow"로 바로 실행
+    inputs:
+      mode:
+        description: 'full = 전체 수집, admin = 관리자 입력만 반영(1~2분)'
+        required: false
+        default: 'full'
 
 permissions:
   contents: write
@@ -34,8 +39,9 @@ jobs:
           SAFETY_DATA_KEY: ${{ secrets.SAFETY_DATA_KEY }}
         run: |
           # 키를 아직 안 넣었으면 시연용 값으로 화면만 띄웁니다(키를 넣으면 자동으로 실제 수집).
-          if [ -z "$DATA_GO_KR_KEY" ]; then python collect/run.py --demo; else python collect/run.py; fi
-          python collect/tiles.py || true
+          if [ "${{ inputs.mode }}" = "admin" ]; then python collect/run.py --admin-only
+          elif [ -z "$DATA_GO_KR_KEY" ]; then python collect/run.py --demo; else python collect/run.py; fi
+          if [ "${{ inputs.mode }}" != "admin" ]; then python collect/tiles.py || true; fi
       - name: 결과 저장(커밋)
         run: |
           git config user.name "donghae-office-bot"

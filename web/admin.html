@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>동해시 AI 시장실 · 관리자 입력</title>
+<meta name="robots" content="noindex">
+<style>
+  :root { --navy:#1B3A6B; --blue:#1F6FD1; --line:#DDE3EC; --bg:#F4F6FA; --ok:#2E8B57; --bad:#D9534F; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:'Pretendard','Malgun Gothic',system-ui,sans-serif; background:var(--bg); color:#1D2733; }
+  header { background:#fff; border-bottom:1px solid var(--line); padding:14px 24px; display:flex; align-items:center; gap:14px; position:sticky; top:0; z-index:5; }
+  header h1 { font-size:20px; margin:0; color:var(--navy); }
+  header a { margin-left:auto; color:var(--blue); font-weight:700; text-decoration:none; }
+  main { max-width:1100px; margin:20px auto 60px; padding:0 16px; display:grid; gap:16px; }
+  section { background:#fff; border:1px solid var(--line); border-radius:14px; padding:18px 20px; }
+  h2 { font-size:17px; margin:0 0 4px; color:var(--navy); }
+  .sub { color:#6B7686; font-size:13px; margin:0 0 12px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(170px, 1fr)); gap:10px 14px; }
+  label { display:flex; flex-direction:column; gap:4px; font-size:13px; font-weight:700; color:#38475A; }
+  label small { font-weight:400; color:#8A94A3; }
+  input, select { font:inherit; font-size:15px; padding:8px 10px; border:1px solid #C9D2DE; border-radius:8px; background:#fff; }
+  input:focus { outline:2px solid #BFD4F4; border-color:var(--blue); }
+  input.num { text-align:right; }
+  .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  button { font:inherit; font-weight:800; border:0; border-radius:9px; padding:10px 18px; cursor:pointer; background:var(--navy); color:#fff; }
+  button.ghost { background:#EEF2F8; color:var(--navy); }
+  button.danger { background:#FDE7E4; color:var(--bad); }
+  button:disabled { opacity:.5; cursor:default; }
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  th, td { padding:6px 8px; border-bottom:1px solid #EEF1F5; text-align:right; }
+  th:first-child, td:first-child { text-align:left; }
+  thead th { color:#6B7686; font-weight:700; font-size:12px; }
+  .msg { padding:10px 14px; border-radius:10px; font-weight:700; display:none; }
+  .msg.ok { display:block; background:#E2F3E9; color:var(--ok); }
+  .msg.err { display:block; background:#FDE7E4; color:var(--bad); }
+  .msg.info { display:block; background:#E4EEFB; color:var(--blue); }
+  .warn { color:var(--bad); font-size:12px; font-weight:700; }
+  .off { color:#8A94A3; font-size:12px; font-weight:400; }
+  details summary { cursor:pointer; font-weight:800; color:var(--navy); }
+  .dongs td input { width:110px; padding:5px 8px; font-size:14px; }
+  #saveBar { position:sticky; bottom:0; background:#fff; border:1px solid var(--line); border-radius:14px; padding:12px 20px; display:flex; gap:12px; align-items:center; box-shadow:0 -4px 16px rgba(27,58,107,.08); }
+</style>
+</head>
+<body>
+<header>
+  <h1>동해시 AI 시장실 · 관리자 입력</h1>
+  <span class="off" id="offInfo"></span>
+  <a href="./">시장실 화면으로 →</a>
+</header>
+<main>
+  <section id="tokSec">
+    <h2>① 처음 한 번: GitHub 열쇠(토큰) 넣기</h2>
+    <p class="sub">이 컴퓨터 브라우저에만 저장됩니다. 저장소 gkdlrkdgml-lang/donghae-office 의 <b>Contents: 읽기·쓰기</b>, <b>Actions: 읽기·쓰기</b> 권한만 준 토큰을 쓰세요.</p>
+    <div class="row">
+      <input id="tok" type="password" placeholder="github_pat_로 시작하는 토큰" style="flex:1;min-width:280px">
+      <button id="tokSave">저장</button>
+      <button class="ghost" id="tokClear">지우기</button>
+      <span id="tokState" class="off"></span>
+    </div>
+  </section>
+
+  <section>
+    <h2>② 기준일</h2>
+    <p class="sub">이 날짜 기준의 동해시 값을 넣습니다. 같은 기준일로 다시 저장하면 덮어씁니다. 빈칸은 저장하지 않습니다.</p>
+    <div class="row"><label>기준일 <input type="date" id="date"></label></div>
+  </section>
+
+  <section>
+    <h2>③ 주민등록 인구·세대</h2>
+    <p class="sub">입력하면 시장실의 동해시 인구 화면과 고령·생산연령 비율 순위에 바로 반영됩니다. <span id="popOff"></span></p>
+    <div class="grid">
+      <label>총인구 <small>명</small><input class="num" data-s="pop" data-k="total"></label>
+      <label>세대수 <small>세대</small><input class="num" data-s="pop" data-k="hh"></label>
+      <label>남자 <small>명</small><input class="num" data-s="pop" data-k="male"></label>
+      <label>여자 <small>명</small><input class="num" data-s="pop" data-k="female"></label>
+      <label>65세 이상 <small>명 · 고령인구 비율 계산</small><input class="num" data-s="pop" data-k="age65"></label>
+      <label>15~64세 <small>명 · 생산연령 비율 계산</small><input class="num" data-s="pop" data-k="age15_64"></label>
+    </div>
+    <div class="warn" id="popWarn"></div>
+    <details style="margin-top:12px"><summary>동별 인구·세대 (선택)</summary>
+      <table class="dongs"><thead><tr><th>동</th><th>인구(명)</th><th>세대</th><th>공식 최신</th></tr></thead><tbody id="dongBody"></tbody></table>
+    </details>
+  </section>
+
+  <section>
+    <h2>④ 인구 변동</h2>
+    <p class="sub">기간(예: 이번 달 1일~기준일) 동안의 출생·사망·전입·전출입니다.</p>
+    <div class="grid">
+      <label>기간 시작 <input type="date" data-s="vital" data-k="from"></label>
+      <label>기간 끝 <input type="date" data-s="vital" data-k="to"></label>
+      <label>출생 <small>명</small><input class="num" data-s="vital" data-k="birth"></label>
+      <label>사망 <small>명</small><input class="num" data-s="vital" data-k="death"></label>
+      <label>전입 <small>명 · 시 밖에서</small><input class="num" data-s="vital" data-k="in"></label>
+      <label>전출 <small>명 · 시 밖으로</small><input class="num" data-s="vital" data-k="out"></label>
+    </div>
+  </section>
+
+  <section>
+    <h2>⑤ 고용·일자리</h2>
+    <p class="sub">공식 고용률(통계청 지역별고용조사)은 반기마다 자동으로 받고 있습니다. 여기에는 시가 가진 더 최신 값을 넣습니다.</p>
+    <div class="grid">
+      <label>고용률 <small>% (15~64세)</small><input class="num" data-s="employ" data-k="rate"></label>
+      <label>취업자 수 <small>명</small><input class="num" data-s="employ" data-k="employed"></label>
+      <label>일자리 사업 참여자 <small>명 · 올해 누계</small><input class="num" data-s="employ" data-k="job_people"></label>
+      <label>일자리 창출 <small>개 · 올해 누계</small><input class="num" data-s="employ" data-k="jobs"></label>
+      <label style="grid-column:span 2">출처·설명 <small>예: 일자리경제과 집계</small><input data-s="employ" data-k="note"></label>
+    </div>
+  </section>
+
+  <div id="saveBar">
+    <button id="save">저장하고 시장실에 반영</button>
+    <span class="off">반영까지 보통 2~3분(다른 수집이 돌고 있으면 그 뒤에)</span>
+    <div class="msg" id="msg" style="margin-left:auto"></div>
+  </div>
+
+  <section>
+    <h2>저장된 입력</h2>
+    <p class="sub">기준일을 누르면 그 값을 위 칸에 불러옵니다.</p>
+    <table><thead><tr><th>기준일</th><th>총인구</th><th>세대</th><th>출생</th><th>사망</th><th>전입</th><th>전출</th><th>고용률</th><th>저장</th><th></th></tr></thead><tbody id="hist"></tbody></table>
+  </section>
+</main>
+<script>
+(function () {
+  var OWNER = 'gkdlrkdgml-lang', REPO = 'donghae-office', PATH = 'manual/admin_input.json', API = 'https://api.github.com/repos/' + OWNER + '/' + REPO;
+  var D = null, file = { entries: [] }, sha = null;
+  function $(id) { return document.getElementById(id); }
+  function fmt(v) { return v == null || v === '' ? '–' : Number(v).toLocaleString('ko-KR'); }
+  function tok() { try { return localStorage.getItem('dh_admin_token') || ''; } catch (e) { return ''; } }
+  function say(t, cls) { var m = $('msg'); m.className = 'msg ' + cls; m.textContent = t; }
+  function gh(method, url, body) {
+    return fetch(url, { method: method, headers: { Authorization: 'Bearer ' + tok(), Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined })
+      .then(function (r) { if (r.status === 404 && method === 'GET') return null; if (!r.ok) return r.text().then(function (t) { throw new Error(r.status + ' ' + t.slice(0, 200)); }); return r.status === 204 ? {} : r.json(); });
+  }
+  function b64dec(s) { return decodeURIComponent(escape(atob(s.replace(/\n/g, '')))); }
+  function b64enc(s) { return btoa(unescape(encodeURIComponent(s))); }
+
+  // 토큰
+  $('tok').value = tok() ? '••••••••(저장됨)' : '';
+  $('tokState').textContent = tok() ? '저장되어 있음' : '아직 없음';
+  $('tokSave').onclick = function () { var v = $('tok').value.trim(); if (!v || v.indexOf('••') === 0) return; try { localStorage.setItem('dh_admin_token', v); } catch (e) {} $('tok').value = '••••••••(저장됨)'; $('tokState').textContent = '저장됨'; load(); };
+  $('tokClear').onclick = function () { try { localStorage.removeItem('dh_admin_token'); } catch (e) {} $('tok').value = ''; $('tokState').textContent = '지웠습니다'; };
+
+  var d0 = new Date(); $('date').value = d0.getFullYear() + '-' + ('0' + (d0.getMonth() + 1)).slice(-2) + '-' + ('0' + d0.getDate()).slice(-2);
+
+  // 공식 최신 값(시장실 데이터) 불러와서 참고로 보여 주기
+  var s = document.createElement('script');
+  s.src = 'data/data.js?t=' + Date.now();
+  s.onload = function () {
+    D = window.DONGHAE_DATA || {}; var A = D.admin || {}, me = (A.official_me) || (A.regions || {})[D.me] || {};
+    var ym = A.live ? A.live.official_ym : A.ym;
+    if (ym) { var lab = ym.slice(0, 4) + '년 ' + Number(ym.slice(4)) + '월'; $('popOff').textContent = '공식 최신(' + lab + ' 주민등록): 총인구 ' + fmt(me.total) + '명 · 세대 ' + fmt(me.hh) + ' · 남 ' + fmt(me.male) + ' · 여 ' + fmt(me.female); $('offInfo').textContent = '공식 자료 ' + lab; }
+    var body = $('dongBody'); Object.keys(A.dongs || {}).forEach(function (nm) {
+      var o = A.dongs[nm]; var tr = document.createElement('tr');
+      tr.innerHTML = '<td>' + nm + '</td><td><input class="num" data-dong="' + nm + '" data-k="total"></td><td><input class="num" data-dong="' + nm + '" data-k="hh"></td><td class="off">' + fmt(o.total) + '명 · ' + fmt(o.hh) + '세대</td>';
+      body.appendChild(tr);
+    });
+  };
+  document.head.appendChild(s);
+
+  function num(v) { v = String(v || '').replace(/[,\s]/g, ''); if (v === '') return null; var n = Number(v); return isFinite(n) ? n : NaN; }
+  function collectForm() {
+    var e = { date: $('date').value }, bad = [];
+    document.querySelectorAll('[data-s]').forEach(function (inp) {
+      var sec = inp.getAttribute('data-s'), k = inp.getAttribute('data-k'), v = inp.value.trim();
+      if (v === '') return;
+      var val = (inp.type === 'date' || k === 'note') ? v : num(v);
+      if (typeof val === 'number' && isNaN(val)) { bad.push(inp.closest('label').firstChild.textContent.trim()); return; }
+      (e[sec] = e[sec] || {})[k] = val;
+    });
+    document.querySelectorAll('[data-dong]').forEach(function (inp) {
+      var v = num(inp.value); if (v == null) return; if (isNaN(v)) { bad.push(inp.getAttribute('data-dong')); return; }
+      ((e.dong = e.dong || {})[inp.getAttribute('data-dong')] = e.dong[inp.getAttribute('data-dong')] || {})[inp.getAttribute('data-k')] = v;
+    });
+    return { e: e, bad: bad };
+  }
+  document.addEventListener('input', function () {
+    var p = collectForm().e.pop || {}, w = [];
+    if (p.total != null && p.male != null && p.female != null && p.male + p.female !== p.total) w.push('남자+여자(' + fmt(p.male + p.female) + ')가 총인구와 다릅니다.');
+    if (p.age65 != null && p.total && p.age65 > p.total) w.push('65세 이상이 총인구보다 큽니다.');
+    $('popWarn').textContent = w.join(' ');
+  });
+  function fill(e) {
+    document.querySelectorAll('[data-s],[data-dong]').forEach(function (inp) { inp.value = ''; });
+    $('date').value = e.date;
+    document.querySelectorAll('[data-s]').forEach(function (inp) { var v = (e[inp.getAttribute('data-s')] || {})[inp.getAttribute('data-k')]; if (v != null) inp.value = v; });
+    document.querySelectorAll('[data-dong]').forEach(function (inp) { var v = ((e.dong || {})[inp.getAttribute('data-dong')] || {})[inp.getAttribute('data-k')]; if (v != null) inp.value = v; });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  function drawHist() {
+    var tb = $('hist'); tb.innerHTML = '';
+    (file.entries || []).slice().sort(function (a, b) { return a.date < b.date ? 1 : -1; }).forEach(function (e) {
+      var tr = document.createElement('tr'), p = e.pop || {}, v = e.vital || {}, m = e.employ || {};
+      tr.innerHTML = '<td><a href="#" style="font-weight:800;color:#1F6FD1">' + e.date + '</a></td><td>' + fmt(p.total) + '</td><td>' + fmt(p.hh) + '</td><td>' + fmt(v.birth) + '</td><td>' + fmt(v.death) + '</td><td>' + fmt(v['in']) + '</td><td>' + fmt(v.out) + '</td><td>' + (m.rate != null ? m.rate + '%' : '–') + '</td><td class="off">' + (e.saved_at || '') + '</td><td><button class="danger" style="padding:4px 10px">삭제</button></td>';
+      tr.querySelector('a').onclick = function (ev) { ev.preventDefault(); fill(e); };
+      tr.querySelector('button').onclick = function () { if (!confirm(e.date + ' 입력을 삭제할까요? 시장실 화면에서도 빠집니다.')) return; file.entries = file.entries.filter(function (x) { return x.date !== e.date; }); write('삭제: ' + e.date); };
+      tb.appendChild(tr);
+    });
+  }
+  function load() {
+    if (!tok()) { say('먼저 ①에 GitHub 토큰을 넣어 주세요.', 'info'); return; }
+    gh('GET', API + '/contents/' + PATH + '?ref=main').then(function (j) {
+      if (j) { sha = j.sha; file = JSON.parse(b64dec(j.content)); } else { sha = null; file = { entries: [] }; }
+      drawHist(); say('저장된 입력 ' + (file.entries || []).length + '건을 불러왔습니다.', 'ok');
+    }).catch(function (e) { say('불러오기 실패: 토큰 권한을 확인해 주세요. (' + e.message + ')', 'err'); });
+  }
+  function write(msg) {
+    $('save').disabled = true; say('저장 중…', 'info');
+    var body = { message: '관리자 입력 ' + msg, content: b64enc(JSON.stringify(file, null, 1)), branch: 'main' };
+    if (sha) body.sha = sha;
+    return gh('PUT', API + '/contents/' + PATH, body).then(function (j) {
+      sha = j.content.sha; drawHist();
+      return gh('POST', API + '/actions/workflows/collect.yml/dispatches', { ref: 'main', inputs: { mode: 'admin' } });
+    }).then(function () { say('저장했습니다. 2~3분 뒤 시장실 화면에 반영됩니다.', 'ok'); })
+      .catch(function (e) { say('저장 실패: ' + e.message + (String(e.message).indexOf('409') === 0 ? ' (다른 곳에서 먼저 저장됨 → 새로고침 후 다시)' : ''), 'err'); load(); })
+      .then(function () { $('save').disabled = false; });
+  }
+  $('save').onclick = function () {
+    if (!tok()) { say('먼저 ①에 GitHub 토큰을 넣어 주세요.', 'err'); return; }
+    var r = collectForm(), e = r.e;
+    if (!e.date) { say('기준일을 넣어 주세요.', 'err'); return; }
+    if (r.bad.length) { say('숫자가 아닌 칸: ' + r.bad.join(', '), 'err'); return; }
+    if (!e.pop && !e.dong && !e.vital && !e.employ) { say('넣은 값이 없습니다.', 'err'); return; }
+    e.saved_at = new Date().toLocaleString('ko-KR', { hour12: false });
+    file.entries = (file.entries || []).filter(function (x) { return x.date !== e.date; }).concat([e]);
+    write(e.date);
+  };
+  load();
+})();
+</script>
+</body>
+</html>

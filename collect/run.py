@@ -545,14 +545,73 @@ def demo(state, S, C):
         ok(state, s, '시연용 가짜 값')
 
 
+ADMIN_INPUT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'manual', 'admin_input.json')
+
+
+def apply_admin_input(state, S):
+    """관리자 화면(web/admin.html)에서 넣은 동해시 최신 자료를 화면용 값에 덮어씁니다.
+    원본 state는 건드리지 않도록 build()에서 복사본에만 적용합니다."""
+    import copy
+    if not os.path.exists(ADMIN_INPUT):
+        return state
+    try:
+        ent = (load_json(ADMIN_INPUT) or {}).get('entries') or []
+    except Exception as e:  # noqa: BLE001
+        log('관리자 입력 읽기 실패 %s' % e)
+        return state
+    if not ent:
+        return state
+    st = copy.deepcopy(state)
+    me = codes().get('me') or '동해'
+    ent = sorted(ent, key=lambda x: x.get('date', ''))
+    live = {}
+    for sec in ('pop', 'dong', 'vital', 'employ'):
+        last = [x for x in ent if x.get(sec)]
+        if last:
+            live[sec] = {'date': last[-1]['date'], 'v': last[-1][sec], 'history': [{'date': x['date'], 'v': x[sec]} for x in last[-24:]]}
+    A = st.get('admin')
+    if A and live.get('pop'):
+        d, v = live['pop']['date'], live['pop']['v']
+        off_end = A['ym'] + '31'
+        if d.replace('-', '') > off_end and A['regions'].get(me):
+            r = A['regions'][me]
+            A['official_me'] = dict(r)
+            for k in ('total', 'hh', 'male', 'female'):
+                if v.get(k) is not None:
+                    r['prev_m' if k == 'total' else 'prev_m_' + k] = r[k]
+                    r[k] = float(v[k])
+            A['live'] = {'date': d, 'official_ym': A['ym']}
+            tot = r['total']
+            Y = A.get('youth') or {}
+            if Y.get('cur') and (v.get('age65') is not None or v.get('age15_64') is not None):
+                Y['prev'] = dict(Y['cur'])
+                if v.get('age65') is not None:
+                    Y['cur']['elderly'] = float(v['age65'])
+                if v.get('age15_64') is not None:
+                    Y['cur']['working'] = float(v['age15_64'])
+            for iid, k in (('elderly', 'age65'), ('working_age', 'age15_64')):
+                I = st['indicators'].get(iid)
+                if I and v.get(k) is not None and tot:
+                    I['values'] = dict(I['values'])
+                    I['values'][me] = float(v[k]) / tot * 100
+                    I['basis'] = I['basis'] + ' · 동해시는 %s 관리자 입력' % d
+        if live.get('dong') and A.get('dongs'):
+            for nm, dv in live['dong']['v'].items():
+                if nm in A['dongs'] and dv.get('total') is not None:
+                    A['dongs'][nm] = {'total': float(dv['total']), 'hh': float(dv.get('hh') or A['dongs'][nm].get('hh') or 0)}
+    st['admin_live'] = live
+    return st
+
+
 def build(state, S, C):
+    state = apply_admin_input(state, S)
     out = {
         'generated_at': now().strftime('%Y-%m-%d %H:%M'),
         'demo': any(v.get('from') == 'demo' for v in state['indicators'].values()),
         'title': S['title'], 'slogan': S.get('slogan', ''), 'map': {'vworld': (S.get('map') or {}).get('vworld_key', '')}, 'me': C['me'], 'menu': [m for m in S['menu'] if m.get('show', True)],
         'frame': S.get('frame', {}), 'judge': S['judge'],
         'regions': [r['name'] for r in C['regions']],
-        'indicators': [], 'admin': state.get('admin'), 'status': state['status'],
+        'indicators': [], 'admin': state.get('admin'), 'admin_live': state.get('admin_live'), 'status': state['status'],
         'finance': state.get('finance') or {},
         'life': {k: v for k, v in (state.get('life') or {}).items()},
     }
@@ -587,7 +646,8 @@ def main():
             state['admin'] = None
         if (state.get('finance') or {}).get('demo'):
             state['finance'] = {}
-        collect(state, S, C)
+        if '--admin-only' not in sys.argv:   # 관리자 입력만 반영할 때는 수집을 건너뜀(1~2분)
+            collect(state, S, C)
     save_json(STATE, state)
     data = build(state, S, C)
     os.makedirs(WEB_DATA, exist_ok=True)
