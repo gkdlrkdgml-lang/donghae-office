@@ -229,22 +229,36 @@ def main():
             say('[KOSIS검색] %s 실패 %s' % (q, e))
     from urllib.parse import unquote as _unq
     _dk = _unq(os.environ.get('DATA_GO_KR_KEY', '').strip())
-    tests = [
-        ('측정소', 'https://apis.data.go.kr/B552584/MsrstnInfoInqireSvc/getMsrstnList', {'addr': '동해', 'returnType': 'json', 'numOfRows': '20'}),
-        ('대기일평균', 'https://apis.data.go.kr/B552584/ArpltnStatsSvc/getMsrstnAcctoRDyrg', {'msrstnName': '천곡동', 'inqBginDt': '20260101', 'inqEndDt': '20261119', 'returnType': 'json', 'numOfRows': '5'}),
-        ('대기월평균', 'https://apis.data.go.kr/B552584/ArpltnStatsSvc/getMsrstnAcctoRMmrg', {'msrstnName': '천곡동', 'inqBginMm': '202601', 'inqEndMm': '202610', 'returnType': 'json', 'numOfRows': '12'}),
-        ('ASOS일', 'https://apis.data.go.kr/1360000/AsosDalyInfoService/getWthrDataList', {'dataType': 'JSON', 'dataCd': 'ASOS', 'dateCd': 'DAY', 'startDt': '20261101', 'endDt': '20261119', 'stnIds': '106', 'numOfRows': '3'}),
-        ('수질측정', 'https://apis.data.go.kr/1480523/WaterQualityService/getWaterMeasuringList', {'numOfRows': '5', 'resultType': 'JSON', 'wmyrList': '2026', 'wmodList': '09'}),
-        ('수질측정2', 'https://apis.data.go.kr/1480523/WaterQualityService/getWaterMeasuringListMavg', {'numOfRows': '5', 'resultType': 'JSON', 'wmyrList': '2026'}),
-        ('해수욕장수질', 'https://apis.data.go.kr/1192000/service/OceansBeachSeawaterService1/getOceansBeachSeawaterInfo1', {'numOfRows': '5', 'resultType': 'JSON', 'SIDO_NM': '강원', 'RES_YEAR': '2026'}),
-    ]
-    for nm, url, prm in tests:
+    import re as _re
+    for pk in ('15125635', '15157214', '15073855', '15081073'):
         try:
-            q = dict(prm); q['serviceKey'] = _dk
-            t = http_get(url, q, tries=1, timeout=30)
-            say('[환경API] %s → %s' % (nm, t[:900].replace(_dk, '***').replace('\n', ' ')))
+            h = http_get('https://www.data.go.kr/data/%s/openapi.do' % pk, {}, tries=1)
+            mj = _re.search(r'swaggerJson = `(.*?)`', h, _re.S)
+            if not mj:
+                say('[스웨거] %s 없음' % pk)
+                continue
+            sj = json.loads(mj.group(1))
+            base = 'https://' + str(sj.get('host', '')) + str(sj.get('basePath', ''))
+            for pth, v in (sj.get('paths') or {}).items():
+                for meth, d in (v.items() if isinstance(v, dict) else []):
+                    if not isinstance(d, dict):
+                        continue
+                    say('[스웨거] %s %s%s %s | 인자 %s' % (pk, base, pth, d.get('summary'), [(x.get('name'), x.get('required')) if isinstance(x, dict) else x for x in d.get('parameters', [])]))
         except Exception as e:  # noqa: BLE001
-            say('[환경API] %s 실패 %s' % (nm, str(e)[:250]))
+            say('[스웨거] %s 실패 %s' % (pk, str(e)[:200]))
+    _kp = os.environ.get('KEPCO_KEY', '').strip()
+    if _kp:
+        for nm, url, prm in (('코드', 'https://bigdata.kepco.co.kr/openapi/v1/commonCode.do', {'codeTy': 'metroCd'}),
+                             ('계약종별', 'https://bigdata.kepco.co.kr/openapi/v1/powerUsage/contractType.do', {'year': '2026', 'month': '09', 'metroCd': '51'}),
+                             ('가구평균', 'https://bigdata.kepco.co.kr/openapi/v1/powerUsage/houseAve.do', {'year': '2026', 'month': '09', 'metroCd': '51'})):
+            try:
+                q = dict(prm); q.update({'apiKey': _kp, 'returnType': 'json'})
+                t = http_get(url, q, tries=1, timeout=30)
+                say('[한전] %s → %s' % (nm, t[:1200].replace(_kp, '***')))
+            except Exception as e:  # noqa: BLE001
+                say('[한전] %s 실패 %s' % (nm, str(e)[:250]))
+    else:
+        say('[한전] KEPCO_KEY 없음')
     if os.environ.get('PROBE_FULL') != '1':
         return
     probe('admm_population', {'url': 'https://apis.data.go.kr/1741000/admmPpltnHhStus/selectAdmmPpltnHhStus', 'key_env': 'DATA_GO_KR_KEY',

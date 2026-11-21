@@ -18,6 +18,7 @@ jobs:
           LOFIN_KEY: ${{ secrets.LOFIN_KEY }}
           LOFIN_KEY_FINAL: ${{ secrets.LOFIN_KEY_FINAL }}
           KOSIS_KEY: ${{ secrets.KOSIS_KEY }}
+          KEPCO_KEY: ${{ secrets.KEPCO_KEY }}
           SAFETY_DATA_KEY: ${{ secrets.SAFETY_DATA_KEY }}
         run: python collect/probe.py
       - uses: actions/upload-artifact@v4
