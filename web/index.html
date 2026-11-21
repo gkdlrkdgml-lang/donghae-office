@@ -24,7 +24,7 @@
   .brand .emblem { height: 34px; width: auto; display: block; }
   .brand i { width: 38px; height: 38px; border-radius: 8px; background: var(--blue); display: inline-block; }
   nav { display: flex; gap: 4px; }
-  nav button { font: inherit; font-size: 16px; color: var(--sub); background: none; border: 0; padding: 8px 16px; border-radius: 6px; cursor: pointer; min-height: 40px; }
+  nav button { font: inherit; font-size: 16px; color: var(--sub); background: none; border: 0; padding: 8px 11px; white-space: nowrap; border-radius: 6px; cursor: pointer; min-height: 40px; }
   nav button[aria-current="page"] { background: var(--blue); color: #fff; font-weight: 700; }
   .hright { display: flex; align-items: center; gap: 14px; font-size: 14px; color: var(--sub); }
   .badge { padding: 5px 10px; border-radius: 999px; font-size: 13px; }
@@ -2339,8 +2339,7 @@ function startApp() {
     // 계약종별 구성
     var KC = [['주택용', '#1F6FD1'], ['일반용', '#0F8A8A'], ['산업용', '#6A4FC8'], ['교육용', '#E0A100'], ['농사용', '#3AA655'], ['가로등', '#C0602B'], ['심야', '#8FB2E0']];
     var parts = KC.filter(function (k) { return R.by && R.by[k[0]] && R.by[k[0]].kwh; }).map(function (k) { return [k[0], R.by[k[0]].kwh, k[1]]; });
-    var leg = el('div', { class: 'lleg', style: 'justify-content:center;flex-wrap:wrap' }, parts.map(function (k) { return el('span', {}, [el('i', { style: 'background:' + k[2] }), document.createTextNode(k[0] + ' ' + fmt(k[1] / R.total * 100, 1) + '%')]); }));
-    panel('계약종별 사용량 · ' + fullName(SN), ymL + ' · 전체 ' + fmt(R.total / 1e6, 1) + 'GWh', parts.length ? [donut(parts, fmt(R.total / 1e6, 1) + 'GWh', '한 달 사용량'), leg] : el('div', { class: 'empty', text: '자료 없음' }));
+    panel('계약종별 사용량 · ' + fullName(SN), ymL + ' · 전체 ' + fmt(R.total / 1e6, 1) + 'GWh', parts.length ? donut(parts, fmt(R.total / 1e6, 1) + 'GWh', '한 달 사용량') : el('div', { class: 'empty', text: '자료 없음' }));
     // 산업분류 상위
     var BZ = (PW.biz || {})[SN] || {}, bk = Object.keys(BZ).filter(function (k) { return BZ[k] > 0; }).sort(function (a, b) { return BZ[b] - BZ[a]; }).slice(0, 7), bt = 0;
     Object.keys(BZ).forEach(function (k) { bt += BZ[k] || 0; });

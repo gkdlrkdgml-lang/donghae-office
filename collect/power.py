@@ -64,11 +64,14 @@ def _month(y, m, names):
         d['bill'] += b or 0
     if len(out) < len(names):
         return None
-    time.sleep(1)
-    for r in _get('powerUsage/houseAve.do', {'year': y, 'month': m}):
-        n = names.get(r.get('city'))
-        if n in out:
-            out[n]['house'] = {'cnt': _num(r.get('houseCnt')), 'kwh': _num(r.get('powerUsage')), 'bill': _num(r.get('bill'))}
+    time.sleep(3)
+    try:   # 가구평균이 실패해도 계약종별은 살려 두고, 가구평균은 다음 실행 때 다시 받습니다
+        for r in _get('powerUsage/houseAve.do', {'year': y, 'month': m}):
+            n = names.get(r.get('city'))
+            if n in out:
+                out[n]['house'] = {'cnt': _num(r.get('houseCnt')), 'kwh': _num(r.get('powerUsage')), 'bill': _num(r.get('bill'))}
+    except Exception as e:  # noqa: BLE001
+        log('전력 가구평균 %s%s 실패: %s' % (y, m, e))
     return out
 
 
@@ -101,7 +104,13 @@ def collect(C, prev=None):
             d = _month(ym[:4], ym[4:], names)
         except Exception as e:  # noqa: BLE001
             errors.append('%s %s' % (ym, e))
+            if months.get(ym):
+                latest = ym   # 이미 받은 계약종별이 있으면 그 달을 그대로 씀
+                break
             continue
+        if d and months.get(ym) and not any('house' in v for v in d.values()):
+            latest = ym
+            break
         if d:
             months[ym] = d
             latest = ym
@@ -119,11 +128,11 @@ def collect(C, prev=None):
             continue
         try:
             d = _month(ym[:4], ym[4:], names)
-            if d:
+            if d and (ym not in months or any('house' in v for v in d.values())):
                 months[ym] = d
         except Exception as e:  # noqa: BLE001
             errors.append('%s %s' % (ym, e))
-        time.sleep(1)
+        time.sleep(3)
     keep = sorted(months)[-KEEP:]
     months = {k: months[k] for k in keep if k <= latest}
     # 3) 최신 달 산업분류
