@@ -38,6 +38,7 @@ jobs:
           KEPCO_KEY: ${{ secrets.KEPCO_KEY }}
           SAFETY_DATA_KEY: ${{ secrets.SAFETY_DATA_KEY }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          LAW_OC: ${{ secrets.LAW_OC }}
         run: |
           # 키를 아직 안 넣었으면 시연용 값으로 화면만 띄웁니다(키를 넣으면 자동으로 실제 수집).
           if [ "${{ inputs.mode }}" = "admin" ]; then python collect/run.py --admin-only

@@ -126,8 +126,65 @@ def supabase_test(mode):
         say('[supabase-test] 삭제 → ' + call('DELETE', 'entries?author_name=eq.' + __import__('urllib.parse').parse.quote('연결 시험')))
 
 
+def land_probe():
+    """국토·건축: 브이월드(지오코더·연속지적·토지이용계획·토지특성·토지임야), 건축HUB 건축물대장, 국가법령 조례."""
+    import urllib.parse as up
+    S = settings()
+    vk = (S.get('map') or {}).get('vworld_key', '')
+    dom = 'https://gkdlrkdgml-lang.github.io'
+    def vw(url, prm, tag):
+        q = dict(prm); q.update({'key': vk, 'domain': dom})
+        try:
+            t = http_get(url, q, tries=1, timeout=30)
+            say('[land] %s → %s' % (tag, t[:1500].replace(vk, '***').replace('\n', ' ')))
+            return t
+        except Exception as e:  # noqa: BLE001
+            say('[land] %s 실패 %s' % (tag, str(e)[:300]))
+            return ''
+    t = vw('https://api.vworld.kr/req/address', {'service': 'address', 'request': 'getcoord', 'version': '2.0', 'crs': 'epsg:4326', 'address': '강원특별자치도 동해시 천곡로 77', 'refine': 'true', 'simple': 'false', 'format': 'json', 'type': 'road'}, '지오코더')
+    x = y = None
+    try:
+        pt = json.loads(t)['response']['result']['point']; x, y = pt['x'], pt['y']
+    except Exception:  # noqa: BLE001
+        pass
+    pnu = ''
+    if x:
+        t = vw('https://api.vworld.kr/req/data', {'service': 'data', 'request': 'GetFeature', 'data': 'LP_PA_CBND_BUBUN', 'geomFilter': 'POINT(%s %s)' % (x, y), 'format': 'json', 'size': '1', 'geometry': 'false', 'attribute': 'true', 'crs': 'EPSG:4326'}, '연속지적')
+        try:
+            pnu = json.loads(t)['response']['result']['featureCollection']['features'][0]['properties']['pnu']
+        except Exception:  # noqa: BLE001
+            pass
+        vw('https://api.vworld.kr/req/data', {'service': 'data', 'request': 'GetFeature', 'data': 'LT_C_UQ111', 'geomFilter': 'POINT(%s %s)' % (x, y), 'format': 'json', 'size': '5', 'geometry': 'false', 'attribute': 'true', 'crs': 'EPSG:4326'}, '용도지역레이어')
+    say('[land] PNU=%s' % pnu)
+    if pnu:
+        vw('https://api.vworld.kr/ned/data/getLandUseAttr', {'pnu': pnu, 'format': 'json', 'numOfRows': '50', 'pageNo': '1'}, '토지이용계획')
+        for yr in ('2026', '2025'):
+            vw('https://api.vworld.kr/ned/data/getLandCharacteristics', {'pnu': pnu, 'stdrYear': yr, 'format': 'json', 'numOfRows': '5', 'pageNo': '1'}, '토지특성 %s' % yr)
+        vw('https://api.vworld.kr/ned/data/ladfrlList', {'pnu': pnu, 'format': 'json', 'numOfRows': '5', 'pageNo': '1'}, '토지임야')
+        dk = up.unquote(os.environ.get('DATA_GO_KR_KEY', '').strip())
+        prm = {'serviceKey': dk, 'sigunguCd': pnu[:5], 'bjdongCd': pnu[5:10], 'platGbCd': '0' if pnu[10] == '1' else '1', 'bun': pnu[11:15], 'ji': pnu[15:19], '_type': 'json', 'numOfRows': '5', 'pageNo': '1'}
+        for op in ('getBrTitleInfo', 'getBrBasisOulnInfo'):
+            try:
+                t = http_get('https://apis.data.go.kr/1613000/BldRgstHubService/' + op, prm, tries=1, timeout=40)
+                say('[land] 건축물대장 %s → %s' % (op, t[:1800].replace(dk, '***')))
+            except Exception as e:  # noqa: BLE001
+                say('[land] 건축물대장 %s 실패 %s' % (op, str(e)[:300]))
+    oc = os.environ.get('LAW_OC', '').strip()
+    say('[land] LAW_OC 길이 %d' % len(oc))
+    if oc:
+        for q in ('동해시 도시계획 조례', '동해시 건축 조례'):
+            try:
+                t = http_get('https://www.law.go.kr/DRF/lawSearch.do', {'OC': oc, 'target': 'ordin', 'type': 'JSON', 'query': q, 'display': '5'}, tries=1, timeout=30)
+                say('[land] 조례검색 %s → %s' % (q, t[:1200]))
+            except Exception as e:  # noqa: BLE001
+                say('[land] 조례검색 %s 실패 %s' % (q, str(e)[:300]))
+
+
 def main():
     load_env()
+    if os.environ.get('PROBE_ONLY') == 'land':
+        land_probe()
+        return
     if os.environ.get('PROBE_ONLY', '').startswith('sbtest_'):
         supabase_test(os.environ['PROBE_ONLY'][7:])
         return
