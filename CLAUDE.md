@@ -25,6 +25,11 @@ KOSIS(여러 표), 국세통계포털 TASIS(월별 가동·신규 사업자), �
 복지로 복지통계, 심평원·NMC 의료기관, 관광자원통계 GW(`B551940`, 유료관광지 월 입장객),
 환경부 상·하수도 통계, 지방공기업 경영정보, 기상청 ASOS 일자료, 에어코리아 대기오염통계(7월~만 제공), 국립환경과학원 수질 DB.
 
+## 관리자 입력(2026-11-22)
+- `web/admin.html`: 동해시 인구·세대·동별·인구 변동·고용을 기준일별로 입력 → GitHub 토큰(브라우저에만 저장)으로 `manual/admin_input.json`에 커밋하고
+  `collect.yml`을 `mode=admin`으로 실행(수집 생략, `run.py --admin-only`, 1분 안팎).
+- `run.py`의 `apply_admin_input()`이 build 때 복사본에만 덮어씀(원본 state 유지): 동해 총인구·세대·남녀(기준일이 공식 최신 월보다 늦을 때), 65세·15~64세 → 고령·생산연령 비율 순위 재계산, 동별 인구, `admin_live`(vital·employ)는 화면에 따로 표시.
+
 ## 남은 일
 - **전력 탭(「에너지·전력」) — 2026-11-21 만듦**: `collect/power.py`(한전 `KEPCO_KEY`, metroCd 51).
   계약종별·가구평균은 시·군 월별 25개월 보관(지난 달은 다시 안 받음), 산업분류는 최신 달만. 지표 pw_total·pw_house·pw_house_bill·pw_yoy·pw_ind_share(모두 dir 0).
