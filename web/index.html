@@ -68,6 +68,8 @@
   section.zoom { position: fixed; left: 48px; right: 48px; top: 84px; bottom: 40px; z-index: 60; grid-row: auto !important; grid-column: auto !important; box-shadow: 0 20px 60px rgba(15,30,60,.35); }
   section.zoom > * { zoom: 1.45; }
   section.zoom .zbtn { background: var(--blue); color: #fff; }
+  /* 지도(Leaflet) 안쪽 층이 크게 보기 창 위로 올라오지 않게 지도마다 따로 묶음 */
+  #view .leaflet-container { z-index: 0; isolation: isolate; }
   #zoomBack { position: fixed; inset: 0; background: rgba(23,32,44,.45); z-index: 50; }
   .donut { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 12px; min-height: 0; }
   .dsvg { min-height: 0; display: flex; justify-content: center; }

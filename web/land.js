@@ -302,6 +302,7 @@ window.DHLand = (function () {
       return det; }));
     var p5 = H.panel('판정 근거 · 확인할 것', '빨강·노랑부터 · 눌러서 근거 조문 보기', [list].concat(d.errs.length ? [el('div', { class: 'chips', style: 'margin-top:8px;gap:6px;flex-wrap:wrap' }, d.errs.map(function (e) { return el('span', { class: 'chip bad', text: e }); }))] : []));
     p5.style.gridRow = '4'; p5.style.gridColumn = '3';
+    setTimeout(function () { Array.prototype.forEach.call(H.view.querySelectorAll('section.zoom details'), function (x) { x.open = true; }); }, 0);   // 크게 보기: 근거를 모두 펼침
     // ⑥ 건물 정보(건축물대장): 어떤 건물인지, 언제 지었는지
     var d8 = function (v) { v = String(v || '').trim(); return v.length >= 8 ? v.slice(0, 4) + '.' + v.slice(4, 6) + '.' + v.slice(6, 8) : '–'; };
     var bbody;
