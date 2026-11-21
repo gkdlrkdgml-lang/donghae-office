@@ -1,0 +1,29 @@
+name: Supabase 중계 기능 올리기
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['supabase/functions/**']
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      PROJECT_REF: zkdsystvrakicrkckcrd
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: 비밀값 넣기
+        env:
+          DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
+        run: supabase secrets set --project-ref "$PROJECT_REF" DATA_GO_KR_KEY="$DATA_GO_KR_KEY"
+      - name: 함수 올리기
+        run: supabase functions deploy land --project-ref "$PROJECT_REF" --no-verify-jwt --use-api
+      - name: 올라갔는지 확인(로그인 없이 부르면 401이 정상)
+        run: |
+          code=$(curl -s -o /tmp/r.txt -w '%{http_code}' -X POST "https://$PROJECT_REF.supabase.co/functions/v1/land" -H 'content-type: application/json' -d '{"pnu":"5117010100108060000"}')
+          echo "응답 $code: $(cat /tmp/r.txt)"
