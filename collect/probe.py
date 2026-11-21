@@ -142,11 +142,12 @@ def land_probe():
             say('[land] %s 실패 %s' % (tag, str(e)[:300]))
             return ''
     t = vw('https://api.vworld.kr/req/address', {'service': 'address', 'request': 'getcoord', 'version': '2.0', 'crs': 'epsg:4326', 'address': '강원특별자치도 동해시 천곡로 77', 'refine': 'true', 'simple': 'false', 'format': 'json', 'type': 'road'}, '지오코더')
-    x = y = None
+    x, y = '129.1143', '37.5247'   # 지오코더 실패 시 동해시청 근처 좌표
     try:
         pt = json.loads(t)['response']['result']['point']; x, y = pt['x'], pt['y']
     except Exception:  # noqa: BLE001
         pass
+    vw('https://api.vworld.kr/req/wmts/1.0.0/%s/Base/7/48/109.png' % vk, {}, 'WMTS 연결확인')
     pnu = ''
     if x:
         t = vw('https://api.vworld.kr/req/data', {'service': 'data', 'request': 'GetFeature', 'data': 'LP_PA_CBND_BUBUN', 'geomFilter': 'POINT(%s %s)' % (x, y), 'format': 'json', 'size': '1', 'geometry': 'false', 'attribute': 'true', 'crs': 'EPSG:4326'}, '연속지적')
@@ -175,7 +176,7 @@ def land_probe():
         for q in ('동해시 도시계획 조례', '동해시 건축 조례'):
             try:
                 t = http_get('https://www.law.go.kr/DRF/lawSearch.do', {'OC': oc, 'target': 'ordin', 'type': 'JSON', 'query': q, 'display': '5'}, tries=1, timeout=30)
-                say('[land] 조례검색 %s → %s' % (q, t[:1200]))
+                say('[land] 조례검색 %s → %s' % (q, t[:2500].replace('\\n', ' ').replace('\n', ' ')))
             except Exception as e:  # noqa: BLE001
                 say('[land] 조례검색 %s 실패 %s' % (q, str(e)[:300]))
 
