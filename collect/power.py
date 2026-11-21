@@ -15,6 +15,7 @@ from common import http_get, log, now, ym_shift
 BASE = 'https://bigdata.kepco.co.kr/openapi/v1/'
 METRO = '51'   # 강원(한전 코드표에서는 32도 강원이지만 51로 불러도 강원 18개 시·군이 나옴)
 KEEP = 25      # 25개월 보관(13개월 추이 + 전년 같은 달 비교)
+BUDGET = 420   # 한 번 돌 때 전력 수집에 쓰는 최대 시간(초). 못 채운 달은 다음 실행 때 이어 받음
 
 
 def _get(path, params):
@@ -24,16 +25,16 @@ def _get(path, params):
     q = dict(params)
     q.update({'apiKey': key, 'returnType': 'json', 'metroCd': METRO})
     last = None
-    for i in range(4):   # 한전 서버가 자주 끊겨서 몇 번 더 시도합니다
+    for i in range(3):   # 한전 서버가 자주 끊겨서 몇 번 더 시도합니다
         try:
-            t = http_get(BASE + path, q, tries=1, timeout=40)
+            t = http_get(BASE + path, q, tries=1, timeout=25)
             j = json.loads(t)
             return j.get('data') or []
         except Exception as e:  # noqa: BLE001
             last = e
             if '404' in str(e):
                 return []      # 아직 공표 안 된 달
-            time.sleep([3, 8, 15, 20][i])
+            time.sleep([3, 8, 0][i])
     raise RuntimeError(str(last).replace(key, '***')[:200])
 
 
@@ -84,6 +85,7 @@ def _biz(y, m, names):
 def collect(C, prev=None):
     names = {r['full']: r['name'] for r in C['regions']}
     prev = prev or {}
+    t0 = time.time()
     months = dict(prev.get('months') or {})
     errors = []
     cur = '%04d%02d' % (now().year, now().month)
@@ -109,6 +111,9 @@ def collect(C, prev=None):
         raise RuntimeError('최근 6개월 자료를 받지 못함: %s' % '; '.join(errors[-3:]))
     # 2) 비어 있는 지난 달 채우기(최근 25개월)
     for back in range(1, KEEP):
+        if time.time() - t0 > BUDGET:
+            errors.append('시간 초과 · 나머지 달은 다음에')
+            break
         ym = ym_shift(latest, -back)
         if ym in months and all('house' in v for v in months[ym].values()):
             continue

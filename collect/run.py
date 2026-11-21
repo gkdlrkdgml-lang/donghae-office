@@ -256,7 +256,7 @@ def collect(state, S, C):
         except Exception as e:  # noqa: BLE001
             fail(state, 'water', e)
     # 에너지·전력(한전): 새 달은 보통 2달 뒤 공표 → 사흘마다 확인
-    if os.environ.get('KEPCO_KEY') and (stale('power', 3) or '--force-power' in sys.argv):
+    if os.environ.get('KEPCO_KEY') and (stale('power', 3) or len((L.get('power') or {}).get('months') or {}) < power.KEEP - 1 or '--force-power' in sys.argv):
         try:
             L['power'] = power.collect(C, L.get('power'))
             ok(state, 'power', '%s 기준 · %d개월' % (L['power']['ym'], len(L['power']['months'])) + (' · 일부 실패 %d' % len(L['power']['errors']) if L['power']['errors'] else ''))
