@@ -1,5 +1,5 @@
 /* 동해시 AI 시장실 · 국토·건축 탭
- * - 부지 검토(로그인한 관리자만): 지번·주소 → 브이월드(토지이용계획·토지특성·토지대장) + 건축물대장(Supabase 중계)
+ * - 부지 검토(로그인 없이): 지번·주소 → 브이월드(토지이용계획·토지특성·토지대장) + 건축물대장(Supabase 중계)
  *   → 신호등 판정(초록·노랑·빨강) + 쉬운 설명 + 근거 조문 + 원본 바로가기 + 1장 브리핑
  * - 조례 비교(공개): 강원 18개 시·군 도시계획 조례의 용도지역별 건폐율·용적률
  * 판정 규칙은 참고자료 「지휘부 의사결정 신호등 판정 엔진」을 동해시 조례 원문 수치로 바꿔 구현.
@@ -8,7 +8,7 @@
 window.DHLand = (function () {
   var H = null;            // index.html이 넘겨주는 도구(el, panel, view, render, D ...)
   var sb = null, session = null, profile = null, authChecked = false;
-  var tab = 'site', cur = null, busy = false, hist = null, cmpZone = null, cmpKind = 'far', useSel = '';
+  var tab = 'site', cur = null, busy = false, cmpZone = null, cmpKind = 'far', useSel = '';
   var LV = { GREEN: { c: '#2E8B57', bg: '#E2F3E9', t: '추진 가능' }, YELLOW: { c: '#D99A00', bg: '#FFF4D6', t: '조건부 가능 · 검토 필요' }, RED: { c: '#D9534F', bg: '#FDE7E4', t: '추진 곤란 · 중대 제약' }, INFO: { c: '#1F6FD1', bg: '#E4EEFB', t: '참고' } };
   var USES = ['', '단독주택', '공동주택', '제1종근린생활시설', '제2종근린생활시설', '문화및집회시설', '판매시설', '의료시설', '교육연구시설', '노유자시설', '수련시설', '운동시설', '업무시설', '숙박시설', '공장', '창고시설', '위험물저장및처리시설', '자동차관련시설', '공공용시설', '관광휴게시설', '주차장'];
 
@@ -77,7 +77,7 @@ window.DHLand = (function () {
         ned('getLandUseAttr', { pnu: pnu }),
         ned('getLandCharacteristics', { pnu: pnu, stdrYear: String(yr) }).then(function (j) { return arr(((j || {}).landCharacteristicss || {}).field).length ? j : ned('getLandCharacteristics', { pnu: pnu, stdrYear: String(yr - 1) }); }),
         ned('ladfrlList', { pnu: pnu }),
-        sb.functions.invoke('land', { body: { pnu: pnu } }).then(function (r) { return r.error ? { _err: r.error.message } : r.data; }).catch(function (e) { return { _err: e.message }; })
+        (sb ? sb.functions.invoke('land', { body: { pnu: pnu } }) : Promise.reject(new Error('연결 설정 없음'))).then(function (r) { return r.error ? { _err: r.error.message } : r.data; }).catch(function (e) { return { _err: e.message }; })
       ]).then(function (res) {
         var d = { q: q, pnu: pnu, feat: f, use: arr(((res[0] || {}).landUses || {}).field), ch: arr(((res[1] || {}).landCharacteristicss || {}).field), lad: arr(((res[2] || {}).ladfrlVOList || {}).ladfrlVOList), bld: res[3] || {},
           errs: [res[0] && res[0]._err ? '토지이용계획: ' + res[0]._err : null, res[1] && res[1]._err ? '토지특성: ' + res[1]._err : null, res[2] && res[2]._err ? '토지대장: ' + res[2]._err : null, res[3] && res[3]._err ? '건축물대장: ' + res[3]._err : null].filter(Boolean) };
@@ -194,54 +194,40 @@ window.DHLand = (function () {
     return [l1, l2, l3];
   }
 
-  // ------------------------------------------------------------ 이력(Supabase)
+  // ------------------------------------------------------------ 최근 검토(이 브라우저에만 저장, 서버 저장 없음)
+  function recentGet() { try { return JSON.parse(localStorage.getItem('dh_land_recent') || '[]'); } catch (e) { return []; } }
   function saveHist(d) {
-    if (!sb || !session || !d.ev) return;
-    var p = d.feat.properties || {};
-    sb.from('site_reviews').insert({ pnu: d.pnu, address: p.addr || d.q, status: d.ev.status, target_use: useSel || null, author: session.user.id, author_name: (profile || {}).name || '',
-      summary: { zone: d.ev.zone, jimok: d.ev.jimok, area: d.ev.area, road: d.ev.road, tags: d.ev.reasons.filter(function (r) { return r.level !== 'GREEN'; }).map(function (r) { return r.level + ':' + r.tag; }), far: d.ev.rule && d.ev.rule.far, bcr: d.ev.rule && d.ev.rule.bcr, price: d.ev.price } })
-      .then(function () { hist = null; });
-  }
-  function loadHist() {
-    if (!sb || !session || hist) return;
-    hist = [];
-    sb.from('site_reviews').select('*').order('created_at', { ascending: false }).limit(200).then(function (r) { hist = r.data || []; if (tab === 'hist' || tab === 'site') H.render(); });
+    if (!d.ev) return;
+    var p = d.feat.properties || {}, r = recentGet().filter(function (x) { return x.pnu !== d.pnu; });
+    r.unshift({ pnu: d.pnu, address: p.addr || d.q, status: d.ev.status });
+    try { localStorage.setItem('dh_land_recent', JSON.stringify(r.slice(0, 6))); } catch (e) {}
   }
 
   // ------------------------------------------------------------ 화면
   function screen(helpers) {
     H = helpers;
     var el = H.el, view = H.view;
-    if (!authChecked) { initAuth().then(function () { H.render(); }); }
+    if (!sb) initAuth();
     view.style.gridTemplateColumns = 'repeat(3, minmax(0, 1fr))';
     view.style.gridTemplateRows = '44px auto minmax(0, 1fr) minmax(0, 1fr)';
-    var tabs = [['site', '부지 검토'], ['hist', '검토 이력·비교'], ['ord', '조례 비교 · 18개 시·군']];
+    var tabs = [['site', '부지 검토'], ['ord', '조례 비교 · 18개 시·군']];
+    if (tab === 'hist') tab = 'site';
     view.appendChild(el('div', { class: 'title' }, [el('h1', { text: H.D.me + '시 국토·건축' }),
       el('div', { class: 'chips', style: 'flex-wrap:nowrap;gap:6px;margin-left:12px' }, tabs.map(function (t) {
         return el('button', { type: 'button', class: 'chip', style: 'cursor:pointer;border:0;font-weight:800;font-size:15px' + (t[0] === tab ? ';background:#1B3A6B;color:#fff' : ''), text: t[1], onclick: function () { tab = t[0]; H.render(); } }); })),
       el('span', { class: 'basis', text: tab === 'ord' ? '국가법령정보센터 자치법규 원문 · ' + (((H.D.life || {}).ordin || {}).at || '') + ' 확인' : '브이월드(국토교통부) · 건축HUB 건축물대장 · 동해시 도시계획 조례 원문' })]));
     if (tab === 'ord') return screenOrd(el);
-    if (!authChecked) { full(el('div', { class: 'empty', style: 'font-size:22px', text: '로그인 확인 중…' })); return; }
-    if (!isAdmin()) {
-      full(el('div', { style: 'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;height:100%' }, [
-        el('div', { style: 'font-size:28px;font-weight:800;color:#1B3A6B', text: '관리자 로그인 후 볼 수 있습니다' }),
-        el('div', { style: 'font-size:17px;color:#556274', text: '부지 검토는 내부 검토 자료라 로그인한 관리자에게만 보입니다.' }),
-        el('a', { href: 'admin.html', style: 'background:#1B3A6B;color:#fff;font-weight:800;font-size:18px;padding:12px 26px;border-radius:10px;text-decoration:none', text: '관리자 로그인' })]));
-      return;
-    }
-    loadHist();
-    if (tab === 'hist') return screenHist(el);
     screenSite(el);
   }
-  function full(node) { var s = H.el('section', { style: 'grid-column:1 / -1;grid-row:2 / span 3' }, [node]); H.view.appendChild(s); }
+  function full(node, row) { var s = H.el('section', { style: 'grid-column:1 / -1;grid-row:' + (row || '2 / span 3') }, [node]); H.view.appendChild(s); }
 
   function searchBar(el) {
     var inp = el('input', { type: 'text', placeholder: '지번(예: 천곡동 806) · 도로명 주소 · PNU 19자리', value: (cur && cur.q) || '', style: 'flex:1;font:inherit;font-size:19px;padding:10px 14px;border:2px solid #C9D2DE;border-radius:10px;min-width:0' });
     inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') lookup(inp.value); e.stopPropagation(); });
     var sel = el('select', { style: 'font:inherit;font-size:16px;padding:9px;border:2px solid #C9D2DE;border-radius:10px' }, USES.map(function (u) { var o = el('option', { value: u, text: u || '예정 용도(선택)' }); if (u === useSel) o.selected = true; return o; }));
     sel.addEventListener('change', function () { useSel = sel.value; if (cur && cur.ev) { cur.ev = evaluate(cur); H.render(); } });
-    var recent = (hist || []).filter(function (h, i, a) { return a.findIndex(function (x) { return x.pnu === h.pnu; }) === i; }).slice(0, 5);
-    var bar = el('section', { style: 'grid-column:1 / -1;flex-direction:row;align-items:center;gap:10px;padding:10px 14px' }, [inp, sel,
+    var recent = recentGet().slice(0, 5);
+    var bar = el('section', { style: 'grid-column:1 / -1;grid-row:2;flex-direction:row;align-items:center;gap:10px;padding:10px 14px' }, [inp, sel,
       el('button', { type: 'button', style: 'font:inherit;font-weight:800;font-size:18px;background:#1B3A6B;color:#fff;border:0;border-radius:10px;padding:10px 22px;cursor:pointer', text: busy ? '조회 중…' : '검토', onclick: function () { lookup(inp.value); } }),
       recent.length ? el('div', { class: 'chips', style: 'flex-wrap:nowrap;gap:6px;max-width:42%;overflow:hidden' }, recent.map(function (h) {
         return el('button', { type: 'button', class: 'chip', style: 'cursor:pointer;border:0;white-space:nowrap;background:' + LV[h.status || 'INFO'].bg + ';color:' + LV[h.status || 'INFO'].c, text: '● ' + String(h.address || h.pnu).replace(/^강원특별자치도\s*동해시\s*/, ''), onclick: function () { lookup(h.pnu); } }); })) : null]);
@@ -257,7 +243,7 @@ window.DHLand = (function () {
         el('div', { style: 'font-size:24px;font-weight:800;color:#1B3A6B', text: cur.loading })] : [
         el('div', { style: 'font-size:26px;font-weight:800;color:#1B3A6B', text: '검토할 땅의 지번이나 주소를 넣어 주세요' }),
         el('div', { style: 'font-size:17px', text: '토지이용계획·토지특성·토지대장·건축물대장을 한 번에 조회해 신호등(초록·노랑·빨강)으로 판정합니다.' }),
-        el('div', { style: 'font-size:15px', text: '판정 기준: 국토계획법·건축법·도로법 + 동해시 도시계획 조례 원문 수치(' + (ordMe() ? ordMe().date.replace(/(\d{4})(\d\d)(\d\d)/, '$1.$2.$3') + ' 시행' : '조례 수집 대기') + ')' })]));
+        el('div', { style: 'font-size:15px', text: '판정 기준: 국토계획법·건축법·도로법 + 동해시 도시계획 조례 원문 수치(' + (ordMe() ? ordMe().date.replace(/(\d{4})(\d\d)(\d\d)/, '$1.$2.$3') + ' 시행' : '조례 수집 대기') + ')' })]), '3 / span 2');
       return;
     }
     var d = cur, ev = d.ev, S = LV[ev.status], p = d.feat.properties || {};
@@ -323,22 +309,6 @@ window.DHLand = (function () {
     p5.style.gridRow = '3 / span 2'; p5.style.gridColumn = '3';
   }
 
-  function screenHist(el) {
-    var rows = hist || [];
-    var f = screenHist.f || '';
-    var bar = el('div', { class: 'chips', style: 'gap:6px;margin-bottom:8px' }, [['', '전체'], ['GREEN', '초록'], ['YELLOW', '노랑'], ['RED', '빨강']].map(function (x) {
-      return el('button', { type: 'button', class: 'chip', style: 'cursor:pointer;border:0;font-weight:800' + (f === x[0] ? ';background:#1B3A6B;color:#fff' : ''), text: x[1] + ' ' + rows.filter(function (r) { return !x[0] || r.status === x[0]; }).length, onclick: function () { screenHist.f = x[0]; H.render(); } }); }));
-    var shown = rows.filter(function (r) { return !f || r.status === f; });
-    var tb = el('table', { class: 'dt', style: 'font-size:15px' }, [el('thead', {}, [el('tr', {}, ['', '주소', '용도지역', '지목·면적', '용적률', '확인할 것', '검토', '일시'].map(function (h) { return el('th', { text: h }); }))]),
-      el('tbody', {}, shown.map(function (r) { var s = r.summary || {};
-        return el('tr', { style: 'cursor:pointer', onclick: function () { tab = 'site'; lookup(r.pnu); } }, [
-          el('td', { html: '<b style="color:' + LV[r.status || 'INFO'].c + ';font-size:20px">●</b>' }), el('td', { text: String(r.address || r.pnu).replace(/^강원특별자치도\s*/, '') }), el('td', { text: s.zone || '–' }),
-          el('td', { text: (s.jimok || '–') + ' · ' + fmt(s.area) + '㎡' }), el('td', { text: s.far != null ? s.far + '%' : '–' }),
-          el('td', { style: 'max-width:520px;white-space:normal', text: (s.tags || []).map(function (t) { return t.replace(/^\w+:/, ''); }).join(', ') || '–' }),
-          el('td', { text: r.author_name || '' }), el('td', { text: new Date(r.created_at).toLocaleString('ko-KR', { hour12: false }).slice(0, 18) })]); }))]);
-    full(el('div', { style: 'display:flex;flex-direction:column;min-height:0;height:100%' }, [bar, el('div', { style: 'overflow:auto;min-height:0' }, [shown.length ? tb : el('div', { class: 'empty', text: '아직 검토 이력이 없습니다' })])]));
-  }
-
   function screenOrd(el) {
     var O = ((H.D.life || {}).ordin) || {}, R = O.regions || {};
     if (!Object.keys(R).length) { full(el('div', { class: 'empty', style: 'font-size:22px', text: '조례 자료를 받는 중입니다(하루 한 번 수집)' })); return; }
@@ -377,7 +347,7 @@ window.DHLand = (function () {
       'table{width:100%;border-collapse:collapse}td,th{border:1px solid #C9D2DE;padding:5px 7px;text-align:left;vertical-align:top}th{background:#EEF2F8;width:22%}.lv{display:inline-block;padding:3px 12px;border-radius:12px;color:#fff;font-weight:800}' +
       'ol{margin:6px 0;padding-left:20px;line-height:1.6}.small{color:#556274;font-size:11px}@media print{button{display:none}}</style></head><body>' +
       '<button onclick="print()" style="float:right;padding:6px 14px">인쇄</button>' +
-      '<h1>부지 검토 브리핑</h1><div class="small">' + esc(new Date().toLocaleString('ko-KR', { hour12: false })) + ' · 동해시 AI 시장실 · 작성 ' + esc((profile || {}).name || '') + '</div>' +
+      '<h1>부지 검토 브리핑</h1><div class="small">' + esc(new Date().toLocaleString('ko-KR', { hour12: false })) + ' · 동해시 AI 시장실</div>' +
       '<h2>1. 대상지</h2><table><tr><th>소재지</th><td>' + esc(p.addr || d.q) + '</td></tr><tr><th>PNU</th><td>' + d.pnu + '</td></tr><tr><th>용도지역 · 지목 · 면적</th><td>' + esc(ev.zones.join(' · ') || '–') + ' · ' + esc(ev.jimok) + ' · ' + fmt(ev.area) + '㎡</td></tr>' +
       '<tr><th>공시지가</th><td>' + (ev.price ? fmt(ev.price) + '원/㎡ (' + esc(ev.priceYear) + '년)' : '–') + '</td></tr>' + (useSel ? '<tr><th>예정 용도</th><td>' + esc(useSel) + '</td></tr>' : '') + '</table>' +
       '<h2>2. 종합 판정</h2><p><span class="lv" style="background:' + S.c + '">' + { GREEN: '초록', YELLOW: '노랑', RED: '빨강' }[ev.status] + '</span> <b>' + S.t + '</b></p><ol>' + hl.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ol>' +

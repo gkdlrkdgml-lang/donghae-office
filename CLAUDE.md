@@ -40,10 +40,10 @@ KOSIS(여러 표), 국세통계포털 TASIS(월별 가동·신규 사업자), �
 - 동해시 로고(왼쪽 위)를 누르면 admin.html로 감(숨은 버튼). 시험: `gh workflow run probe.yml -f only=supabase` (명단·입력 확인).
 
 ## 국토·건축 탭(2026-11-22 만듦) — `web/land.js`
-- 부지 검토(로그인한 관리자만, admin.html과 같은 Supabase 세션 `dh_admin_auth`): 지번·도로명·PNU → 브이월드(브라우저 JSONP: 지오코더·연속지적·토지이용계획·토지특성·토지임야)
-  + 건축물대장은 Supabase Edge Function `land`(supabase/functions/land, 관리자 JWT 확인, DATA_GO_KR_KEY는 Supabase 비밀값) → 신호등 판정·근거 조문·토지이음 링크·1장 브리핑(인쇄).
+- 부지 검토(로그인 없이 — 사용자가 이력·로그인 불필요하다고 함. 최근 검토는 브라우저 localStorage `dh_land_recent`에만): 지번·도로명·PNU → 브이월드(브라우저 JSONP: 지오코더·연속지적·토지이용계획·토지특성·토지임야)
+  + 건축물대장은 Supabase Edge Function `land`(supabase/functions/land, 시장실 Origin만 허용 + IP당 10분 60회, 관리자 JWT도 허용, DATA_GO_KR_KEY는 Supabase 비밀값) → 신호등 판정·근거 조문·토지이음 링크·1장 브리핑(인쇄).
   브이월드는 GitHub 서버(해외)에서 막힘 → 반드시 브라우저에서 호출. 판정 규칙은 참고자료/신호등 엔진 + 동해시 조례 원문 수치. 사용자 요청: 「도시과 확인 필요」 같은 문구 넣지 말 것(근거·원본을 최대한 보여 주기).
-- 검토 이력: Supabase 표 `site_reviews`(supabase/sites.sql). SQL은 `gh workflow run db_sql.yml -f file=…`로 실행(SUPABASE_ACCESS_TOKEN).
+- 검토 이력: 서버 저장 안 함(표 `site_reviews`는 만들어 두었으나 미사용). SQL은 `gh workflow run db_sql.yml -f file=…`로 실행(SUPABASE_ACCESS_TOKEN).
 - 조례 비교: `collect/landlaw.py`가 18개 시·군 도시계획(군계획) 조례에서 용도지역별 건폐율·용적률 추출(주 1회, LAW_OC). 일부 시·군은 조문 형식이 달라 몇 개 용도지역 값이 빠짐(원주·홍천·화천·인제 상업지역 용적률 등) → 빠진 곳은 비교에서 제외(추정 안 함).
 - Edge Function 배포: `supabase/functions/**` 고치고 push하면 deploy_functions.yml이 자동 배포.
 - 참고 코드: chrisryugj/archhub-mcp, korean-law-mcp (MIT). 다음 할 일: 국토·건축 현황 통계(노후·내진 미적용 추정·인허가, 18개 시·군 비교).

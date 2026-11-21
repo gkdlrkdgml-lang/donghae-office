@@ -1,4 +1,4 @@
-// 부지 검토용 중계: 로그인한 관리자만 건축물대장(건축HUB)을 필지번호(PNU)로 조회.
+// 부지 검토용 중계: 시장실 사이트(또는 로그인한 관리자)에서만 건축물대장(건축HUB)을 필지번호(PNU)로 조회.
 // 공공데이터포털 키(DATA_GO_KR_KEY)는 Supabase 비밀값에만 있고 브라우저로 나가지 않습니다.
 // 건축HUB 호출 방식 참고: chrisryugj/archhub-mcp (MIT License)
 const CORS = {
@@ -16,6 +16,16 @@ const OPS: Record<string, string> = {
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...CORS, "Content-Type": "application/json; charset=utf-8" } });
+}
+
+// 로그인 대신: 시장실 사이트에서 온 요청만 받고, 짧은 시간에 너무 많이 부르면 막음
+const ALLOWED = ["https://gkdlrkdgml-lang.github.io"];
+const hits = new Map<string, number[]>();
+function tooMany(ip: string) {
+  const now = Date.now(), win = 10 * 60 * 1000, max = 60;
+  const arr = (hits.get(ip) || []).filter((t) => now - t < win);
+  arr.push(now); hits.set(ip, arr);
+  return arr.length > max;
 }
 
 async function whoIs(req: Request): Promise<string | null> {
@@ -52,8 +62,14 @@ async function hub(op: string, prm: Record<string, string>, key: string) {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json({ error: "POST만 됩니다" }, 405);
-  const role = await whoIs(req);
-  if (role !== "admin" && role !== "super") return json({ error: "관리자 로그인이 필요합니다" }, 401);
+  const origin = req.headers.get("origin") || "";
+  const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || "?";
+  const fromSite = ALLOWED.includes(origin);
+  if (!fromSite) {
+    const role = await whoIs(req);
+    if (role !== "admin" && role !== "super") return json({ error: "시장실 사이트에서만 쓸 수 있습니다" }, 403);
+  }
+  if (tooMany(ip)) return json({ error: "잠시 후 다시 시도해 주세요(10분에 60회까지)" }, 429);
   let body: { pnu?: string } = {};
   try { body = await req.json(); } catch { /* 빈 본문 */ }
   const pnu = String(body.pnu || "").trim();
