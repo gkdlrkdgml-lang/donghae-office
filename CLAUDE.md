@@ -34,6 +34,10 @@ KOSIS(여러 표), 국세통계포털 TASIS(월별 가동·신규 사업자), �
 - 반영: `collect/admin_sync.py`가 service_role 키(GitHub Secret `SUPABASE_SERVICE_KEY`)로 entries를 받아 `manual/admin_input.json`(예전 형식)으로 만듦 →
   `run.py`의 `apply_admin_input()`이 build 때 복사본에만 덮어씀(동해 총인구·세대·남녀, 65세·15~64세 → 고령·생산연령 비율 재계산, 동별, admin_live).
   `.github/workflows/admin_watch.yml`이 10분마다 바뀜(state.json `admin_sig`)을 보고 `collect.yml mode=admin` 실행.
+  (2026-11-22 01:50 기준 예약 실행이 아직 한 번도 안 돎 → 다음에 `gh run list -w admin_watch.yml`로 event=schedule 있는지 확인)
+- 입력값 적용 규칙: 기준일이 공식 최신 달(인구·동별·인구변동) 또는 고용률 공식 반기 끝날보다 늦을 때만 사용, 아니면 API 값.
+  인구는 공식 최신 달 대비(「10월 대비」) + 「지난 입력(날짜)보다」 증감 표시. 인구 증감률(전년 대비) 순위는 공식값 유지(같은 날짜 1년 전 값이 없어서).
+- 동해시 로고(왼쪽 위)를 누르면 admin.html로 감(숨은 버튼). 시험: `gh workflow run probe.yml -f only=supabase` (명단·입력 확인).
 
 ## 남은 일
 - **전력 탭(「에너지·전력」) — 2026-11-21 만듦**: `collect/power.py`(한전 `KEPCO_KEY`, metroCd 51).
