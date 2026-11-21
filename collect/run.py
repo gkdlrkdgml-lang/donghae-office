@@ -571,10 +571,19 @@ def apply_admin_input(state, S):
         if last:
             live[sec] = {'date': last[-1]['date'], 'v': last[-1][sec], 'history': [{'date': x['date'], 'v': x[sec]} for x in last[-24:]]}
     A = st.get('admin')
+    # 공식 자료가 입력 기준일보다 새로우면 그 입력은 쓰지 않음(→ API 값 그대로)
+    off_end = (A['ym'] + '31') if A and A.get('ym') else ''
+    for sec in ('pop', 'dong', 'vital'):
+        if sec in live and off_end and live[sec]['date'].replace('-', '') <= off_end:
+            del live[sec]
+    ep = str(((st.get('life') or {}).get('employ') or {}).get('period') or '')
+    if 'employ' in live and len(ep) == 6:
+        e_end = ep[:4] + ('0630' if ep[4:] == '01' else '1231')   # 고용률 공식 반기 끝날
+        if live['employ']['date'].replace('-', '') <= e_end:
+            del live['employ']
     if A and live.get('pop'):
         d, v = live['pop']['date'], live['pop']['v']
-        off_end = A['ym'] + '31'
-        if d.replace('-', '') > off_end and A['regions'].get(me):
+        if A['regions'].get(me):
             r = A['regions'][me]
             A['official_me'] = dict(r)
             for k in ('total', 'hh', 'male', 'female'):
@@ -582,6 +591,10 @@ def apply_admin_input(state, S):
                     r['prev_m' if k == 'total' else 'prev_m_' + k] = r[k]
                     r[k] = float(v[k])
             A['live'] = {'date': d, 'official_ym': A['ym']}
+            # 바로 전 입력(공식 최신 달보다 늦은 것)과 비교
+            pv = [h for h in live['pop']['history'][:-1] if h['date'].replace('-', '') > off_end and (h['v'] or {}).get('total') is not None]
+            if pv:
+                A['live']['prev_in'] = dict(pv[-1]['v'], date=pv[-1]['date'])
             tot = r['total']
             Y = A.get('youth') or {}
             if Y.get('cur') and (v.get('age65') is not None or v.get('age15_64') is not None):
@@ -596,10 +609,10 @@ def apply_admin_input(state, S):
                     I['values'] = dict(I['values'])
                     I['values'][me] = float(v[k]) / tot * 100
                     I['basis'] = I['basis'] + ' · 동해시는 %s 관리자 입력' % d
-        if live.get('dong') and A.get('dongs'):
-            for nm, dv in live['dong']['v'].items():
-                if nm in A['dongs'] and dv.get('total') is not None:
-                    A['dongs'][nm] = {'total': float(dv['total']), 'hh': float(dv.get('hh') or A['dongs'][nm].get('hh') or 0)}
+    if A and live.get('dong') and A.get('dongs'):
+        for nm, dv in live['dong']['v'].items():
+            if nm in A['dongs'] and dv.get('total') is not None:
+                A['dongs'][nm] = {'total': float(dv['total']), 'hh': float(dv.get('hh') or A['dongs'][nm].get('hh') or 0)}
     st['admin_live'] = live
     return st
 

@@ -610,7 +610,8 @@ function startApp() {
     var dm = me.prev_m ? me.total - me.prev_m : null;
     r1.appendChild(el('div', { class: 'pc hero' }, [el('div', { class: 'pl', text: '전체 인구' }), el('div', { class: 'pv', html: fmt(me.total, 0) + '<small>명</small>' }),
       el('div', { class: 'pd' }, [el('span', { text: cmpL }), delta(dm)]),
-      el('div', { class: 'ps', text: '1년 전보다 ' + (me.prev ? (me.total - me.prev >= 0 ? '+' : '') + fmt(me.total - me.prev, 0) + '명' : '–') })]));
+      el('div', { class: 'ps', text: (A.live ? ymLabel(A.prev_ym) + '보다 ' : '1년 전보다 ') + (me.prev ? (me.total - me.prev >= 0 ? '+' : '') + fmt(me.total - me.prev, 0) + '명' : '–') }),
+      A.live && A.live.prev_in ? el('div', { class: 'ps', text: '지난 입력(' + A.live.prev_in.date.slice(5).replace('-', '.') + ')보다 ' + (me.total - A.live.prev_in.total >= 0 ? '+' : '') + fmt(me.total - A.live.prev_in.total, 0) + '명' }) : null].filter(Boolean)));
     function card(lbl, ic, col, bg, val, unit, d, du, sub) {
       r1.appendChild(el('div', { class: 'pc' }, [el('div', { class: 'pl', text: lbl }), icon(ic, col, bg),
         el('div', { class: 'pv', style: 'color:' + col, html: val + '<small>' + unit + '</small>' }),
