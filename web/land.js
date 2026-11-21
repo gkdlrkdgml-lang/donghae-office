@@ -180,7 +180,7 @@ window.DHLand = (function () {
       var ap = String(x.useAprDay || '').trim(), y = +ap.slice(0, 4), now = new Date();
       var age = y > 1800 ? now.getFullYear() - y - ((now.getMonth() + 1) * 100 + now.getDate() < (+ap.slice(4, 6) || 1) * 100 + (+ap.slice(6, 8) || 1) ? 1 : 0) : null;
       return { name: (x.bldNm || '').trim() + (x.dongNm && x.dongNm.trim() ? ' ' + x.dongNm.trim() : ''), use: x.mainPurpsCdNm, struct: x.strctCdNm, floors: x.grndFlrCnt, under: x.ugrndFlrCnt, height: x.heit,
-        tot: x.totArea, arch: x.archArea, bc: x.bcRat, vl: x.vlRat, approve: ap.length >= 8 ? ap.slice(0, 4) + '.' + ap.slice(4, 6) + '.' + ap.slice(6, 8) : (ap || ''), age: age, earthquake: x.rserthqkDsgnApplyYn };
+        tot: x.totArea, arch: x.archArea, plat: x.platArea, bc: x.bcRat, vl: x.vlRat, hhld: x.hhldCnt, ho: x.hoCnt, park: (+x.indrMechUtcnt || 0) + (+x.indrAutoUtcnt || 0) + (+x.oudrMechUtcnt || 0) + (+x.oudrAutoUtcnt || 0), elev: (+x.rideUseElvtCnt || 0) + (+x.emgenUseElvtCnt || 0), main: x.mainAtchGbCdNm, roof: x.roofCdNm, permit: x.pmsDay, start: x.stcnsDay, approve: ap.length >= 8 ? ap.slice(0, 4) + '.' + ap.slice(4, 6) + '.' + ap.slice(6, 8) : (ap || ''), age: age, earthquake: x.rserthqkDsgnApplyYn, eqAbility: x.rserthqkAblty };
     });
   }
   function annexFor(zone) { var o = ordMe(); return o && (o.annex || []).filter(function (a) { return zone && a.title && a.title.indexOf(zone) >= 0; })[0]; }
@@ -306,7 +306,25 @@ window.DHLand = (function () {
     var p5 = H.panel('판정 근거 · 확인할 것', '빨강·노랑부터 · 눌러서 근거 조문 보기', [list,
       el('div', { class: 'chips', style: 'margin-top:8px;gap:6px;flex-wrap:wrap' }, [ax ? el('a', { class: 'chip navy', href: ax.url, target: '_blank', rel: 'noopener', style: 'text-decoration:none', text: '별표 원문: ' + ax.title.replace(/<.*?>/g, '').slice(0, 34) + ' ↗' }) : null]
         .concat(d.errs.map(function (e) { return el('span', { class: 'chip bad', text: e }); })))]);
-    p5.style.gridRow = '3 / span 2'; p5.style.gridColumn = '3';
+    p5.style.gridRow = '4'; p5.style.gridColumn = '3';
+    // ⑥ 건물 정보(건축물대장): 어떤 건물인지, 언제 지었는지
+    var d8 = function (v) { v = String(v || '').trim(); return v.length >= 8 ? v.slice(0, 4) + '.' + v.slice(4, 6) + '.' + v.slice(6, 8) : '–'; };
+    var bbody;
+    if (d.bld && d.bld._err) bbody = el('div', { class: 'empty', style: 'color:#D9534F', text: '건축물대장 조회 실패: ' + d.bld._err });
+    else if (!B.length) bbody = el('div', { class: 'empty', text: '건축물대장에 등록된 건물이 없습니다(나대지 또는 미등재).' });
+    else bbody = el('div', { style: 'overflow:auto;min-height:0;display:flex;flex-direction:column;gap:8px' }, B.map(function (b) {
+      var oldC = b.age != null && b.age >= 30 ? '#D9534F' : '#1B3A6B';
+      return el('div', { style: 'border:1px solid #DDE3EC;border-radius:10px;padding:8px 12px' }, [
+        el('div', { style: 'display:flex;justify-content:space-between;gap:8px;align-items:baseline' }, [
+          el('div', { style: 'font-size:18px;font-weight:900;color:#1B3A6B', text: (b.name || '(건물명 없음)') + (b.main ? ' · ' + b.main : '') }),
+          el('div', { style: 'font-size:17px;font-weight:900;color:' + oldC, text: b.age != null ? b.age + '년 경과' : '' })]),
+        el('div', { style: 'font-size:15px;margin-top:3px', html: '<b>' + (b.use || '용도 미기재') + '</b> · ' + (b.struct || '구조 미기재') + ' · 지상 ' + (b.floors || 0) + '층' + (+b.under ? '/지하 ' + b.under + '층' : '') + (+b.height ? ' · 높이 ' + fmt(b.height, 1) + 'm' : '') }),
+        el('div', { style: 'font-size:14px;color:#38475A;margin-top:3px', text: '사용승인 ' + (b.approve || '–') + ' · 허가 ' + d8(b.permit) + ' · 착공 ' + d8(b.start) }),
+        el('div', { style: 'font-size:14px;color:#38475A', text: '연면적 ' + fmt(b.tot) + '㎡ · 건축면적 ' + fmt(b.arch) + '㎡' + (+b.bc ? ' · 건폐율 ' + fmt(b.bc, 1) + '%' : '') + (+b.vl ? ' · 용적률 ' + fmt(b.vl, 1) + '%' : '') }),
+        el('div', { style: 'font-size:14px;color:#38475A', text: (+b.hhld ? '세대 ' + b.hhld + ' · ' : '') + (+b.ho ? '호 ' + b.ho + ' · ' : '') + '주차 ' + (b.park || 0) + '대 · 승강기 ' + (b.elev || 0) + '대 · 내진설계 ' + (b.earthquake === '1' ? '적용' : b.earthquake === '0' ? '미적용' : '미기재') + (b.eqAbility && String(b.eqAbility).trim() ? ' (' + b.eqAbility + ')' : '') })]); }));
+    var recap = ((d.bld || {}).recap || {}).items || [];
+    var p6 = H.panel('건물 정보 · 건축물대장', B.length ? B.length + '동' + (recap.length ? ' · 총괄표제부 있음' : '') + ' · 건축HUB' : '건축HUB', bbody);
+    p6.style.gridRow = '3'; p6.style.gridColumn = '3';
   }
 
   function screenOrd(el) {
