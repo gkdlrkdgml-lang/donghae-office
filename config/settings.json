@@ -64,6 +64,11 @@
       "show": true
     },
     {
+      "id": "land",
+      "label": "국토·건축",
+      "show": true
+    },
+    {
       "id": "frame",
       "label": "액자",
       "show": true

@@ -16,6 +16,7 @@ import life
 import tour  # noqa: E402
 import power  # noqa: E402
 import admin_sync  # noqa: E402
+import landlaw  # noqa: E402
 from rank import rank  # noqa: E402
 
 STATE = os.path.join(WEB_DATA, 'state.json')
@@ -256,6 +257,13 @@ def collect(state, S, C):
             ok(state, 'water', ', '.join('%s %s' % (k, v['year']) for k, v in L['water']['tables'].items()) + (' · 실패 %s' % list(L['water']['errors']) if L['water']['errors'] else ''))
         except Exception as e:  # noqa: BLE001
             fail(state, 'water', e)
+    # 국토·건축: 18개 시·군 도시계획 조례의 용도지역별 건폐율·용적률(주 1회, 개정된 조례만 다시 받음)
+    if os.environ.get('LAW_OC') and (stale('ordin', 7) or '--force-ordin' in sys.argv):
+        try:
+            L['ordin'] = landlaw.collect(C, L.get('ordin'))
+            ok(state, 'ordin', '%d개 시·군 조례' % len(L['ordin']['regions']) + (' · 실패 %s' % L['ordin']['errors'] if L['ordin']['errors'] else ''))
+        except Exception as e:  # noqa: BLE001
+            fail(state, 'ordin', e)
     # 에너지·전력(한전): 새 달은 보통 2달 뒤 공표 → 사흘마다 확인
     if os.environ.get('KEPCO_KEY') and (stale('power', 3) or len((L.get('power') or {}).get('months') or {}) < power.KEEP - 1 or '--force-power' in sys.argv):
         try:
@@ -640,7 +648,7 @@ def build(state, S, C):
     # 분야 화면이 비면 메뉴에서 숨김
     has_fin = any(i['id'] == 'fin_indep' for i in out['indicators'])
     L = out.get('life') or {}
-    need = {'wx_year': L.get('wx_year'), 'stores': L.get('stores'), 'water': L.get('water'), 'social': L.get('social'), 'economy': L.get('economy'), 'welfare': L.get('hospitals'), 'traffic': L.get('ev') or L.get('cars'), 'env': L.get('air'), 'power': L.get('power'), 'tour': L.get('visit_months')}
+    need = {'wx_year': L.get('wx_year'), 'stores': L.get('stores'), 'water': L.get('water'), 'social': L.get('social'), 'economy': L.get('economy'), 'welfare': L.get('hospitals'), 'traffic': L.get('ev') or L.get('cars'), 'env': L.get('air'), 'power': L.get('power'), 'land': L.get('ordin'), 'tour': L.get('visit_months')}
     out['menu'] = [m for m in out['menu'] if not (m['id'] == 'finance' and not has_fin) and not (m['id'] in ('admin', 'compare') and not out['admin'])
                    and not (m['id'] in need and not need[m['id']])]
     return out
