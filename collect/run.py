@@ -230,7 +230,7 @@ def collect(state, S, C):
         except Exception as e:  # noqa: BLE001
             fail(state, 'social', e)
     for key, fn, days in (('wx_year', lambda: sources.weather_year(), 1), ('air_year', lambda: sources.air_year(C), 1), ('wq', lambda: sources.water_quality(L.get('wq')), 7)):
-        if stale(key, days) or ('--force-' + key) in sys.argv:
+        if stale(key, days) or ('--force-' + key) in sys.argv or (key == 'air_year' and not (L.get(key) or {}).get('start')):
             try:
                 L[key] = fn()
                 ok(state, key, '%s · %d곳' % (L[key].get('end', L[key]['at']), len(L[key].get('regions') or L[key].get('points') or {})))
@@ -317,11 +317,11 @@ def collect(state, S, C):
             set_ind(state, iid, {r: v[y][k] for r, v in WY['regions'].items() if y in v}, '%s %s(기상청 ASOS 관측소)' % (lab, nm))
     AY = L.get('air_year') or {}
     if AY.get('regions'):
-        y = str(AY['year']); e = AY['end']
-        lab = '%s년 1월 1일~%d월 %d일' % (y, int(e[4:6]), int(e[6:]))
-        set_ind(state, 'air_good', {r: v[y]['good'] for r, v in AY['regions'].items() if y in v}, lab + ' 초미세먼지 좋음 날수(에어코리아 확정 일평균)')
-        set_ind(state, 'air_bad', {r: v[y]['bad'] for r, v in AY['regions'].items() if y in v}, lab + ' 초미세먼지 나쁨 이상 날수(에어코리아 확정 일평균)')
-        set_ind(state, 'air_avg', {r: v[y]['pm25'] for r, v in AY['regions'].items() if y in v}, lab + ' 초미세먼지 평균(에어코리아 확정 일평균)')
+        y = str(AY['year']); e = AY['end']; st = AY.get('start') or (y + '0101')
+        lab = '%s년 %d월 %d일~%d월 %d일' % (y, int(st[4:6]), int(st[6:]), int(e[4:6]), int(e[6:]))
+        set_ind(state, 'air_good', {r: v[y]['good'] for r, v in AY['regions'].items() if y in v}, lab + ' 초미세먼지 좋음 날수(에어코리아 일평균)')
+        set_ind(state, 'air_bad', {r: v[y]['bad'] for r, v in AY['regions'].items() if y in v}, lab + ' 초미세먼지 나쁨 이상 날수(에어코리아 일평균)')
+        set_ind(state, 'air_avg', {r: v[y]['pm25'] for r, v in AY['regions'].items() if y in v}, lab + ' 초미세먼지 평균(에어코리아 일평균)')
     AT = L.get('attr') or {}
     if AT.get('months'):
         full = [ym for ym, m in AT['months'].items() if len(m) >= 17]   # 18개 시·군이 다 올라온 달까지만 비교

@@ -1315,9 +1315,9 @@ def air_year(C):
                 d = str(x.get('msurDt', '')).replace('-', '')
                 c = daily.setdefault(str(yy), {}).setdefault(reg, {}).setdefault(d, [[], []])
                 p25, p10 = to_num(x.get('pm25Value')), to_num(x.get('pm10Value'))
-                if p25 is not None:
+                if p25 is not None and p25 >= 0:   # 음수 = 결측 표시
                     c[0].append(p25)
-                if p10 is not None:
+                if p10 is not None and p10 >= 0:
                     c[1].append(p10)
     out = {'at': now().strftime('%Y-%m-%d'), 'end': end.strftime('%Y%m%d'), 'year': y, 'stations': stns, 'regions': {}}
     for yy, regs in daily.items():
@@ -1330,7 +1330,7 @@ def air_year(C):
             for d, v in p25.items():
                 m25.setdefault(d[4:6], []).append(v)
             out['regions'].setdefault(reg, {})[yy] = {
-                'n': len(p25),
+                'n': len(p25), 'start': min(p25),
                 'pm25': round(sum(p25.values()) / len(p25), 1),
                 'pm10': round(sum(p10.values()) / len(p10), 1) if p10 else None,
                 'good': sum(1 for v in p25.values() if v <= 15),
@@ -1340,6 +1340,8 @@ def air_year(C):
             }
     if not out['regions']:
         raise RuntimeError('대기통계를 받지 못함')
+    ss = [v[str(y)]['start'] for v in out['regions'].values() if str(y) in v]
+    out['start'] = min(ss) if ss else None   # 에어코리아 통계가 주는 첫날(최근 몇 달만 줌)
     return out
 
 
