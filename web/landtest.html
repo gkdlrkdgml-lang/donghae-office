@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<title>국토 API 연결 시험</title>
+<style>
+  body { font-family: 'Malgun Gothic', system-ui, sans-serif; margin: 20px; background: #F4F6FA; color: #1D2733; }
+  h1 { color: #1B3A6B; font-size: 20px; }
+  .row { background: #fff; border: 1px solid #DDE3EC; border-radius: 10px; padding: 10px 14px; margin: 8px 0; }
+  .ok { color: #2E8B57; font-weight: 800; } .bad { color: #D9534F; font-weight: 800; }
+  pre { white-space: pre-wrap; word-break: break-all; font-size: 12px; max-height: 160px; overflow: auto; background: #F7F9FC; padding: 6px; margin: 6px 0 0; }
+</style>
+</head>
+<body>
+<h1>국토 API 연결 시험 (동해시청 필지)</h1>
+<p>잠시 기다리면 아래에 결과가 나옵니다. 이 화면을 캡처해서 보내 주세요.</p>
+<div id="out"></div>
+<script src="data/data.js"></script>
+<script>
+(function () {
+  var KEY = ((window.DONGHAE_DATA || {}).map || {}).vworld || '', DOM = location.origin, out = document.getElementById('out'), n = 0;
+  function row(name, ok, txt) {
+    var d = document.createElement('div'); d.className = 'row';
+    d.innerHTML = '<b>' + name + '</b> · <span class="' + (ok ? 'ok' : 'bad') + '">' + (ok ? '됨' : '안 됨') + '</span><pre></pre>';
+    d.querySelector('pre').textContent = String(txt).slice(0, 1500); out.appendChild(d);
+  }
+  function qs(o) { return Object.keys(o).map(function (k) { return k + '=' + encodeURIComponent(o[k]); }).join('&'); }
+  function jsonp(url, prm) {
+    return new Promise(function (res, rej) {
+      var cb = 'cb' + (n++) + '_' + Date.now(); var s = document.createElement('script'), t = setTimeout(function () { rej(new Error('응답 없음(10초)')); }, 10000);
+      window[cb] = function (j) { clearTimeout(t); res(j); };
+      s.onerror = function () { clearTimeout(t); rej(new Error('불러오기 실패')); };
+      prm.callback = cb; s.src = url + '?' + qs(prm); document.head.appendChild(s);
+    });
+  }
+  function both(name, url, prm) {
+    prm = Object.assign({ key: KEY, domain: DOM, format: 'json' }, prm);
+    return fetch(url + '?' + qs(prm)).then(function (r) { return r.text(); }).then(function (t) { row(name + ' (직접)', !/error|ERROR|INCORRECT|오류/.test(t.slice(0, 300)), t); return JSON.parse(t); })
+      .catch(function (e) {
+        return jsonp(url, prm).then(function (j) { row(name + ' (JSONP)', true, JSON.stringify(j)); return j; })
+          .catch(function (e2) { row(name, false, '직접: ' + e.message + ' / JSONP: ' + e2.message); return null; });
+      });
+  }
+  if (!KEY) { row('브이월드 키', false, '시장실 설정에 키가 없습니다'); return; }
+  var x = 129.1143, y = 37.5247, pnu = '';
+  both('주소→좌표(지오코더)', 'https://api.vworld.kr/req/address', { service: 'address', request: 'getcoord', version: '2.0', crs: 'epsg:4326', address: '강원특별자치도 동해시 천곡로 77', type: 'road', refine: 'true', simple: 'false' })
+    .then(function (j) { try { x = j.response.result.point.x; y = j.response.result.point.y; } catch (e) {}
+      return both('필지(연속지적)', 'https://api.vworld.kr/req/data', { service: 'data', request: 'GetFeature', data: 'LP_PA_CBND_BUBUN', geomFilter: 'POINT(' + x + ' ' + y + ')', size: 1, geometry: 'false', attribute: 'true', crs: 'EPSG:4326' }); })
+    .then(function (j) { try { pnu = j.response.result.featureCollection.features[0].properties.pnu; } catch (e) {}
+      row('PNU(필지번호)', !!pnu, pnu || '못 찾음');
+      if (!pnu) return;
+      return both('토지이용계획', 'https://api.vworld.kr/ned/data/getLandUseAttr', { pnu: pnu, numOfRows: 50, pageNo: 1 })
+        .then(function () { return both('토지특성', 'https://api.vworld.kr/ned/data/getLandCharacteristics', { pnu: pnu, stdrYear: '2025', numOfRows: 5, pageNo: 1 }); })
+        .then(function () { return both('토지임야', 'https://api.vworld.kr/ned/data/ladfrlList', { pnu: pnu, numOfRows: 5, pageNo: 1 }); });
+    });
+})();
+</script>
+</body>
+</html>
