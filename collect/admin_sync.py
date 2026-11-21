@@ -14,6 +14,7 @@ import json
 import os
 import re
 import sys
+import urllib.error
 import urllib.request
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -35,9 +36,15 @@ def fetch():
     if not url or not key:
         return None   # 아직 연결 안 함 → 예전 파일 그대로 사용
     q = url + '/rest/v1/entries?select=id,ref_date,section,data,author_name,created_at&deleted=eq.false&order=created_at.desc&limit=5000'
-    req = urllib.request.Request(q, headers={'apikey': key, 'Authorization': 'Bearer ' + key, 'Accept': 'application/json'})
-    with urllib.request.urlopen(req, timeout=30) as r:
-        return json.loads(r.read().decode('utf-8'))
+    h = {'apikey': key, 'Accept': 'application/json', 'User-Agent': 'donghae-office-collector/1.0'}
+    if not key.startswith('sb_'):          # 예전 방식(JWT) service_role 키일 때만 Authorization 사용
+        h['Authorization'] = 'Bearer ' + key
+    req = urllib.request.Request(q, headers=h)
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            return json.loads(r.read().decode('utf-8'))
+    except urllib.error.HTTPError as e:
+        raise RuntimeError('Supabase %s %s' % (e.code, e.read()[:300].decode('utf-8', 'replace')))
 
 
 def signature(rows):
