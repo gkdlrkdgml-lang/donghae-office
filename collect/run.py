@@ -229,6 +229,13 @@ def collect(state, S, C):
             ok(state, 'social', '시설 %s · 수급 %s' % (L['social'].get('fac_year'), L['social'].get('rcp_year')))
         except Exception as e:  # noqa: BLE001
             fail(state, 'social', e)
+    for key, fn, days in (('wx_year', lambda: sources.weather_year(), 1), ('air_year', lambda: sources.air_year(C), 1), ('wq', lambda: sources.water_quality(L.get('wq')), 7)):
+        if stale(key, days) or ('--force-' + key) in sys.argv:
+            try:
+                L[key] = fn()
+                ok(state, key, '%s · %d곳' % (L[key].get('end', L[key]['at']), len(L[key].get('regions') or L[key].get('points') or {})))
+            except Exception as e:  # noqa: BLE001
+                fail(state, key, e)
     if stale('attr', 3) or '--force-attr' in sys.argv:
         try:
             L['attr'] = sources.attractions(C, L.get('attr'))
@@ -302,6 +309,19 @@ def collect(state, S, C):
         set_ind(state, 'biz_active', {k: v.get('total') for k, v in EC['active'][y].items() if v.get('total')}, '%s년 말 가동사업자(국세청)' % y)
         set_ind(state, 'biz_new', {k: v.get('total') for k, v in EC['new'][y].items() if v.get('total')}, '%s년 신규 사업자(국세청)' % y)
         set_ind(state, 'biz_net', {k: v.get('total', 0) - (EC['closed'][y].get(k) or {}).get('total', 0) for k, v in EC['new'][y].items() if k in EC['closed'][y]}, '%s년 신규−폐업(국세청)' % y)
+    WY = L.get('wx_year') or {}
+    if WY.get('regions'):
+        y = str(WY['year']); e = WY['end']
+        lab = '%s년 1월 1일~%d월 %d일' % (y, int(e[4:6]), int(e[6:]))
+        for iid, k, nm in (('wx_rain', 'rain', '강수량'), ('wx_heat', 'heat', '폭염일수(최고 33℃ 이상)'), ('wx_trop', 'tropical', '열대야(최저 25℃ 이상)')):
+            set_ind(state, iid, {r: v[y][k] for r, v in WY['regions'].items() if y in v}, '%s %s(기상청 ASOS 관측소)' % (lab, nm))
+    AY = L.get('air_year') or {}
+    if AY.get('regions'):
+        y = str(AY['year']); e = AY['end']
+        lab = '%s년 1월 1일~%d월 %d일' % (y, int(e[4:6]), int(e[6:]))
+        set_ind(state, 'air_good', {r: v[y]['good'] for r, v in AY['regions'].items() if y in v}, lab + ' 초미세먼지 좋음 날수(에어코리아 확정 일평균)')
+        set_ind(state, 'air_bad', {r: v[y]['bad'] for r, v in AY['regions'].items() if y in v}, lab + ' 초미세먼지 나쁨 이상 날수(에어코리아 확정 일평균)')
+        set_ind(state, 'air_avg', {r: v[y]['pm25'] for r, v in AY['regions'].items() if y in v}, lab + ' 초미세먼지 평균(에어코리아 확정 일평균)')
     AT = L.get('attr') or {}
     if AT.get('months'):
         full = [ym for ym, m in AT['months'].items() if len(m) >= 17]   # 18개 시·군이 다 올라온 달까지만 비교
@@ -527,7 +547,7 @@ def build(state, S, C):
     # 분야 화면이 비면 메뉴에서 숨김
     has_fin = any(i['id'] == 'fin_indep' for i in out['indicators'])
     L = out.get('life') or {}
-    need = {'stores': L.get('stores'), 'water': L.get('water'), 'social': L.get('social'), 'economy': L.get('economy'), 'welfare': L.get('hospitals'), 'traffic': L.get('ev') or L.get('cars'), 'env': L.get('air'), 'tour': L.get('visit_months')}
+    need = {'wx_year': L.get('wx_year'), 'stores': L.get('stores'), 'water': L.get('water'), 'social': L.get('social'), 'economy': L.get('economy'), 'welfare': L.get('hospitals'), 'traffic': L.get('ev') or L.get('cars'), 'env': L.get('air'), 'tour': L.get('visit_months')}
     out['menu'] = [m for m in out['menu'] if not (m['id'] == 'finance' and not has_fin) and not (m['id'] in ('admin', 'compare') and not out['admin'])
                    and not (m['id'] in need and not need[m['id']])]
     return out

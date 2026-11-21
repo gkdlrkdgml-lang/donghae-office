@@ -414,10 +414,10 @@ function startApp() {
       el('span', { text: '1위 = 도내에서 가장 좋은 곳 · 막대가 높을수록 좋음 · 초록 강점 · 주황 개선 필요 · 누르면 세부 현황' })
     ]));
     var GO = { pop_change: ['admin', 'compare'], working_age: ['admin', 'compare'], elderly: ['admin', 'compare'], medical: ['welfare'], ev: ['traffic', 'ev'], cars: ['traffic', 'cars'],
-      accidents: ['traffic', 'safe'], parking: ['traffic', 'park'], bus_stops: ['traffic', 'busst'], taxi: ['traffic', 'taxi'], visitors: ['tour', 'now'], tour_exp: ['tour', 'dem'], budget: ['finance'], fin_indep: ['finance'] };
+      accidents: ['traffic', 'safe'], parking: ['traffic', 'park'], bus_stops: ['traffic', 'busst'], taxi: ['traffic', 'taxi'], visitors: ['tour', 'now'], wx_rain: ['env', 'wx'], wx_heat: ['env', 'wx'], wx_trop: ['env', 'wx'], air_good: ['env', 'air'], air_bad: ['env', 'air'], air_avg: ['env', 'air'], attr_visit: ['tour', 'attr'], shop_new: ['economy'], sew_rate: ['water'], sup_rate: ['water'], tour_exp: ['tour', 'dem'], budget: ['finance'], fin_indep: ['finance'] };
     function open(i) {
       var t = GO[i.id]; if (!t) return;
-      if (t[0] === 'admin') admTab = t[1]; else if (t[0] === 'traffic') trTab = t[1]; else if (t[0] === 'tour') tourTab = t[1];
+      if (t[0] === 'admin') admTab = t[1]; else if (t[0] === 'traffic') trTab = t[1]; else if (t[0] === 'tour') tourTab = t[1]; else if (t[0] === 'env') envTab = t[1];
       go(t[0]);
     }
     function dirTag(i) {
@@ -499,6 +499,7 @@ function startApp() {
     globe: '<circle cx="24" cy="24" r="18"/><path d="M6 24h36M24 6c-6 6-6 30 0 36M24 6c6 6 6 30 0 36" stroke="#fff" stroke-width="2.4" fill="none"/>',
     trend: '<path d="M6 34 18 22l8 8 14-16" stroke="currentColor" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M33 12h9v9z"/>',
     drop: '<path d="M24 5C18 14 11 22 11 30a13 13 0 0 0 26 0c0-8-7-16-13-25z"/>',
+    moon: '<path d="M30 6a18 18 0 1 0 12 30A15 15 0 0 1 30 6z"/>',
     factory: '<path d="M5 41V22l10 6v-6l10 6v-6l10 6V8h8v33z"/>',
     warn: '<path d="M24 5 3 42h42z"/><rect x="22" y="17" width="4" height="13" rx="2" fill="#fff"/><circle cx="24" cy="35" r="2.4" fill="#fff"/>'
   };
@@ -1296,6 +1297,101 @@ function startApp() {
   // ---------- 환경 ----------
   var envDetail = null;
   function skyText(sl) { var p = +sl.PTY || 0, k = +sl.SKY || 1; return p === 1 ? '비' : p === 2 ? '비·눈' : p === 3 ? '눈' : p === 4 ? '소나기' : k === 4 ? '흐림' : k === 3 ? '구름많음' : '맑음'; }
+  // 환경: 아래 탭(지금 날씨·대기 / 올해 기상 / 대기 성적표 / 하천 수질)
+  var envTab = 'now', envMet = 'wx_rain', airMet = 'air_good';
+  function screenEnvTabs() {
+    var L = D.life || {}, tabs = [['now', '지금 날씨·대기']];
+    if (L.wx_year && L.wx_year.regions) tabs.push(['wx', '올해 기상']);
+    if (L.air_year && L.air_year.regions) tabs.push(['air', '대기 성적표']);
+    if (L.wq && L.wq.data && Object.keys(L.wq.data).length) tabs.push(['wq', '하천 수질']);
+    if (!tabs.some(function (t) { return t[0] === envTab; })) envTab = 'now';
+    ({ now: screenEnv, wx: screenWxYear, air: screenAirYear, wq: screenWq })[envTab]();
+    var title = view.querySelector('.title');
+    if (title && tabs.length > 1) title.insertBefore(tabsBar(tabs, envTab, function (k) { envTab = k; }), title.children[1] || null);
+  }
+  function ymdL(d) { return Number(d.slice(4, 6)) + '월 ' + Number(d.slice(6)) + '일'; }
+  function metSwitch(MET, cur, set) {
+    return el('div', { class: 'chips', style: 'flex-wrap:nowrap;gap:6px;margin-bottom:6px' }, MET.map(function (m) {
+      return el('button', { type: 'button', class: 'chip', style: 'cursor:pointer;border:0;font-weight:800' + (m[0] === cur ? ';background:#1B3A6B;color:#fff' : ''), text: m[1], onclick: function () { set(m[0]); render(); } }); }));
+  }
+  function screenWxYear() {
+    var W = (D.life || {}).wx_year || {}, R = W.regions || {}, y = String(W.year), py = String(W.year - 1), e = W.end || '';
+    var SN = R[regName()] ? regName() : D.me, r = (R[SN] || {})[y] || {}, p = (R[SN] || {})[py] || {};
+    function dlt(a, b, d, u, goodDown) { if (a == null || b == null) return null; var x = a - b; return ['작년 같은 기간 ' + fmt(b, d) + u + ' (' + (x > 0 ? '+' : '') + fmt(x, d) + ')', x === 0 ? '' : ((x < 0) === !!goodDown ? 'good' : 'bad')]; }
+    lifeTitle(fullName(SN) + ' 올해 기상', '기상청 지상관측(ASOS) ' + (R[SN] ? '' : '· ') + y + '년 1월 1일~' + ymdL(e) + ' · 매일 갱신' + (R[regName()] ? '' : ' · 관측소 없는 시·군은 동해시 표시'));
+    view.style.gridTemplateColumns = 'minmax(0, 0.8fr) minmax(0, 1.35fr)';
+    view.style.gridTemplateRows = '44px auto minmax(0, 1fr) minmax(0, 1fr)';
+    cardsRow([
+      { l: '올해 강수량', sub: '1월~' + ymdL(e), ic: 'drop', col: '#1F6FD1', bg: '#E4EEFB', v: fmt(r.rain, 1), u: 'mm', chips: [dlt(r.rain, p.rain, 1, 'mm'), ['비 온 날 ' + fmt(r.rain_days, 0) + '일', '']] },
+      { l: '폭염일수', sub: '최고 33℃ 이상', ic: 'sun', col: '#D9534F', bg: '#FDE7E4', v: fmt(r.heat, 0), u: '일', chips: [rankChip(indFor(ind('wx_heat'), SN)), dlt(r.heat, p.heat, 0, '일', true)] },
+      { l: '열대야', sub: '최저 25℃ 이상', ic: 'moon', col: '#7A4FC4', bg: '#EFE9FB', v: fmt(r.tropical, 0), u: '일', chips: [rankChip(indFor(ind('wx_trop'), SN)), dlt(r.tropical, p.tropical, 0, '일', true)] },
+      { l: '평균기온', sub: '1월~' + ymdL(e), ic: 'trend', col: '#C0602B', bg: '#FDEBDD', v: fmt(r.avg_ta, 1), u: '℃', chips: [dlt(r.avg_ta, p.avg_ta, 1, '℃'), r.max_ta ? ['최고 ' + fmt(r.max_ta[0], 1) + '℃ (' + ymdL(r.max_ta[1]) + ')', 'bad'] : null] },
+      r.max_rn ? { l: '하루 최다 강수', sub: ymdL(r.max_rn[1]), ic: 'drop', col: '#0F8A8A', bg: '#DDF3F2', v: fmt(r.max_rn[0], 1), u: 'mm', chips: [r.min_ta ? ['최저기온 ' + fmt(r.min_ta[0], 1) + '℃ (' + ymdL(r.min_ta[1]) + ')', ''] : null, ['한파일 ' + fmt(r.cold, 0) + '일', '']] } : null
+    ]);
+    var MET = [['wx_rain', '강수량'], ['wx_heat', '폭염일수'], ['wx_trop', '열대야']].filter(function (m) { return ind(m[0]); });
+    var I0 = ind(envMet) || ind('wx_rain'), I = I0 ? indFor(I0, SN) : null;
+    var p1 = panel((I0 ? I0.name : '') + ' · 강원 관측소 ' + Object.keys(R).length + '곳', (I0 ? I0.basis : '') + ' · ' + (I0 ? I0.unit : ''), [metSwitch(MET, envMet, function (k) { envMet = k; }), I ? rankList(I, regPick, regSel) : el('div', { class: 'empty', text: '자료 없음' })]);
+    p1.style.gridRow = '3 / span 2';
+    var ms = []; for (var m = 1; m <= Number(e.slice(4, 6)); m++) ms.push(('0' + m).slice(-2));
+    panel('월별 강수량 · ' + fullName(SN), py + '년과 ' + y + '년 같은 기간 · mm', groupCols(ms.map(function (m) { return Number(m) + '월'; }), [
+      { name: py + '년', color: '#B7C3D3', values: ms.map(function (m) { return (p.rain_m || {})[m] || 0; }) },
+      { name: y + '년', color: '#1F6FD1', values: ms.map(function (m) { return (r.rain_m || {})[m] || 0; }) }], null, true));
+    var regs = Object.keys(R).sort(function (a, b) { return ((R[b][y] || {}).rain || 0) - ((R[a][y] || {}).rain || 0); });
+    var tb = el('tbody', {}, regs.map(function (g) { var a = R[g][y] || {}, b = R[g][py] || {};
+      return el('tr', { style: g === SN ? 'background:#EEF3FB' : '' }, [el('td', { html: '<b>' + fullName(g) + '</b>' }), el('td', { class: 'r', text: fmt(a.rain, 0) + 'mm' }), el('td', { class: 'r', text: fmt(a.heat, 0) + '일' }), el('td', { class: 'r', text: fmt(a.tropical, 0) + '일' }), el('td', { class: 'r', text: fmt(a.avg_ta, 1) + '℃' }), el('td', { class: 'r', html: a.avg_ta != null && b.avg_ta != null ? '<b style="color:' + (a.avg_ta >= b.avg_ta ? '#D9534F' : '#1F6FD1') + '">' + (a.avg_ta - b.avg_ta >= 0 ? '+' : '') + fmt(a.avg_ta - b.avg_ta, 1) + '℃</b>' : '–' })]); }));
+    panel('강원 관측소 한눈에 · ' + y + '년', '1월~' + ymdL(e) + ' · 평균기온 변화 = 작년 같은 기간 대비', el('table', { class: 'dt big' }, [el('thead', {}, [el('tr', {}, ['지역', '강수량', '폭염', '열대야', '평균기온', '변화'].map(function (h, j) { return el('th', { class: j ? 'r' : '', text: h }); }))]), tb]));
+  }
+  function screenAirYear() {
+    var A = (D.life || {}).air_year || {}, R = A.regions || {}, y = String(A.year), py = String(A.year - 1), e = A.end || '';
+    var SN = R[regName()] ? regName() : D.me, r = (R[SN] || {})[y] || {}, p = (R[SN] || {})[py] || {};
+    var st = Object.keys(A.stations || {}).filter(function (k) { return A.stations[k] === SN; });
+    function dlt(a, b, d, u, goodDown) { if (a == null || b == null) return null; var x = a - b; return ['작년 ' + fmt(b, d) + u + ' (' + (x > 0 ? '+' : '') + fmt(x, d) + ')', x === 0 ? '' : ((x < 0) === !!goodDown ? 'good' : 'bad')]; }
+    lifeTitle(fullName(SN) + ' 대기 성적표', '에어코리아 확정 일평균 · ' + y + '년 1월 1일~' + ymdL(e) + ' · 측정소 ' + st.join('·') + selHint());
+    view.style.gridTemplateColumns = 'minmax(0, 0.8fr) minmax(0, 1.35fr)';
+    view.style.gridTemplateRows = '44px auto minmax(0, 1fr) minmax(0, 1fr)';
+    cardsRow([
+      { l: '초미세먼지 좋음', sub: '일평균 15㎍/㎥ 이하', ic: 'leaf', col: '#2E8B57', bg: '#E2F3E9', v: fmt(r.good, 0), u: '일', chips: [rankChip(indFor(ind('air_good'), SN)), r.n ? ['측정일의 ' + fmt(r.good / r.n * 100, 0) + '%', ''] : null] },
+      { l: '초미세먼지 나쁨', sub: '일평균 36㎍/㎥ 이상', ic: 'cloud', col: '#D9534F', bg: '#FDE7E4', v: fmt(r.bad, 0), u: '일', chips: [rankChip(indFor(ind('air_bad'), SN)), dlt(r.bad, p.bad, 0, '일', true)] },
+      { l: '초미세먼지 평균', sub: y + '년', ic: 'cloud', col: '#1F6FD1', bg: '#E4EEFB', v: fmt(r.pm25, 1), u: '㎍/㎥', chips: [rankChip(indFor(ind('air_avg'), SN)), dlt(r.pm25, p.pm25, 1, '', true)] },
+      { l: '미세먼지 평균', sub: y + '년 · 나쁨 ' + fmt(r.bad10, 0) + '일', ic: 'cloud', col: '#7A4FC4', bg: '#EFE9FB', v: fmt(r.pm10, 1), u: '㎍/㎥', chips: [dlt(r.pm10, p.pm10, 1, '', true)] }
+    ]);
+    var MET = [['air_good', '좋음 날수'], ['air_bad', '나쁨 날수'], ['air_avg', '평균 농도']].filter(function (m) { return ind(m[0]); });
+    var I0 = ind(airMet) || ind('air_good'), I = I0 ? indFor(I0, SN) : null;
+    var p1 = panel((I0 ? I0.name : '') + ' · 강원 18개 시·군', (I0 ? I0.basis : '') + ' · 누르면 그 지역', [metSwitch(MET, airMet, function (k) { airMet = k; }), I ? rankList(I, regPick, regSel) : el('div', { class: 'empty', text: '자료 없음' })]);
+    p1.style.gridRow = '3 / span 2';
+    var ms = Object.keys(r.m25 || {}).sort();
+    var gm = ms.map(function (m) { var s = 0, n = 0; Object.keys(R).forEach(function (g) { var v = ((R[g][y] || {}).m25 || {})[m]; if (v != null) { s += v; n++; } }); return n ? s / n : null; });
+    var ser = [{ name: fullName(SN) + ' ' + y, color: '#1F6FD1', width: 3.5, labels: true, values: ms.map(function (m) { return r.m25[m]; }) },
+      { name: fullName(SN) + ' ' + py, color: '#B7C3D3', width: 2, dash: '5 4', values: ms.map(function (m) { return (p.m25 || {})[m]; }) },
+      { name: '강원 평균 ' + y, color: '#E08A3C', width: 2, values: gm }];
+    panel('월평균 초미세먼지 · ' + fullName(SN), '㎍/㎥ · 15 이하 좋음 · 36 이상 나쁨', lineChart(ms.map(function (m) { return Number(m) + '월'; }), ser, { fit: true, d: 1 }));
+    var regs = Object.keys(R).sort(function (a, b) { return ((R[a][y] || {}).pm25 || 99) - ((R[b][y] || {}).pm25 || 99); });
+    var tb = el('tbody', {}, regs.slice(0, 18).map(function (g) { var a = R[g][y] || {};
+      return el('tr', { style: g === SN ? 'background:#EEF3FB' : '' }, [el('td', { html: '<b>' + fullName(g) + '</b>' }), el('td', { class: 'r', text: fmt(a.pm25, 1) }), el('td', { class: 'r', html: '<b style="color:#2E8B57">' + fmt(a.good, 0) + '</b>' }), el('td', { class: 'r', html: '<b style="color:#D9534F">' + fmt(a.bad, 0) + '</b>' }), el('td', { class: 'r', text: fmt(a.pm10, 1) })]); }));
+    panel('18개 시·군 한눈에 · ' + y + '년', '초미세먼지 평균 낮은 순 · ㎍/㎥ · 일', el('table', { class: 'dt big' }, [el('thead', {}, [el('tr', {}, ['지역', '초미세 평균', '좋음', '나쁨', '미세 평균'].map(function (h, j) { return el('th', { class: j ? 'r' : '', text: h }); }))]), tb]));
+  }
+  function screenWq() {
+    var Q = (D.life || {}).wq || {}, P = Q.points || {}, DT = Q.data || {};
+    var pts = Object.keys(DT).sort(function (a, b) { return Object.keys(DT[b]).length - Object.keys(DT[a]).length; });
+    var all = {}; pts.forEach(function (p) { Object.keys(DT[p]).forEach(function (ym) { all[ym] = 1; }); }); var yms = Object.keys(all).sort();
+    var ly = yms[yms.length - 1] || '', y = ly.slice(0, 4);
+    lifeTitle('동해시 하천 수질', '국립환경과학원 물환경 측정망 · 최신 ' + y + '년 ' + Number(ly.slice(4)) + '월 · 측정지점 ' + pts.length + '곳 · 매주 갱신');
+    view.style.gridTemplateColumns = 'minmax(0, 1fr) minmax(0, 1fr)';
+    view.style.gridTemplateRows = '44px auto minmax(0, 1fr) minmax(0, 1fr)';
+    function grade(b) { return b == null ? ['–', ''] : b <= 1 ? ['Ia 매우 좋음', 'good'] : b <= 2 ? ['Ib 좋음', 'good'] : b <= 3 ? ['II 약간 좋음', 'good'] : b <= 5 ? ['III 보통', ''] : b <= 8 ? ['IV 약간 나쁨', 'bad'] : ['V 이하 나쁨', 'bad']; }
+    function last(p) { var k = Object.keys(DT[p]).sort(); return [k[k.length - 1], DT[p][k[k.length - 1]]]; }
+    cardsRow(pts.slice(0, 5).map(function (p) { var L2 = last(p), v = L2[1] || {}, g = grade(v.BOD);
+      return { l: (P[p] || {}).nm || p, sub: Number(L2[0].slice(4)) + '월 측정 · BOD', ic: 'drop', col: '#0F8A8A', bg: '#DDF3F2', v: fmt(v.BOD, 1), u: 'mg/L', chips: [[g[0], g[1]], v.TP != null ? ['총인 ' + fmt(v.TP, 3), ''] : null] }; }));
+    var lab = yms.map(function (ym) { return (ym.slice(4) === '01' || ym === yms[0] ? ym.slice(2, 4) + '.' : '') + Number(ym.slice(4)) + '월'; });
+    var cols = ['#0F8A8A', '#1F6FD1', '#7A4FC4', '#E08A3C', '#2E8B57'];
+    var p2 = panel('BOD(생물화학적 산소요구량) 월별 · 측정지점별', 'mg/L · 낮을수록 깨끗함 · 1 이하 매우 좋음', lineChart(lab, pts.slice(0, 5).map(function (p, i) { return { name: (P[p] || {}).nm || p, color: cols[i], width: i ? 2 : 3, labels: i === 0, values: yms.map(function (ym) { return (DT[p][ym] || {}).BOD; }) }; }), { fit: true, d: 1 }));
+    p2.style.gridColumn = '1 / span 2';
+    var IT = [['BOD', 'BOD', 1], ['COD', 'COD', 1], ['TOC', 'TOC', 1], ['SS', '부유물질', 1], ['DOC', '용존산소', 1], ['TN', '총질소', 3], ['TP', '총인', 3], ['PH', 'pH', 1], ['TEMP', '수온(℃)', 1]];
+    var tb = el('tbody', {}, pts.map(function (p) { var L2 = last(p), v = L2[1] || {};
+      return el('tr', {}, [el('td', { html: '<b>' + ((P[p] || {}).nm || p) + '</b> <small>' + Number(L2[0].slice(4)) + '월</small>' })].concat(IT.map(function (it) { return el('td', { class: 'r', text: v[it[0]] == null ? '–' : fmt(v[it[0]], it[2]) }); }))); }));
+    var p3 = panel('측정지점별 최신 수질', 'mg/L(pH·수온 제외) · ' + pts.map(function (p) { return (P[p] || {}).addr || ''; }).filter(Boolean).slice(0, 2).join(' / '), el('table', { class: 'dt big' }, [el('thead', {}, [el('tr', {}, ['지점'].concat(IT.map(function (x) { return x[1]; })).map(function (h, j) { return el('th', { class: j ? 'r' : '', text: h }); }))]), tb]));
+    p3.style.gridColumn = '1 / span 2';
+  }
   function screenEnv() {
     var A = (D.life || {}).air || {}, R = A.regions || {}, SN = R[regName()] ? regName() : D.me, m = R[SN] || {}, me0 = R[D.me] || {}, W = (D.life || {}).weather;
     var vals = Object.keys(R).filter(function (n) { return R[n].pm25 != null; });
@@ -2219,7 +2315,7 @@ function startApp() {
   function screenWelfareTabs() {
     screenWelfare();
   }
-  var SCREENS = { main: screenMain, admin: screenAdminTabs, welfare: screenWelfareTabs, social: screenSocial, traffic: screenTrafficTabs, env: screenEnv, water: screenWater, tour: screenTourTabs, economy: screenEconomyTabs, finance: screenFinance, frame: screenFrame };
+  var SCREENS = { main: screenMain, admin: screenAdminTabs, welfare: screenWelfareTabs, social: screenSocial, traffic: screenTrafficTabs, env: screenEnvTabs, water: screenWater, tour: screenTourTabs, economy: screenEconomyTabs, finance: screenFinance, frame: screenFrame };
   function render() {
     view.textContent = '';
     view.className = '';

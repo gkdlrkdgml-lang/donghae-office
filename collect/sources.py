@@ -1227,3 +1227,152 @@ def attractions(C, cache=None, n_months=40):
     if not months:
         raise RuntimeError('관광지 입장객을 받지 못함: %s' % errs[:3])
     return {'at': now().strftime('%Y-%m-%d'), 'months': dict(sorted(months.items())), 'latest': max(months), 'errors': errs[:5]}
+
+
+ASOS_URL = 'https://apis.data.go.kr/1360000/AsosDalyInfoService/getWthrDataList'
+ASOS_STN = {'속초': '90', '철원': '95', '평창': '100', '춘천': '101', '강릉': '105', '동해': '106', '원주': '114',
+            '영월': '121', '인제': '211', '홍천': '212', '태백': '216', '정선': '217'}
+
+
+def _dkey():
+    k = urllib.parse.unquote(os.environ.get('DATA_GO_KR_KEY', '').strip())
+    if not k:
+        raise RuntimeError('DATA_GO_KR_KEY 없음')
+    return k
+
+
+def weather_year():
+    """기상청 ASOS 일자료: 강원 12개 관측소의 올해 1월 1일~어제와 작년 같은 기간."""
+    key = _dkey()
+    end = now() - __import__('datetime').timedelta(days=1)
+    y, md = end.year, end.strftime('%m%d')
+    out = {'at': now().strftime('%Y-%m-%d'), 'end': end.strftime('%Y%m%d'), 'year': y, 'regions': {}}
+    for reg, stn in ASOS_STN.items():
+        rec = {}
+        for yy in (y, y - 1):
+            try:
+                t = http_get(ASOS_URL, {'serviceKey': key, 'dataType': 'JSON', 'dataCd': 'ASOS', 'dateCd': 'DAY', 'startDt': '%d0101' % yy,
+                                        'endDt': '%d%s' % (yy, md), 'stnIds': stn, 'numOfRows': '400', 'pageNo': '1'}, tries=2, timeout=60)
+                it = ((((json.loads(t).get('response') or {}).get('body') or {}).get('items') or {}).get('item')) or []
+            except Exception as e:  # noqa: BLE001
+                log('ASOS %s %s 실패 %s' % (reg, yy, e))
+                continue
+            days = []
+            for x in it:
+                days.append([x.get('tm', '').replace('-', ''), to_num(x.get('avgTa')), to_num(x.get('maxTa')), to_num(x.get('minTa')), to_num(x.get('sumRn')) or 0])
+            if not days:
+                continue
+            rn_m = {}
+            for d in days:
+                rn_m[d[0][4:6]] = round(rn_m.get(d[0][4:6], 0) + (d[4] or 0), 1)
+            ta = [d[1] for d in days if d[1] is not None]
+            rec[str(yy)] = {
+                'n': len(days),
+                'rain': round(sum(d[4] for d in days), 1),
+                'rain_days': sum(1 for d in days if d[4] >= 0.1),
+                'heat': sum(1 for d in days if d[2] is not None and d[2] >= 33),
+                'tropical': sum(1 for d in days if d[3] is not None and d[3] >= 25),
+                'cold': sum(1 for d in days if d[3] is not None and d[3] <= -12),
+                'avg_ta': round(sum(ta) / len(ta), 1) if ta else None,
+                'max_ta': max((d[2], d[0]) for d in days if d[2] is not None) if any(d[2] is not None for d in days) else None,
+                'min_ta': min((d[3], d[0]) for d in days if d[3] is not None) if any(d[3] is not None for d in days) else None,
+                'rain_m': rn_m,
+                'max_rn': max((d[4], d[0]) for d in days),
+            }
+        if rec:
+            out['regions'][reg] = rec
+    if not out['regions']:
+        raise RuntimeError('ASOS 자료를 받지 못함')
+    return out
+
+
+AIR_STAT_URL = 'https://apis.data.go.kr/B552584/ArpltnStatsSvc/getMsrstnAcctoRDyrg'
+AIR_STN_URL = 'https://apis.data.go.kr/B552584/MsrstnInfoInqireSvc/getMsrstnList'
+
+
+def air_year(C):
+    """에어코리아 대기오염통계: 강원 측정소 일평균 → 시·군별(측정소 평균) 올해·작년 같은 기간."""
+    key = _dkey()
+    end = now() - __import__('datetime').timedelta(days=1)
+    y, md = end.year, end.strftime('%m%d')
+    t = http_get(AIR_STN_URL, {'serviceKey': key, 'addr': '강원', 'returnType': 'json', 'numOfRows': '200', 'pageNo': '1'}, tries=2, timeout=40)
+    stns = {}
+    for x in ((json.loads(t).get('response') or {}).get('body') or {}).get('items') or []:
+        reg = match_region(str(x.get('addr', '')), C['regions'])
+        if reg and x.get('stationName'):
+            stns[x['stationName']] = reg
+    daily = {}   # {year: {reg: {date: [pm25 list], ...}}}
+    for st, reg in stns.items():
+        for yy in (y, y - 1):
+            try:
+                t = http_get(AIR_STAT_URL, {'serviceKey': key, 'msrstnName': st, 'inqBginDt': '%d0101' % yy, 'inqEndDt': '%d%s' % (yy, md),
+                                            'returnType': 'json', 'numOfRows': '400', 'pageNo': '1'}, tries=2, timeout=60)
+                it = ((json.loads(t).get('response') or {}).get('body') or {}).get('items') or []
+            except Exception as e:  # noqa: BLE001
+                log('대기통계 %s %s 실패 %s' % (st, yy, e))
+                continue
+            for x in it:
+                d = str(x.get('msurDt', '')).replace('-', '')
+                c = daily.setdefault(str(yy), {}).setdefault(reg, {}).setdefault(d, [[], []])
+                p25, p10 = to_num(x.get('pm25Value')), to_num(x.get('pm10Value'))
+                if p25 is not None:
+                    c[0].append(p25)
+                if p10 is not None:
+                    c[1].append(p10)
+    out = {'at': now().strftime('%Y-%m-%d'), 'end': end.strftime('%Y%m%d'), 'year': y, 'stations': stns, 'regions': {}}
+    for yy, regs in daily.items():
+        for reg, days in regs.items():
+            p25 = {d: sum(v[0]) / len(v[0]) for d, v in days.items() if v[0]}
+            p10 = {d: sum(v[1]) / len(v[1]) for d, v in days.items() if v[1]}
+            if not p25:
+                continue
+            m25 = {}
+            for d, v in p25.items():
+                m25.setdefault(d[4:6], []).append(v)
+            out['regions'].setdefault(reg, {})[yy] = {
+                'n': len(p25),
+                'pm25': round(sum(p25.values()) / len(p25), 1),
+                'pm10': round(sum(p10.values()) / len(p10), 1) if p10 else None,
+                'good': sum(1 for v in p25.values() if v <= 15),
+                'bad': sum(1 for v in p25.values() if v > 35),
+                'bad10': sum(1 for v in p10.values() if v > 80),
+                'm25': {m: round(sum(v) / len(v), 1) for m, v in sorted(m25.items())},
+            }
+    if not out['regions']:
+        raise RuntimeError('대기통계를 받지 못함')
+    return out
+
+
+WQ_URL = 'https://apis.data.go.kr/1480523/WaterQualityService/getWaterMeasuringList'
+
+
+def water_quality(cache=None):
+    """국립환경과학원 수질 DB: 동해시 하천 측정지점 월별(올해·작년)."""
+    key = _dkey()
+    y = now().year
+    pts = dict((cache or {}).get('points') or {})
+    if not pts:   # 처음 한 번: 최근 달 전체 목록에서 동해시 지점 찾기
+        for back in range(1, 5):
+            ym = ym_shift(now().strftime('%Y%m'), -back)
+            page = 1
+            while True:
+                t = http_get(WQ_URL, {'serviceKey': key, 'resultType': 'JSON', 'numOfRows': '1000', 'pageNo': str(page), 'wmyrList': ym[:4], 'wmodList': ym[4:]}, tries=2, timeout=90)
+                j = (json.loads(t).get('getWaterMeasuringList') or {})
+                it = j.get('item') or []
+                for x in it:
+                    if '동해시' in str(x.get('ADDR', '')):
+                        pts[x['PT_NO']] = {'nm': x.get('PT_NM'), 'addr': str(x.get('ADDR', '')).strip()}
+                if len(it) < 1000:
+                    break
+                page += 1
+            if pts:
+                break
+    if not pts:
+        raise RuntimeError('동해시 수질 측정지점을 찾지 못함')
+    rows = {}
+    for yy in (y - 1, y):
+        t = http_get(WQ_URL, {'serviceKey': key, 'resultType': 'JSON', 'numOfRows': '1000', 'pageNo': '1', 'ptNoList': ','.join(pts), 'wmyrList': str(yy)}, tries=2, timeout=90)
+        for x in (json.loads(t).get('getWaterMeasuringList') or {}).get('item') or []:
+            ym = '%s%s' % (x.get('WMYR'), str(x.get('WMOD')).zfill(2))
+            rows.setdefault(x['PT_NO'], {})[ym] = {k: to_num(str(x.get('ITEM_' + k) or '').strip()) for k in ('BOD', 'COD', 'TOC', 'SS', 'DOC', 'TN', 'TP', 'TEMP', 'PH', 'TCOLI')}
+    return {'at': now().strftime('%Y-%m-%d'), 'points': pts, 'data': rows}
