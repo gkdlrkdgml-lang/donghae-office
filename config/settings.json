@@ -29,6 +29,11 @@
       "show": true
     },
     {
+      "id": "land",
+      "label": "토지 및 건축",
+      "show": true
+    },
+    {
       "id": "social",
       "label": "복지",
       "show": true
@@ -61,11 +66,6 @@
     {
       "id": "power",
       "label": "에너지·전력",
-      "show": true
-    },
-    {
-      "id": "land",
-      "label": "토지 및 건축",
       "show": true
     },
     {
