@@ -26,8 +26,10 @@ KOSIS(여러 표), 국세통계포털 TASIS(월별 가동·신규 사업자), �
 환경부 상·하수도 통계, 지방공기업 경영정보, 기상청 ASOS 일자료, 에어코리아 대기오염통계(7월~만 제공), 국립환경과학원 수질 DB.
 
 ## 남은 일
-- **전력 탭(「에너지·전력」)**: 한전 전력데이터 개방포털 키를 GitHub Secret `KEPCO_KEY`로 넣으면 시작
-  (계약종별 전력사용량, 가구 평균, 신재생 설치 → 시·군 월별, 18개 시·군 비교). 워크플로에 KEPCO_KEY 전달은 이미 해 둠.
+- **전력 탭(「에너지·전력」) — 2026-11-21 만듦**: `collect/power.py`(한전 `KEPCO_KEY`, metroCd 51).
+  계약종별·가구평균은 시·군 월별 25개월 보관(지난 달은 다시 안 받음), 산업분류는 최신 달만. 지표 pw_total·pw_house·pw_house_bill·pw_yoy·pw_ind_share(모두 dir 0).
+  한전 서버가 자주 끊김(TLS timeout) → 한 번에 7분까지만 받고 나머지 달은 다음 실행에서 채움. 신재생(`renewEnergy.do`)은 아직 응답 못 받음 → 되면 추가.
+  `gh workflow run probe.yml -f only=kepco`로 한전만 빠르게 점검 가능.
 - **전자파(전파진흥원)**: `B552729/kcaApiService_emf/getEmfExposureIndex`, `B552729/KCCEWISLE/{bemf,meas,movebemf,fixbemf}` —
   신청은 승인됐으나 기관 서버가 504(연결실패). 살아나면 환경 탭에 추가.
 - 쓰레기(폐기물) 2026년 자료는 공개 API 없음 → 동해시 자원순환 부서 월별 자료를 받으면 붙이기.

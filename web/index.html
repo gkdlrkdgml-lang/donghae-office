@@ -2341,7 +2341,7 @@ function startApp() {
     var parts = KC.filter(function (k) { return R.by && R.by[k[0]] && R.by[k[0]].kwh; }).map(function (k) { return [k[0], R.by[k[0]].kwh, k[1]]; });
     panel('계약종별 사용량 · ' + fullName(SN), ymL + ' · 전체 ' + fmt(R.total / 1e6, 1) + 'GWh', parts.length ? donut(parts, fmt(R.total / 1e6, 1) + 'GWh', '한 달 사용량') : el('div', { class: 'empty', text: '자료 없음' }));
     // 산업분류 상위
-    var BZ = (PW.biz || {})[SN] || {}, bk = Object.keys(BZ).filter(function (k) { return BZ[k] > 0; }).sort(function (a, b) { return BZ[b] - BZ[a]; }).slice(0, 7), bt = 0;
+    var BZ = (PW.biz || {})[SN] || {}, bk = Object.keys(BZ).filter(function (k) { return BZ[k] > 0; }).sort(function (a, b) { return BZ[b] - BZ[a]; }).slice(0, 5), bt = 0;
     Object.keys(BZ).forEach(function (k) { bt += BZ[k] || 0; });
     var bym = PW.biz_ym ? PW.biz_ym.slice(0, 4) + '년 ' + (+PW.biz_ym.slice(4)) + '월' : '';
     panel('업종별 사용량 상위 · ' + fullName(SN), bym + ' · 한전 산업분류 · MWh', bk.length ? el('table', { class: 'dt big' }, [el('thead', {}, [el('tr', {}, ['업종', '사용량', '비중'].map(function (h, j) { return el('th', { class: j ? 'r' : '', text: h }); }))]),
