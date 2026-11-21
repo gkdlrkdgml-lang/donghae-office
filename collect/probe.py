@@ -188,10 +188,18 @@ def ordin_probe():
     os.makedirs(os.path.join(ROOT, 'probe_out'), exist_ok=True)
     open(os.path.join(ROOT, 'probe_out', 'ordin.json'), 'w', encoding='utf-8').write(t)
     say('[ordin] 길이 %d 앞 %s' % (len(t), t[:600].replace('\n', ' ')))
-    import re
-    for kw in ('건폐율', '용적률'):
-        for m in list(re.finditer(kw, t))[:3]:
-            say('[ordin] %s … %s' % (kw, t[max(0, m.start() - 200): m.start() + 900].replace('\n', ' ')))
+    j = json.loads(t)['LawService']
+    say('[ordin] 키 %s' % list(j.keys()))
+    jo = j.get('조문') or {}
+    say('[ordin] 조문 키 %s' % (list(jo.keys()) if isinstance(jo, dict) else type(jo)))
+    arts = jo.get('조') if isinstance(jo, dict) else jo
+    arts = arts if isinstance(arts, list) else [arts]
+    say('[ordin] 조 개수 %d, 첫 조 키 %s' % (len(arts), list(arts[0].keys()) if arts and isinstance(arts[0], dict) else arts[:1]))
+    for a in arts:
+        txt = json.dumps(a, ensure_ascii=False)
+        if '건폐율' in txt[:200] or '용적률' in txt[:200]:
+            say('[ordin] 조문 %s' % txt[:4000])
+    say('[ordin] 별표 %s' % json.dumps(j.get('별표') or '', ensure_ascii=False)[:1500])
 
 
 def main():
