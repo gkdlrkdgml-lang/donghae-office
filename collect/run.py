@@ -14,6 +14,7 @@ from common import (settings, codes, load_env, save_json, load_json, log, now, r
 import sources  # noqa: E402
 import life
 import tour  # noqa: E402
+import power  # noqa: E402
 from rank import rank  # noqa: E402
 
 STATE = os.path.join(WEB_DATA, 'state.json')
@@ -254,6 +255,25 @@ def collect(state, S, C):
             ok(state, 'water', ', '.join('%s %s' % (k, v['year']) for k, v in L['water']['tables'].items()) + (' · 실패 %s' % list(L['water']['errors']) if L['water']['errors'] else ''))
         except Exception as e:  # noqa: BLE001
             fail(state, 'water', e)
+    # 에너지·전력(한전): 새 달은 보통 2달 뒤 공표 → 사흘마다 확인
+    if os.environ.get('KEPCO_KEY') and (stale('power', 3) or '--force-power' in sys.argv):
+        try:
+            L['power'] = power.collect(C, L.get('power'))
+            ok(state, 'power', '%s 기준 · %d개월' % (L['power']['ym'], len(L['power']['months'])) + (' · 일부 실패 %d' % len(L['power']['errors']) if L['power']['errors'] else ''))
+        except Exception as e:  # noqa: BLE001
+            fail(state, 'power', e)
+    PW = L.get('power') or {}
+    if PW.get('ym') and PW['months'].get(PW['ym']):
+        pym = PW['ym']
+        cm, pm = PW['months'][pym], PW['months'].get(ym_shift(pym, -12)) or {}
+        lab = '%s년 %d월' % (pym[:4], int(pym[4:]))
+        set_ind(state, 'pw_total', {k: v['total'] / 1e6 for k, v in cm.items()}, lab + ' 한 달 · 한전')
+        set_ind(state, 'pw_house', {k: v['house']['kwh'] for k, v in cm.items() if (v.get('house') or {}).get('kwh') is not None}, lab + ' 가구 평균 · 한전')
+        set_ind(state, 'pw_house_bill', {k: v['house']['bill'] for k, v in cm.items() if (v.get('house') or {}).get('bill') is not None}, lab + ' 가구 평균 · 한전')
+        set_ind(state, 'pw_ind_share', {k: v['by'].get('산업용', {}).get('kwh', 0) / v['total'] * 100 for k, v in cm.items() if v['total']}, lab + ' 전체 사용량 중 산업용 · 한전')
+        if pm:
+            set_ind(state, 'pw_yoy', {k: (v['total'] - pm[k]['total']) / pm[k]['total'] * 100 for k, v in cm.items() if pm.get(k) and pm[k]['total']},
+                    lab + ' (전년 같은 달 대비) · 한전')
     if stale('employ', 15) or '--force-life' in sys.argv:
         try:
             L['employ'] = sources.employment(S, C)
@@ -547,7 +567,7 @@ def build(state, S, C):
     # 분야 화면이 비면 메뉴에서 숨김
     has_fin = any(i['id'] == 'fin_indep' for i in out['indicators'])
     L = out.get('life') or {}
-    need = {'wx_year': L.get('wx_year'), 'stores': L.get('stores'), 'water': L.get('water'), 'social': L.get('social'), 'economy': L.get('economy'), 'welfare': L.get('hospitals'), 'traffic': L.get('ev') or L.get('cars'), 'env': L.get('air'), 'tour': L.get('visit_months')}
+    need = {'wx_year': L.get('wx_year'), 'stores': L.get('stores'), 'water': L.get('water'), 'social': L.get('social'), 'economy': L.get('economy'), 'welfare': L.get('hospitals'), 'traffic': L.get('ev') or L.get('cars'), 'env': L.get('air'), 'power': L.get('power'), 'tour': L.get('visit_months')}
     out['menu'] = [m for m in out['menu'] if not (m['id'] == 'finance' and not has_fin) and not (m['id'] in ('admin', 'compare') and not out['admin'])
                    and not (m['id'] in need and not need[m['id']])]
     return out

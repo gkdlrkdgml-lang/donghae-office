@@ -414,7 +414,7 @@ function startApp() {
       el('span', { text: '1위 = 도내에서 가장 좋은 곳 · 막대가 높을수록 좋음 · 초록 강점 · 주황 개선 필요 · 누르면 세부 현황' })
     ]));
     var GO = { pop_change: ['admin', 'compare'], working_age: ['admin', 'compare'], elderly: ['admin', 'compare'], medical: ['welfare'], ev: ['traffic', 'ev'], cars: ['traffic', 'cars'],
-      accidents: ['traffic', 'safe'], parking: ['traffic', 'park'], bus_stops: ['traffic', 'busst'], taxi: ['traffic', 'taxi'], visitors: ['tour', 'now'], wx_rain: ['env', 'wx'], wx_heat: ['env', 'wx'], wx_trop: ['env', 'wx'], air_good: ['env', 'air'], air_bad: ['env', 'air'], air_avg: ['env', 'air'], attr_visit: ['tour', 'attr'], shop_new: ['economy'], sew_rate: ['water'], sup_rate: ['water'], tour_exp: ['tour', 'dem'], budget: ['finance'], fin_indep: ['finance'] };
+      accidents: ['traffic', 'safe'], parking: ['traffic', 'park'], bus_stops: ['traffic', 'busst'], taxi: ['traffic', 'taxi'], visitors: ['tour', 'now'], wx_rain: ['env', 'wx'], wx_heat: ['env', 'wx'], wx_trop: ['env', 'wx'], air_good: ['env', 'air'], air_bad: ['env', 'air'], air_avg: ['env', 'air'], attr_visit: ['tour', 'attr'], shop_new: ['economy'], sew_rate: ['water'], sup_rate: ['water'], pw_total: ['power'], pw_house: ['power'], pw_house_bill: ['power'], pw_yoy: ['power'], pw_ind_share: ['power'], tour_exp: ['tour', 'dem'], budget: ['finance'], fin_indep: ['finance'] };
     function open(i) {
       var t = GO[i.id]; if (!t) return;
       if (t[0] === 'admin') admTab = t[1]; else if (t[0] === 'traffic') trTab = t[1]; else if (t[0] === 'tour') tourTab = t[1]; else if (t[0] === 'env') envTab = t[1];
@@ -2304,6 +2304,63 @@ function startApp() {
     var p4 = panel('수도요금·하수처리 · ' + yl('wops'), '지방공기업 경영정보 · 도내 평균 = 18개 시·군 평균', el('table', { class: 'dt big' }, [el('thead', {}, [el('tr', {}, ['항목'].concat(cols.map(fullName)).concat(['도내 평균']).map(function (h, j) { return el('th', { class: j ? 'r' : '', text: h }); }))]), tb]));
     p4.style.gridColumn = '3'; p4.style.gridRow = '4';
   }
+  // 에너지·전력: 한전 전력데이터 개방포털(계약종별·가구 평균·산업분류), 강원 18개 시·군 월별
+  var pwMet = 'pw_total';
+  function screenPower() {
+    var PW = (D.life || {}).power || {}, MS = PW.months || {}, ym = PW.ym, CM = MS[ym] || {};
+    var SN = CM[regName()] ? regName() : D.me, isMe = SN === D.me, R = CM[SN] || {};
+    var ymL = ym ? ym.slice(0, 4) + '년 ' + (+ym.slice(4)) + '월' : '';
+    var pym = ym ? (+ym.slice(0, 4) - 1) + ym.slice(4) : null, PM = MS[pym] || {};
+    lifeTitle(fullName(SN) + ' 에너지·전력', '한전 전력데이터 개방포털 · ' + ymL + ' 기준(매달 자동 갱신, 보통 2달 뒤 공표)' + selHint());
+    view.style.gridTemplateRows = '44px auto minmax(0, 1fr) minmax(0, 1fr)';
+    var regs = Object.keys(CM).filter(function (k) { return k !== '강원'; });
+    function gwAvg(f) { var t = 0, n = 0; regs.forEach(function (k) { var v = f(CM[k]); if (v != null) { t += v; n++; } }); return n ? t / n : null; }
+    function hs(r, k) { return r && r.house ? r.house[k] : null; }
+    function sh(r, k) { return r && r.total ? ((r.by[k] || {}).kwh || 0) / r.total * 100 : null; }
+    function chg(a, b, d, u, lab) { if (a == null || b == null) return null; var x = a - b; return [lab + (x > 0 ? '+' : '') + fmt(x, d) + u, x > 0 ? 'navy' : '']; }
+    var yoy = R.total && PM[SN] && PM[SN].total ? (R.total - PM[SN].total) / PM[SN].total * 100 : null;
+    cardsRow([
+      { l: '전력 사용량', sub: ymL + ' 한 달', ic: 'bolt', col: '#E0A100', bg: '#FFF4D6', v: fmt(R.total / 1e6, 1), u: 'GWh',
+        chips: [rankChip(indFor(ind('pw_total'), SN)), yoy != null ? ['전년 같은 달보다 ' + (yoy > 0 ? '+' : '') + fmt(yoy, 1) + '%', ''] : null] },
+      { l: '가구당 사용량', sub: '주택용 한 달 평균', ic: 'house', col: '#1F6FD1', bg: '#E4EEFB', v: fmt(hs(R, 'kwh'), 1), u: 'kWh',
+        chips: [isMe ? ['도내 평균 ' + fmt(gwAvg(function (r) { return hs(r, 'kwh'); }), 1) + 'kWh', 'navy'] : chg(hs(R, 'kwh'), hs(CM[D.me], 'kwh'), 1, 'kWh', D.me + '보다 '), chg(hs(R, 'kwh'), hs(PM[SN], 'kwh'), 1, 'kWh', '전년보다 ')] },
+      { l: '가구당 전기요금', sub: '주택용 한 달 평균', ic: 'coin', col: '#C0602B', bg: '#FDEBDD', v: fmt(hs(R, 'bill'), 0), u: '원',
+        chips: [isMe ? ['도내 평균 ' + fmt(gwAvg(function (r) { return hs(r, 'bill'); }), 0) + '원', 'navy'] : chg(hs(R, 'bill'), hs(CM[D.me], 'bill'), 0, '원', D.me + '보다 '), hs(R, 'cnt') != null ? ['주택 ' + fmt(hs(R, 'cnt'), 0) + '가구', 'violet'] : null] },
+      { l: '산업용 비중', sub: '전체 사용량 중', ic: 'factory', col: '#6A4FC8', bg: '#ECE7FB', v: fmt(sh(R, '산업용'), 1), u: '%',
+        chips: [rankChip(indFor(ind('pw_ind_share'), SN)), ['도내 평균 ' + fmt(gwAvg(function (r) { return sh(r, '산업용'); }), 1) + '%', 'navy']] }
+    ]);
+    var MET = [['pw_total', '사용량'], ['pw_house', '가구당'], ['pw_house_bill', '가구 요금'], ['pw_yoy', '증감률'], ['pw_ind_share', '산업용']].filter(function (m) { return ind(m[0]); });
+    if (!MET.some(function (m) { return m[0] === pwMet; })) pwMet = MET[0] && MET[0][0];
+    var I0 = ind(pwMet), I = indFor(I0, SN);
+    var sw = el('div', { class: 'chips', style: 'flex-wrap:nowrap;gap:6px;margin-bottom:6px' }, MET.map(function (m) {
+      return el('button', { type: 'button', class: 'chip', style: 'cursor:pointer;border:0;font-weight:800' + (m[0] === pwMet ? ';background:#1B3A6B;color:#fff' : ''), text: m[1], onclick: function () { pwMet = m[0]; render(); } }); }));
+    var p1 = panel((I0 ? I0.name : '') + ' · 강원 18개 시·군', (I0 ? I0.basis + ' · ' + I0.unit : '') + ' · 누르면 그 지역', [sw, I ? rankList(I, regPick, regSel) : el('div', { class: 'empty', text: '자료 없음' })]);
+    p1.style.gridRow = '3 / span 2';
+    // 계약종별 구성
+    var KC = [['주택용', '#1F6FD1'], ['일반용', '#0F8A8A'], ['산업용', '#6A4FC8'], ['교육용', '#E0A100'], ['농사용', '#3AA655'], ['가로등', '#C0602B'], ['심야', '#8FB2E0']];
+    var parts = KC.filter(function (k) { return R.by && R.by[k[0]] && R.by[k[0]].kwh; }).map(function (k) { return [k[0], R.by[k[0]].kwh, k[1]]; });
+    var leg = el('div', { class: 'lleg', style: 'justify-content:center;flex-wrap:wrap' }, parts.map(function (k) { return el('span', {}, [el('i', { style: 'background:' + k[2] }), document.createTextNode(k[0] + ' ' + fmt(k[1] / R.total * 100, 1) + '%')]); }));
+    panel('계약종별 사용량 · ' + fullName(SN), ymL + ' · 전체 ' + fmt(R.total / 1e6, 1) + 'GWh', parts.length ? [donut(parts, fmt(R.total / 1e6, 1) + 'GWh', '한 달 사용량'), leg] : el('div', { class: 'empty', text: '자료 없음' }));
+    // 산업분류 상위
+    var BZ = (PW.biz || {})[SN] || {}, bk = Object.keys(BZ).filter(function (k) { return BZ[k] > 0; }).sort(function (a, b) { return BZ[b] - BZ[a]; }).slice(0, 7), bt = 0;
+    Object.keys(BZ).forEach(function (k) { bt += BZ[k] || 0; });
+    var bym = PW.biz_ym ? PW.biz_ym.slice(0, 4) + '년 ' + (+PW.biz_ym.slice(4)) + '월' : '';
+    panel('업종별 사용량 상위 · ' + fullName(SN), bym + ' · 한전 산업분류 · MWh', bk.length ? el('table', { class: 'dt big' }, [el('thead', {}, [el('tr', {}, ['업종', '사용량', '비중'].map(function (h, j) { return el('th', { class: j ? 'r' : '', text: h }); }))]),
+      el('tbody', {}, bk.map(function (k) { return el('tr', {}, [el('td', { text: k.length > 16 ? k.slice(0, 15) + '…' : k, title: k }), el('td', { class: 'r', html: '<b>' + fmt(BZ[k] / 1e3, 0) + '</b>' }), el('td', { class: 'r', text: fmt(BZ[k] / bt * 100, 1) + '%' })]); }))]) : el('div', { class: 'empty', text: '자료 없음' }));
+    // 최근 13개월 추이(전년 같은 달과 함께)
+    var ks = Object.keys(MS).sort().slice(-13);
+    function tot(k, n) { var r = (MS[k] || {})[n]; return r ? r.total / 1e6 : null; }
+    function py(k) { return (+k.slice(0, 4) - 1) + k.slice(4); }
+    panel('월별 전력 사용량 · ' + fullName(SN), '최근 13개월 · GWh · 점선 = 1년 전 같은 달', lineChart(ks.map(function (k) { return k.slice(2, 4) + '.' + (+k.slice(4)); }), [
+      { name: fullName(SN), color: '#E0A100', values: ks.map(function (k) { return tot(k, SN); }), width: 3, area: true, labels: 'last' },
+      { name: '1년 전', color: '#8A97A8', dash: '5 4', width: 2, nodot: true, values: ks.map(function (k) { return tot(py(k), SN); }) }
+    ], { fit: true, d: 1 }));
+    // 계약종별 비중 비교
+    var who = isMe ? [D.me, '강원 평균'] : [SN, D.me, '강원 평균'];
+    var CK = ['주택용', '일반용', '산업용', '농사용'];
+    panel('사용 구성 비교', who.map(fullName).join(' · ') + ' · 전체 사용량 중 %', groupCols(CK, cmpSeries(who, function (n) {
+      return CK.map(function (k) { return n === '강원 평균' ? gwAvg(function (r) { return sh(r, k); }) : sh(CM[n], k); }); }), null, true));
+  }
   // 보건 및 의료: 아래 탭(의료 현황 / 실시간 의료기관)
   var welTab = 'now';
   function screenMedLive() {
@@ -2316,7 +2373,7 @@ function startApp() {
   function screenWelfareTabs() {
     screenWelfare();
   }
-  var SCREENS = { main: screenMain, admin: screenAdminTabs, welfare: screenWelfareTabs, social: screenSocial, traffic: screenTrafficTabs, env: screenEnvTabs, water: screenWater, tour: screenTourTabs, economy: screenEconomyTabs, finance: screenFinance, frame: screenFrame };
+  var SCREENS = { main: screenMain, admin: screenAdminTabs, welfare: screenWelfareTabs, social: screenSocial, traffic: screenTrafficTabs, env: screenEnvTabs, water: screenWater, power: screenPower, tour: screenTourTabs, economy: screenEconomyTabs, finance: screenFinance, frame: screenFrame };
   function render() {
     view.textContent = '';
     view.className = '';

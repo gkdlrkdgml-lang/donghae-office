@@ -59,6 +59,11 @@
       "show": true
     },
     {
+      "id": "power",
+      "label": "에너지·전력",
+      "show": true
+    },
+    {
       "id": "frame",
       "label": "액자",
       "show": true
@@ -592,6 +597,71 @@
       "show": true,
       "main": false,
       "note": "측정소 일평균의 올해 평균 · 낮을수록 좋음"
+    },
+    {
+      "id": "pw_total",
+      "name": "전력 사용량(월)",
+      "unit": "GWh",
+      "dir": 0,
+      "digits": 1,
+      "note": "계약종별 사용량 합계(주택·일반·교육·산업·농사·가로등·심야)",
+      "no": 46,
+      "field": "에너지·전력",
+      "source": "한전 전력데이터 개방포털",
+      "show": true,
+      "main": false
+    },
+    {
+      "id": "pw_house",
+      "name": "가구당 전력 사용량",
+      "unit": "kWh",
+      "dir": 0,
+      "digits": 1,
+      "note": "주택용 가구 한 달 평균",
+      "no": 47,
+      "field": "에너지·전력",
+      "source": "한전 전력데이터 개방포털",
+      "show": true,
+      "main": false
+    },
+    {
+      "id": "pw_house_bill",
+      "name": "가구당 전기요금",
+      "unit": "원",
+      "dir": 0,
+      "digits": 0,
+      "note": "주택용 가구 한 달 평균 요금",
+      "no": 48,
+      "field": "에너지·전력",
+      "source": "한전 전력데이터 개방포털",
+      "show": true,
+      "main": false
+    },
+    {
+      "id": "pw_yoy",
+      "name": "전력 사용량 증감률",
+      "unit": "%",
+      "dir": 0,
+      "digits": 1,
+      "note": "전년 같은 달 대비",
+      "no": 49,
+      "field": "에너지·전력",
+      "source": "한전 전력데이터 개방포털",
+      "show": true,
+      "main": false
+    },
+    {
+      "id": "pw_ind_share",
+      "name": "산업용 전력 비중",
+      "unit": "%",
+      "dir": 0,
+      "digits": 1,
+      "note": "전체 사용량 중 산업용",
+      "no": 50,
+      "field": "에너지·전력",
+      "source": "한전 전력데이터 개방포털",
+      "show": true,
+      "main": false
     }
   ],
   "sources": {
