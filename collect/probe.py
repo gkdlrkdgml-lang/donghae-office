@@ -105,8 +105,32 @@ def supabase_probe():
             say('[supabase] %s 실패 %s' % (path.split('?')[0], e))
 
 
+def supabase_test(mode):
+    """연결 시험: 공식 값과 같은 숫자로 공식 기준월 말일 입력을 넣었다 지움(화면 값은 바뀌지 않음)."""
+    import admin_sync, urllib.request as ur
+    key = os.environ.get('SUPABASE_SERVICE_KEY', '').strip()
+    h = {'apikey': key, 'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'donghae-office-collector/1.0', 'Prefer': 'return=representation'}
+    base = admin_sync._url() + '/rest/v1/'
+    def call(method, path, body=None):
+        req = ur.Request(base + path, data=json.dumps(body).encode() if body is not None else None, headers=h, method=method)
+        with ur.urlopen(req, timeout=30) as r:
+            return r.read().decode('utf-8')
+    if mode == 'add':
+        st = json.load(open(os.path.join(ROOT, 'web', 'data', 'state.json'), encoding='utf-8'))
+        A = st['admin']; ym = A['ym']; tot = A['regions']['동해']['total']
+        import calendar
+        d = '%s-%s-%02d' % (ym[:4], ym[4:], calendar.monthrange(int(ym[:4]), int(ym[4:]))[1])
+        uid = json.loads(call('GET', 'profiles?select=id&role=eq.super&limit=1'))[0]['id']
+        say('[supabase-test] 추가 → ' + call('POST', 'entries', {'ref_date': d, 'section': 'pop', 'data': {'total': tot}, 'author': uid, 'author_name': '연결 시험'}))
+    else:
+        say('[supabase-test] 삭제 → ' + call('DELETE', 'entries?author_name=eq.' + __import__('urllib.parse').parse.quote('연결 시험')))
+
+
 def main():
     load_env()
+    if os.environ.get('PROBE_ONLY', '').startswith('sbtest_'):
+        supabase_test(os.environ['PROBE_ONLY'][7:])
+        return
     if os.environ.get('PROBE_ONLY') == 'supabase':
         supabase_probe()
         return
