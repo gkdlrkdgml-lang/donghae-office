@@ -1,0 +1,27 @@
+name: 관리자 입력 감시(10분마다)
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 바뀐 입력이 있으면 화면 반영 실행
+        env:
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          r=$(python3 collect/admin_sync.py --check || echo error)
+          echo "확인 결과: $r"
+          [ "$r" = "changed" ] || exit 0
+          busy=$(gh run list -w collect.yml --json status -q '[.[] | select(.status=="queued" or .status=="in_progress" or .status=="waiting" or .status=="pending")] | length')
+          if [ "$busy" != "0" ]; then echo "이미 반영 실행이 돌고 있어 다음 확인 때 다시 봅니다"; exit 0; fi
+          gh workflow run collect.yml --ref main -f mode=admin

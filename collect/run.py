@@ -15,6 +15,7 @@ import sources  # noqa: E402
 import life
 import tour  # noqa: E402
 import power  # noqa: E402
+import admin_sync  # noqa: E402
 from rank import rank  # noqa: E402
 
 STATE = os.path.join(WEB_DATA, 'state.json')
@@ -648,6 +649,13 @@ def main():
             state['finance'] = {}
         if '--admin-only' not in sys.argv:   # 관리자 입력만 반영할 때는 수집을 건너뜀(1~2분)
             collect(state, S, C)
+    try:   # 관리자 입력(Supabase) 받기
+        sig = admin_sync.pull()
+        if sig is not None:
+            state['admin_sig'] = sig
+            log('관리자 입력 받음 · ' + sig)
+    except Exception as e:  # noqa: BLE001
+        log('관리자 입력(Supabase) 받기 실패 · 지난 값 사용 · %s' % e)
     save_json(STATE, state)
     data = build(state, S, C)
     os.makedirs(WEB_DATA, exist_ok=True)
