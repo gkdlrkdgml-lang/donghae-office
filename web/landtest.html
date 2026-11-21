@@ -54,6 +54,15 @@
         .then(function () { return both('토지특성', 'https://api.vworld.kr/ned/data/getLandCharacteristics', { pnu: pnu, stdrYear: '2025', numOfRows: 5, pageNo: 1 }); })
         .then(function () { return both('토지임야', 'https://api.vworld.kr/ned/data/ladfrlList', { pnu: pnu, numOfRows: 5, pageNo: 1 }); });
     });
+  // 브라우저에서 직접(CORS) 부를 수 있는지: 건축물대장(공공데이터포털)·국가법령(키 없이 주소만 확인)
+  setTimeout(function () {
+    fetch('https://apis.data.go.kr/1613000/BldRgstHubService/getBrBasisOulnInfo?serviceKey=test&sigunguCd=51170&bjdongCd=10100&platGbCd=0&bun=0806&ji=0000&_type=json')
+      .then(function (r) { return r.text(); }).then(function (t) { row('공공데이터포털 브라우저 직접 호출', true, t); })
+      .catch(function (e) { row('공공데이터포털 브라우저 직접 호출', false, e.message); });
+    fetch('https://www.law.go.kr/DRF/lawSearch.do?OC=test&target=ordin&type=JSON&query=' + encodeURIComponent('동해시 도시계획 조례'))
+      .then(function (r) { return r.text(); }).then(function (t) { row('국가법령 브라우저 직접 호출', true, t); })
+      .catch(function (e) { row('국가법령 브라우저 직접 호출', false, e.message); });
+  }, 6000);
 })();
 </script>
 </body>
