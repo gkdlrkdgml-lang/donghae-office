@@ -229,15 +229,22 @@ def main():
             say('[KOSIS검색] %s 실패 %s' % (q, e))
     from urllib.parse import unquote as _unq
     _dk = _unq(os.environ.get('DATA_GO_KR_KEY', '').strip())
-    for op, prm in [('storeListInDong', {'divId': 'signguCd', 'key': '51170'})] + [('storeListByDate', {'key': d}) for d in ('20261120', '20261110', '20261031', '20261015', '20261001', '20260930', '20260915', '20260901', '20260815', '20260701', '20260601')]:
+    tests = [
+        ('측정소', 'https://apis.data.go.kr/B552584/MsrstnInfoInqireSvc/getMsrstnList', {'addr': '동해', 'returnType': 'json', 'numOfRows': '20'}),
+        ('대기일평균', 'https://apis.data.go.kr/B552584/ArpltnStatsSvc/getMsrstnAcctoRDyrg', {'msrstnName': '천곡동', 'inqBginDt': '20260101', 'inqEndDt': '20261119', 'returnType': 'json', 'numOfRows': '5'}),
+        ('대기월평균', 'https://apis.data.go.kr/B552584/ArpltnStatsSvc/getMsrstnAcctoRMmrg', {'msrstnName': '천곡동', 'inqBginMm': '202601', 'inqEndMm': '202610', 'returnType': 'json', 'numOfRows': '12'}),
+        ('ASOS일', 'https://apis.data.go.kr/1360000/AsosDalyInfoService/getWthrDataList', {'dataType': 'JSON', 'dataCd': 'ASOS', 'dateCd': 'DAY', 'startDt': '20261101', 'endDt': '20261119', 'stnIds': '106', 'numOfRows': '3'}),
+        ('수질측정', 'https://apis.data.go.kr/1480523/WaterQualityService/getWaterMeasuringList', {'numOfRows': '5', 'resultType': 'JSON', 'wmyrList': '2026', 'wmodList': '09'}),
+        ('수질측정2', 'https://apis.data.go.kr/1480523/WaterQualityService/getWaterMeasuringListMavg', {'numOfRows': '5', 'resultType': 'JSON', 'wmyrList': '2026'}),
+        ('해수욕장수질', 'https://apis.data.go.kr/1192000/service/OceansBeachSeawaterService1/getOceansBeachSeawaterInfo1', {'numOfRows': '5', 'resultType': 'JSON', 'SIDO_NM': '강원', 'RES_YEAR': '2026'}),
+    ]
+    for nm, url, prm in tests:
         try:
-            q = dict(prm); q.update({'serviceKey': _dk, 'type': 'json', 'numOfRows': '1000', 'pageNo': '1'})
-            j = json.loads(http_get('https://apis.data.go.kr/B553077/api/open/sdsc2/' + op, q, tries=1))
-            bd = j.get('body') or {}
-            it = bd.get('items') or []
-            say('[상가자료] %s %s → %s 총 %s · 이번 %d · 변경구분 %s · 강원 %d · 동해 %d · 예 %s' % (op, prm, j.get('header', {}).get('resultMsg'), bd.get('totalCount'), len(it), sorted(set(str(x.get('chgGb')) for x in it)), sum(1 for x in it if x.get('ctprvnCd') == '51'), sum(1 for x in it if x.get('signguCd') == '51170'), json.dumps(it[:1], ensure_ascii=False)[:500]))
+            q = dict(prm); q['serviceKey'] = _dk
+            t = http_get(url, q, tries=1, timeout=30)
+            say('[환경API] %s → %s' % (nm, t[:900].replace(_dk, '***').replace('\n', ' ')))
         except Exception as e:  # noqa: BLE001
-            say('[상가자료] %s 실패 %s' % (op, str(e)[:300]))
+            say('[환경API] %s 실패 %s' % (nm, str(e)[:250]))
     if os.environ.get('PROBE_FULL') != '1':
         return
     probe('admm_population', {'url': 'https://apis.data.go.kr/1741000/admmPpltnHhStus/selectAdmmPpltnHhStus', 'key_env': 'DATA_GO_KR_KEY',
