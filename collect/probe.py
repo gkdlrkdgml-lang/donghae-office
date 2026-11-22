@@ -202,7 +202,30 @@ def ordin_probe():
     say('[ordin] 별표 %s' % json.dumps(j.get('별표') or '', ensure_ascii=False)[:1500])
 
 
+def lock_probe():
+    import urllib.request, urllib.error, random
+    def code(url, data=None, h=None):
+        try:
+            r = urllib.request.urlopen(urllib.request.Request(url, data=data, headers=h or {}), timeout=30)
+            return r.status, r.read()[:150]
+        except urllib.error.HTTPError as e:
+            return e.code, e.read()[:150]
+    site = 'https://gkdlrkdgml-lang.github.io/donghae-office/'
+    for u in ['', 'auth.js', 'data/data.js', 'data/state.json', 'data/stores_snap.json']:
+        say('공개 사이트 %s → %s' % (u or '(첫 화면)', code(site + u + '?x=%d' % random.randint(1, 9999))[0]))
+    sb = 'https://zkdsystvrakicrkckcrd.supabase.co'
+    k = 'sb_publishable_EA-Zz_6YVEloxXYANEgZoQ_81RAqrv0'
+    say('익명 저장소 읽기 → %s %s' % code(sb + '/storage/v1/object/dash/data/data.json.gz', h={'apikey': k}))
+    say('공개 주소 읽기 → %s %s' % code(sb + '/storage/v1/object/public/dash/data/data.json.gz'))
+    say('land 익명 → %s %s' % code(sb + '/functions/v1/land', b'{"pnu":"5117010100108060000"}', {'apikey': k, 'Content-Type': 'application/json', 'Origin': 'https://gkdlrkdgml-lang.github.io'}))
+    sk = os.environ.get('SUPABASE_SERVICE_KEY', '')
+    st, b = code(sb + '/storage/v1/object/dash/data/version.txt', h={'apikey': sk})
+    say('서버 키 version.txt → %s %s' % (st, b))
+
+
 def main():
+    if os.environ.get('PROBE_ONLY') == 'lock':
+        lock_probe(); return
     load_env()
     if os.environ.get('PROBE_ONLY') == 'ordin':
         ordin_probe()
