@@ -64,11 +64,10 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "POST만 됩니다" }, 405);
   const origin = req.headers.get("origin") || "";
   const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || "?";
-  const fromSite = ALLOWED.includes(origin);
-  if (!fromSite) {
-    const role = await whoIs(req);
-    if (role !== "admin" && role !== "super") return json({ error: "시장실 사이트에서만 쓸 수 있습니다" }, 403);
-  }
+  // 로그인 잠금(2026-11-22): 승인된 계정(보기 전용·관리자·최고관리자)만
+  const role = await whoIs(req);
+  if (role !== "viewer" && role !== "admin" && role !== "super") return json({ error: "승인된 계정으로 로그인해야 합니다" }, 401);
+  void origin; void ALLOWED;
   if (tooMany(ip)) return json({ error: "잠시 후 다시 시도해 주세요(10분에 60회까지)" }, 429);
   let body: { pnu?: string } = {};
   try { body = await req.json(); } catch { /* 빈 본문 */ }

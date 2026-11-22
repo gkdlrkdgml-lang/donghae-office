@@ -1,10 +1,13 @@
 // 인터넷이 잠깐 끊겨도 마지막으로 받은 화면과 데이터를 계속 보여 주기 위한 캐시.
 // 항상 새 파일을 먼저 받아 보고, 실패할 때만 저장해 둔 것을 씁니다.
-var CACHE = 'donghae-office-v1';
+var CACHE = 'donghae-office-v2';
+self.addEventListener('activate', function (e) { e.waitUntil(caches.delete('donghae-office-v1')); });
 self.addEventListener('install', function (e) { self.skipWaiting(); });
 self.addEventListener('activate', function (e) { e.waitUntil(self.clients.claim()); });
 self.addEventListener('fetch', function (e) {
   if (e.request.method !== 'GET') return;
+  if (new URL(e.request.url).origin !== self.location.origin) return;   // 다른 사이트(로그인·자료 저장소)는 저장하지 않음
+  if (/\/data\//.test(e.request.url)) return;
   e.respondWith(
     fetch(e.request).then(function (res) {
       var copy = res.clone();

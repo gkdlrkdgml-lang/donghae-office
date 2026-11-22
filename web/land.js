@@ -16,7 +16,7 @@ window.DHLand = (function () {
   function initAuth() {
     var C = window.DH_ADMIN || {};
     if (sb || !C.url || !window.supabase) { authChecked = true; return Promise.resolve(); }
-    sb = window.supabase.createClient(C.url, C.anonKey, { auth: { persistSession: true, storageKey: 'dh_admin_auth' } });
+    sb = window.DH_SB || window.supabase.createClient(C.url, C.anonKey, { auth: { persistSession: true, storageKey: 'dh_admin_auth' } });
     return sb.auth.getSession().then(function (r) {
       session = r.data.session;
       if (!session) return;

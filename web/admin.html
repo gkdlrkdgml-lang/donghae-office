@@ -158,7 +158,7 @@
 (function () {
   var CFG = window.DH_ADMIN || {}, DOMAINS = ['dh-office.local', 'dh-office.example.com'];
   var SCOPE = { pop: 'admin', dong: 'admin', vital: 'admin', employ: 'economy' };
-  var ROLE = { pending: '승인 대기', admin: '관리자', super: '최고관리자', off: '사용 중지' };
+  var ROLE = { pending: '승인 대기', viewer: '보기 전용', admin: '관리자', super: '최고관리자', off: '사용 중지' };
   var sb = null, me = null, prof = null, D = null, rows = [];
   function $(id) { return document.getElementById(id); }
   function show(id, on) { $(id).classList.toggle('hide', !on); }
@@ -234,6 +234,8 @@
         var can = prof.role === 'super' || prof.role === 'admin';
         show('waitSec', !can); show('app', can);
         if (prof.role === 'off') $('waitTxt').textContent = '사용이 중지된 계정입니다. 최고관리자에게 문의해 주세요.';
+        if (prof.role === 'viewer') $('waitTxt').innerHTML = '「보기 전용」 계정입니다. <a href="./">시장실 화면</a>은 볼 수 있고, 자료 입력은 최고관리자가 「관리자」로 바꿔 주면 됩니다.';
+        if (can && !D) loadRef();
         if (!can) return;
         document.querySelectorAll('section[data-scope]').forEach(function (sec) {
           var ok = prof.role === 'super' || (prof.scopes || []).indexOf(sec.getAttribute('data-scope')) >= 0;
@@ -248,10 +250,15 @@
 
   var d0 = new Date(); $('date').value = d0.getFullYear() + '-' + ('0' + (d0.getMonth() + 1)).slice(-2) + '-' + ('0' + d0.getDate()).slice(-2);
 
-  // 공식 최신 값(시장실 데이터) 참고 표시
-  var sc = document.createElement('script');
-  sc.src = 'data/data.js?t=' + Date.now();
-  sc.onload = function () {
+  // 공식 최신 값(시장실 데이터, 비공개 저장소) 참고 표시
+  function gunzip(b) { return new Response(b.stream().pipeThrough(new DecompressionStream('gzip'))).text(); }
+  function loadRef() {
+    D = {};
+    sb.storage.from('dash').download('data/data.json.gz?t=' + Date.now()).then(function (r) {
+      if (r.error) throw r.error; return gunzip(r.data);
+    }).then(function (t) { window.DONGHAE_DATA = JSON.parse(t); showRef(); }).catch(function (e) { $('offInfo').textContent = '공식 자료를 못 받음: ' + kerr(e); });
+  }
+  function showRef() {
     D = window.DONGHAE_DATA || {}; var A = D.admin || {}, mo = (A.official_me) || (A.regions || {})[D.me] || {};
     var ym = A.live ? A.live.official_ym : A.ym;
     if (ym) { var lab = ym.slice(0, 4) + '년 ' + Number(ym.slice(4)) + '월'; $('popOff').textContent = '공식 최신(' + lab + ' 주민등록): 총인구 ' + fmt(mo.total) + '명 · 세대 ' + fmt(mo.hh) + ' · 남 ' + fmt(mo.male) + ' · 여 ' + fmt(mo.female); $('offInfo').textContent = '공식 자료 ' + lab; }
@@ -260,8 +267,7 @@
       tr.innerHTML = '<td>' + esc(nm) + '</td><td><input class="num" data-dong="' + esc(nm) + '" data-k="total"></td><td><input class="num" data-dong="' + esc(nm) + '" data-k="hh"></td><td class="off">' + fmt(o.total) + '명 · ' + fmt(o.hh) + '세대</td>';
       body.appendChild(tr);
     });
-  };
-  document.head.appendChild(sc);
+  }
 
   // ---------- 입력 폼
   function num(v) { v = String(v || '').replace(/[,\s]/g, ''); if (v === '') return null; var n = Number(v); return isFinite(n) ? n : NaN; }
