@@ -375,7 +375,7 @@ window.DHLand = (function () {
           '「' + z + '」에서 「' + nmU + '」은(는) 별표 기준 ' + J.msg + '.' + (J.ck.length ? ' 입력값 확인: ' + J.ck.join(', ') + '.' : '') + (J.T.note ? ' [별표 머리말] ' + J.T.note : '') + (pre.length ? ' ' + pre.join(' ') : ''),
           J.txt.length ? '해당 조항: ' + J.txt.join(' / ') : '「' + z + '」 ' + (J.T.kind === 'can' ? '허용' : '금지') + ' 목록(' + J.T.items.length + '개 항목)에 「' + nmU + '」(' + ho + ')이 없습니다.',
           (ordMe().name || '동해시 도시계획 조례') + ' ' + J.T.title + ' · 「' + ho.replace('건축법 시행령', '건축법 시행령」') );
-        R[R.length - 1].qs = J.qs;
+        R[R.length - 1].qs = J.qs; R[R.length - 1].pin = true;
       });
     }
     // (2) 지목
@@ -493,7 +493,7 @@ window.DHLand = (function () {
     if (sub) sub.addEventListener('change', function () { useSub = sub.value; re(); });
     function num(ph, v, set, w) {
       var i = el('input', { type: 'number', min: '0', placeholder: ph, value: v == null ? '' : v, title: ph, style: SST + ';width:' + w + 'px' });
-      i.addEventListener('keydown', function (e) { e.stopPropagation(); });
+      i.addEventListener('keydown', function (e) { e.stopPropagation(); if (e.key === 'Enter') { set(i.value === '' ? null : +i.value); re(); } });
       i.addEventListener('change', function () { set(i.value === '' ? null : +i.value); re(); });
       return i;
     }
@@ -584,12 +584,13 @@ window.DHLand = (function () {
     }
     // ⑤ 판정 근거
     var order = { RED: 0, YELLOW: 1, INFO: 2, GREEN: 3 };
-    var list = el('div', { class: 'landlist', style: 'display:flex;flex-direction:column;gap:8px;min-height:0' }, ev.reasons.slice().sort(function (a, b) { return order[a.level] - order[b.level]; }).map(function (r) {
+    var list = el('div', { class: 'landlist', style: 'display:flex;flex-direction:column;gap:8px;min-height:0' }, ev.reasons.slice().sort(function (a, b) { return (b.pin ? 1 : 0) - (a.pin ? 1 : 0) || order[a.level] - order[b.level]; }).map(function (r) {
       var L = LV[r.level], det = el('details', { 'data-fit': '1', style: 'border-left:5px solid ' + L.c + ';background:' + L.bg + ';border-radius:8px;padding:8px 12px' }, [
         el('summary', { style: 'cursor:pointer;font-size:16px;font-weight:800;color:#1B3A6B', html: '<span style="color:' + L.c + '">●</span> [' + r.area + '] ' + r.tag }),
         el('div', { style: 'font-size:15px;margin-top:6px', text: r.detail }),
         el('div', { style: 'font-size:15px;margin-top:4px;font-weight:700', text: '→ ' + r.impact }),
         r.cite ? el('div', { style: 'font-size:13px;margin-top:4px;color:#556274', text: '근거: ' + r.cite }) : null].concat((r.qs || []).map(qBox)));
+      if (r.pin) det.open = true;
       if (r.area === '토지' && /건폐율/.test(r.detail) && artText('bcr')) det.appendChild(el('div', { style: 'font-size:12px;margin-top:6px;color:#38475A;white-space:pre-wrap;max-height:120px;overflow:auto;background:#fff;padding:6px;border-radius:6px', text: '[조례 원문] ' + artText('bcr') + '\n\n' + artText('far') }));
       return det; }));
     var p5 = H.panel('판정 근거 · 확인할 것', '빨강·노랑부터 · 눌러서 근거 조문 보기', [list].concat(d.errs.length ? [el('div', { class: 'chips', style: 'margin-top:8px;gap:6px;flex-wrap:wrap' }, d.errs.map(function (e) { return el('span', { class: 'chip bad', text: e }); }))] : []));
