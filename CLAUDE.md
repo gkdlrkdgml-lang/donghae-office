@@ -26,6 +26,10 @@ KOSIS(여러 표), 국세통계포털 TASIS(월별 가동·신규 사업자), �
 복지로 복지통계, 심평원·NMC 의료기관, 관광자원통계 GW(`B551940`, 유료관광지 월 입장객),
 환경부 상·하수도 통계, 지방공기업 경영정보, 기상청 ASOS 일자료, 에어코리아 대기오염통계(7월~만 제공), 국립환경과학원 수질 DB.
 
+## PWA(2026-11-22)
+- `web/manifest.webmanifest`(display fullscreen, 아이콘 img/icon-192·512·mask-512), sw.js(같은 출처만 캐시, CACHE v3). Chrome·Edge에서 설치하면 주소창 없이 전체 화면 → 1920×1080 무대(#stage, 화면에 맞춰 확대·축소)가 꽉 참.
+  설치 가능하면 위쪽 줄에 「⤓ 앱으로 설치」 단추(beforeinstallprompt).
+
 ## 전체 로그인 잠금(2026-11-22, 무료 방식)
 - 시장실 화면(`index.html`)은 `web/auth.js`가 먼저 로그인 → 승인 계정(role viewer 보기 전용·admin·super)만 열림. 세션은 `dh_admin_auth`(admin.html과 공유), 클라이언트는 `window.DH_SB` 하나.
 - 자료는 **GitHub에 없음**: `collect/store.py`가 Supabase 비공개 버킷 `dash`에 `data/data.json.gz`(화면 자료, 승인 계정 읽기)·`cache/*.json.gz`(state·stores_snap, 서버 키만) 올리고 받음. collect.yml이 pull → run → push, Pages 올리기 전 `web/data` 삭제. `web/data/`는 .gitignore.
