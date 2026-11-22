@@ -220,6 +220,72 @@ window.DHLand = (function () {
     return box;
   }
 
+  // ------------------------------------------------------------ 3D 보기(MapLibre, 주변 건물을 층수로 세움)
+  var mlLoad = null;
+  function loadML() {
+    if (window.maplibregl) return Promise.resolve();
+    if (mlLoad) return mlLoad;
+    mlLoad = new Promise(function (ok, no) {
+      var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'vendor/maplibre/maplibre-gl.css'; document.head.appendChild(l);
+      var sc = document.createElement('script'); sc.src = 'vendor/maplibre/maplibre-gl.js'; sc.onload = function () { ok(); }; sc.onerror = function () { mlLoad = null; no(new Error('3D 지도 파일을 못 불러옴')); }; document.head.appendChild(sc);
+    });
+    return mlLoad;
+  }
+  function floorsOf(p) {
+    var ks = Object.keys(p || {}), k = ks.filter(function (x) { return /^gro_?flo_?co$/i.test(x); })[0] || ks.filter(function (x) { return /(gro|grnd).*(flo|flr)/i.test(x); })[0];
+    var v = k ? parseInt(p[k], 10) : NaN; return isNaN(v) ? null : v;
+  }
+  function open3D(d) {
+    var el = H.el, key = (H.D.map || {}).vworld, old = document.getElementById('dh3d'); if (old) old.remove();
+    var box = el('div', { style: 'position:absolute;inset:0;border-radius:12px;overflow:hidden;background:#DDE5EF' });
+    var note = el('div', { style: 'font-size:14px;color:#38475A', text: '주변 건물을 불러오는 중…' });
+    var rot = null;
+    function close() { if (rot) cancelAnimationFrame(rot); ov.remove(); }
+    var ov = el('div', { id: 'dh3d', style: 'position:fixed;left:3vw;right:3vw;top:4vh;bottom:4vh;z-index:950;font-family:Pretendard,sans-serif;background:#fff;border-radius:16px;box-shadow:0 20px 60px rgba(15,30,60,.35);display:flex;flex-direction:column;padding:14px 18px;gap:8px' }, [
+      el('div', { style: 'display:flex;align-items:center;gap:12px' }, [
+        el('b', { style: 'font-size:22px;color:#1B3A6B', text: '🏢 3D 보기 · ' + ((d.feat.properties || {}).addr || d.q) }),
+        el('div', { style: 'flex:1' }),
+        el('button', { type: 'button', class: 'chip', style: 'cursor:pointer;border:0;font-weight:800', text: '↻ 천천히 돌리기', onclick: function () { if (rot) { cancelAnimationFrame(rot); rot = null; return; } (function spin() { if (ov._m) ov._m.setBearing(ov._m.getBearing() + 0.15); rot = requestAnimationFrame(spin); })(); } }),
+        el('button', { type: 'button', class: 'chip', style: 'cursor:pointer;border:0;font-weight:800;background:#1B3A6B;color:#fff', text: '✕ 닫기', onclick: close })]),
+      el('div', { style: 'flex:1;min-height:0;position:relative' }, [box]), note]);
+    ov.addEventListener('keydown', function (e) { e.stopPropagation(); });
+    document.body.appendChild(ov);   // 확대·축소된 무대(#stage) 밖에 붙여야 3D 지도 마우스·손가락 위치가 맞음
+    var c = center(d.feat.geometry), km = 0.25, dy = km / 111, dx = km / (111 * Math.cos(c[1] * Math.PI / 180));
+    var bldP = vw('https://api.vworld.kr/req/data', { service: 'data', request: 'GetFeature', data: 'LT_C_SPBD', size: 1000, geometry: 'true', attribute: 'true', crs: 'EPSG:4326', geomFilter: 'BOX(' + (c[0] - dx) + ',' + (c[1] - dy) + ',' + (c[0] + dx) + ',' + (c[1] + dy) + ')' })
+      .then(function (j) { var r = (j || {}).response || {}; return r.status === 'OK' ? ((r.result || {}).featureCollection || {}).features || [] : []; }).catch(function () { return []; });
+    Promise.all([loadML(), bldP]).then(function (res) {
+      var feats = res[1], B = buildings(d.bld), myH = Math.max.apply(null, [0].concat(B.map(function (b) { return +b.height || 0; }))), myF = Math.max.apply(null, [0].concat(B.map(function (b) { return +b.floors || 0; })));
+      var polys = rings(d.feat.geometry), withF = 0;
+      var fc = { type: 'FeatureCollection', features: feats.map(function (g) {
+        var f = floorsOf(g.properties), cc = center(g.geometry), me = polys.length && inRing(cc, polys[0]);
+        if (f != null) withF++;
+        var h = me && myH ? myH : (f != null ? Math.max(f, 1) * 3.3 : (me && myF ? myF * 3.3 : 3.3));
+        return { type: 'Feature', geometry: g.geometry, properties: { h: h, me: me ? 1 : 0, f: f == null ? '' : f, nm: (g.properties || {}).buld_nm || (g.properties || {}).bld_nm || '' } };
+      }) };
+      var mine = fc.features.filter(function (x) { return x.properties.me; }).length;
+      var tileV = key ? 'https://api.vworld.kr/req/wmts/1.0.0/' + key + '/Base/{z}/{y}/{x}.png' : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+      var m = new window.maplibregl.Map({ container: box, center: c, zoom: 17.2, pitch: 62, bearing: -25, maxPitch: 80, attributionControl: { compact: true },
+        style: { version: 8, sources: { base: { type: 'raster', tiles: [tileV], tileSize: 256, maxzoom: 19, attribution: key ? '© 국토교통부 브이월드' : '© OpenStreetMap' } }, layers: [{ id: 'base', type: 'raster', source: 'base' }] } });
+      ov._m = m;
+      m.addControl(new window.maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
+      var swapped = false;
+      m.on('error', function (e) { if (!swapped && e && e.sourceId === 'base') { swapped = true; try { m.getSource('base').setTiles(['https://tile.openstreetmap.org/{z}/{x}/{y}.png']); } catch (x) { /* 무시 */ } } });
+      m.on('load', function () {
+        m.addSource('parcel', { type: 'geojson', data: { type: 'Feature', geometry: d.feat.geometry, properties: {} } });
+        m.addLayer({ id: 'parcel-f', type: 'fill', source: 'parcel', paint: { 'fill-color': '#F0A030', 'fill-opacity': 0.35 } });
+        m.addLayer({ id: 'parcel-l', type: 'line', source: 'parcel', paint: { 'line-color': '#E07B00', 'line-width': 4 } });
+        m.addSource('bld', { type: 'geojson', data: fc });
+        m.addLayer({ id: 'bld', type: 'fill-extrusion', source: 'bld', paint: { 'fill-extrusion-height': ['get', 'h'], 'fill-extrusion-base': 0, 'fill-extrusion-opacity': 0.88,
+          'fill-extrusion-color': ['case', ['==', ['get', 'me'], 1], '#D9534F', '#8FA3BF'] } });
+        var pop = new window.maplibregl.Popup({ closeButton: false });
+        m.on('mousemove', 'bld', function (e) { var q = e.features[0].properties; pop.setLngLat(e.lngLat).setHTML('<b>' + (q.nm || '건물') + '</b><br>' + (q.f !== '' ? '지상 ' + q.f + '층 · ' : '') + '높이 약 ' + Math.round(q.h) + 'm').addTo(m); });
+        m.on('mouseleave', 'bld', function () { pop.remove(); });
+      });
+      note.textContent = '주변 250m 건물 ' + feats.length + '동' + (feats.length ? ' (층수 있는 건물 ' + withF + '동)' : '') + ' · 높이는 도로명주소 건물의 지상층수 × 3.3m로 세운 예상치' +
+        (myH ? ' · 붉은 건물(검토 필지)은 건축물대장 높이 ' + fmt(myH, 1) + 'm' : mine ? ' · 붉은 건물 = 검토 필지' : '') + (feats.length && !withF ? ' · ⚠ 층수 자료가 없어 모두 1층 높이로 표시' : '') + ' · 마우스 오른쪽 끌기(태블릿은 두 손가락)로 돌리기·기울이기';
+    }).catch(function (e) { note.textContent = '3D 지도를 열지 못했습니다: ' + e.message; });
+  }
+
   // ------------------------------------------------------------ 브이월드(브라우저에서 JSONP로)
   var seq = 0;
   function qs(o) { return Object.keys(o).map(function (k) { return k + '=' + encodeURIComponent(o[k]); }).join('&'); }
@@ -601,7 +667,8 @@ window.DHLand = (function () {
       layerBar(), mwrap,
       el('div', { class: 'chips', style: 'gap:6px;font-size:13px;flex-wrap:wrap' }, [
         el('a', { class: 'chip', href: 'https://map.ngii.go.kr/ms/map/NlipMap.do', target: '_blank', rel: 'noopener', text: '항공사진 연혁 (국토정보플랫폼) ↗' }),
-        el('a', { class: 'chip', href: 'https://map.kakao.com/link/map/' + encodeURIComponent(p.jibun || '부지') + ',' + ll[1] + ',' + ll[0], target: '_blank', rel: 'noopener', text: '카카오맵 과거 스카이뷰 ↗' })])]));
+        el('a', { class: 'chip', href: 'https://map.kakao.com/link/map/' + encodeURIComponent(p.jibun || '부지') + ',' + ll[1] + ',' + ll[0], target: '_blank', rel: 'noopener', text: '카카오맵 과거 스카이뷰 ↗' }),
+        el('button', { type: 'button', class: 'chip', style: 'cursor:pointer;border:0;background:#1B3A6B;color:#fff;font-weight:800', text: '🏢 3D로 보기', onclick: function (e) { e.stopPropagation(); open3D(d); } })])]));
     p3.style.gridRow = '3'; p3.style.gridColumn = '2';
     setTimeout(function () {
       if (!window.L || !window.L.map) return;
