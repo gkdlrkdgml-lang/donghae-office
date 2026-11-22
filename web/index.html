@@ -2546,15 +2546,17 @@ function startApp() {
   }, true);
   document.addEventListener('keydown', function (e) { if (flowRun && (e.key === 'Escape' || e.key === ' ' )) { e.preventDefault(); flowStop(true); } }, true);
   // ---------- 농업 및 수산(2025 농림어업총조사·농림어업조사·경지면적·친환경 인증, KOSIS) ----------
-  var agTab = 'farm', agMet = 'ag_farms';
+  var agTab = 'wipan', agMet = 'ag_farms', wpSel = null;
   function screenAgriTabs() {
-    var T = ((D.life || {}).agri || {}).tables || {}, tabs = [];
-    if (T.farm || T.land) tabs.push(['farm', '농업']);
-    if (T.fish) tabs.push(['fish', '수산']);
+    var A = (D.life || {}).agri || {}, T = A.tables || {}, WP = (D.life || {}).wipan || {}, tabs = [];
+    if (Object.keys(WP.months || {}).length) tabs.push(['wipan', '수협 위판 · 최신']);
+    if (T.farm || T.land) tabs.push(['farm', '농업 현황']);
+    if (T.fish) tabs.push(['fish', '수산 현황']);
+    if (T.farm || T.fish) tabs.push(['cmp', '비교 · 18개 시·군']);
     if (!tabs.some(function (t) { return t[0] === agTab; })) agTab = tabs.length ? tabs[0][0] : 'farm';
-    if (agTab === 'fish') screenFish(); else screenFarm();
+    if (agTab === 'wipan') screenWipan(); else if (agTab === 'fish') screenFish(); else if (agTab === 'cmp') screenAgriCmp(); else screenFarm();
     var title = view.querySelector('.title');
-    if (title && tabs.length > 1) title.insertBefore(tabsBar(tabs, agTab, function (k) { agTab = k; agMet = k === 'fish' ? 'fs_hh' : 'ag_farms'; }), title.children[1] || null);
+    if (title && tabs.length > 1) title.insertBefore(tabsBar(tabs, agTab, function (k) { agTab = k; }), title.children[1] || null);
   }
   function agT(k) { var t = (((D.life || {}).agri || {}).tables || {})[k]; return t ? { t: t, d: t.data[t.year] || {}, y: t.year } : null; }
   function agBars(list, unit, col) {   // [이름, 값] 막대 목록
@@ -2579,7 +2581,7 @@ function startApp() {
   function screenFarm() {
     var F = agT('farm'), LA = agT('land'), FP = agT('farm_pop'), AG = agT('farm_age'), EC = agT('eco'), LV = agT('livestock'), FR = agT('fruit');
     var SN = regName(), isMe = SN === D.me;
-    lifeTitle(fullName(SN) + ' 농업', '국가데이터처 2025 농림어업총조사(2025.12.1 기준, 2026.9 확정) · 농업면적조사 · 친환경 인증' + selHint());
+    lifeTitle(fullName(SN) + ' 농업 현황', '국가데이터처 2025 농림어업총조사(2025.12.1 기준, 2026.9 확정) · 농업면적조사 · 친환경 인증' + (regSel ? ' · 다시 누르면 ' + D.me + '시로' : ''));
     view.style.gridTemplateRows = '44px auto minmax(0, 1fr) minmax(0, 1fr)';
     var f = F ? F.d[SN] || {} : {}, la = LA ? LA.d[SN] || {} : {}, fp = FP ? FP.d[SN] || {} : {}, ec = EC ? EC.d[SN] || {} : {}, lv = LV ? LV.d[SN] || {} : {};
     var age = AG ? AG.d[SN] || {} : {}, aT = 0, a65 = 0;
@@ -2597,7 +2599,15 @@ function startApp() {
       { l: '친환경 인증 농가', sub: EC ? EC.y + '년 유기·무농약' : '', ic: 'leaf', col: '#0F8A8A', bg: '#DDF3F2', v: fmt(ec['농가수'], 0), u: '호',
         chips: [rankChip(indFor(ind('ag_eco'), SN)), ec['면적'] != null ? ['면적 ' + fmt(ec['면적'], 1) + 'ha · 출하 ' + fmt(ec['출하량'], 0) + '톤', ''] : null] }
     ]);
-    agRankPanel([['ag_farms', '농가'], ['ag_land', '경지면적'], ['ag_old', '고령 경영주'], ['ag_eco', '친환경 인증']]);
+    var pp = panel('전업·겸업 농가 · ' + fullName(SN), (F ? F.y + '년 12월 1일 · ' : '') + '농가 ' + fmt(f['농가'], 0) + '가구', f['농가'] ? donut([['전업', f['전업 농가'] || 0, '#2E8B57'], ['겸업', f['겸업 농가'] || 0, '#A9DCC0']], fmt(f['농가'], 0), '농가') : el('div', { class: 'empty', text: '자료 없음' }));
+    pp.style.gridRow = '3'; pp.style.gridColumn = '1';
+    if (FP) {
+      var fy = Object.keys(FP.t.data).sort();
+      var pq = panel('농가·농가인구 추이 · ' + fullName(SN), fy[0] + '~' + fy[fy.length - 1] + '년 · 농림어업조사(해마다, 표본)', lineChart(fy.map(function (y) { return y + '년'; }), [
+        { name: '농가인구(명)', color: '#1F6FD1', width: 3, values: fy.map(function (y) { return ((FP.t.data[y] || {})[SN] || {})['농가인구']; }) },
+        { name: '농가(가구)', color: '#2E8B57', width: 3, values: fy.map(function (y) { return ((FP.t.data[y] || {})[SN] || {})['농가']; }) }], { fit: true }));
+      pq.style.gridRow = '4'; pq.style.gridColumn = '1';
+    }
     // 경지면적 추이
     if (LA) {
       var ys = Object.keys(LA.t.data).sort();
@@ -2623,7 +2633,7 @@ function startApp() {
   function screenFish() {
     var FS = agT('fish'), FM = agT('fish_method'), SP = agT('fish_species'), FB = agT('fish_boat');
     var SN = regName(); if (FS && !FS.d[SN]) SN = D.me;
-    lifeTitle(fullName(SN) + ' 수산', '국가데이터처 2025 농림어업총조사(2025.12.1 기준, 2026.9 확정) · 해수면 어가' + selHint());
+    lifeTitle(fullName(SN) + ' 수산 현황', '국가데이터처 2025 농림어업총조사(2025.12.1 기준, 2026.9 확정) · 해수면 어가' + (regSel ? ' · 다시 누르면 ' + D.me + '시로' : ''));
     view.style.gridTemplateRows = '44px auto minmax(0, 1fr) minmax(0, 1fr)';
     var f = FS ? FS.d[SN] || {} : {}, m = FM ? FM.d[SN] || {} : {}, b = FB ? FB.d[SN] || {} : {};
     function leaf(o) { var r = []; Object.keys(o).forEach(function (k) { if (k.indexOf(':') < 0 && !/어가|가구|소계/.test(k) && o[k] > 0) r.push([k, o[k]]); }); return r.sort(function (a, c) { return c[1] - a[1]; }); }
@@ -2640,13 +2650,86 @@ function startApp() {
       { l: '물고기 잡는 어가', sub: '어류 어획', ic: 'trend', col: '#7A4FC4', bg: '#EFE9FB', v: fmt(sp['어획 품종별 어로 어업 경영 해수면 어가:어류:어획 어가'], 0), u: '가구',
         chips: [sp['갑각류:소계'] != null ? ['갑각류 ' + fmt(sp['갑각류:소계'], 0) + '가구', ''] : null] }
     ]);
-    agRankPanel([['fs_hh', '해수면 어가']], ' · 바다가 있는 시·군만 · 누르면 그 지역');
     var p2 = panel('어법(잡는 방법)별 어가 · ' + fullName(SN), (FM ? FM.y + '년 12월 1일 · ' : '') + '가구 · 한 어가가 여러 방법을 쓰면 겹쳐 셈', agBars(leaf(m).slice(0, 10), '가구', '#1F6FD1'));
     var p3 = panel('잡는 품종별 어가 · ' + fullName(SN), (SP ? SP.y + '년 12월 1일 · ' : '') + '가구 · 겹쳐 셈', agBars(leaf(sp).slice(0, 14), '가구', '#0F8A8A'));
     p3.style.gridRow = '3 / span 2'; p3.style.gridColumn = '3';
     var parts = [['동력선 보유', b['동력선 척수별 해수면 어가:소계'], '#1F6FD1'], ['무동력선만', b['무동력선 척수별 해수면 어가:소계'], '#8FB2E0'], ['어선 없음', b['어선 미보유 해수면 어가'], '#C9D2DE']].filter(function (x) { return x[1]; });
     var p4 = panel('어선 보유 · ' + fullName(SN), (FB ? FB.y + '년 12월 1일 · ' : '') + '해수면 어가 ' + fmt(f['해수면 어가'], 0) + '가구', parts.length ? donut(parts, fmt(f['해수면 어가'], 0), '어가') : el('div', { class: 'empty', text: '자료 없음' }));
-    p2.style.gridRow = '3'; p2.style.gridColumn = '2'; p4.style.gridRow = '4'; p4.style.gridColumn = '2';
+    p2.style.gridRow = '3 / span 2'; p2.style.gridColumn = '1'; p4.style.gridRow = '3'; p4.style.gridColumn = '2';
+    // 최근 위판(동해시수협) 요약 → 위판 탭으로
+    var WP = (D.life || {}).wipan || {}, wm = WP.ym ? ((WP.months[WP.ym] || {}).coops || {})[WP.me] : null;
+    var p5 = panel('최근 위판 · 동해시수협', WP.ym ? WP.ym.slice(0, 4) + '년 ' + (+WP.ym.slice(4)) + '월 · 누르면 위판 화면' : '자료 없음', wm ? agBars(Object.keys(wm.sp).slice(0, 6).map(function (k) { return [k, wm.sp[k][0] / 1e6, 0]; }), '백만', '#1F6FD1') : el('div', { class: 'empty', text: '자료 없음' }));
+    p5.style.gridRow = '4'; p5.style.gridColumn = '2'; p5.style.cursor = 'pointer'; p5.onclick = function () { agTab = 'wipan'; render(); };
+  }
+  // 비교 · 18개 시·군(인구 비교처럼 뒤쪽 탭)
+  function screenAgriCmp() {
+    var SN = regName(), isMe = SN === D.me;
+    lifeTitle(fullName(SN) + ' 농업·수산 비교', '강원 18개 시·군 · 국가데이터처 2025 농림어업총조사 · 농업면적조사 · 친환경 인증' + selHint());
+    view.style.gridTemplateRows = '44px minmax(0, 1fr)';
+    var p1 = agRankPanel([['ag_farms', '농가'], ['ag_land', '경지면적'], ['ag_old', '고령 경영주'], ['ag_eco', '친환경 인증'], ['fs_hh', '해수면 어가']]);
+    p1.style.gridRow = '2'; p1.style.gridColumn = '1 / span 2';
+    var ids = ['ag_farms', 'ag_land', 'ag_old', 'ag_eco', 'fs_hh'].filter(function (i) { return ind(i); });
+    function val(I, n) { var r = I.ranking.filter(function (x) { return x.name === n; })[0]; return r ? r : null; }
+    function avg(I) { var t = 0, n = 0; I.ranking.forEach(function (x) { if (x.value != null) { t += x.value; n++; } }); return n ? t / n : null; }
+    var rows = ids.map(function (iid) {
+      var I = ind(iid), a = val(I, SN), m = val(I, D.me);
+      return el('tr', {}, [el('td', { html: '<b>' + I.name + '</b><br><small style="color:#6B7686">' + I.unit + '</small>' }),
+        el('td', { class: 'r', html: a ? '<b>' + fmt(a.value, I.digits) + '</b><br><small>' + a.rank + '위 / ' + I.n + '</small>' : '–' }),
+        isMe ? null : el('td', { class: 'r', html: m ? fmt(m.value, I.digits) + '<br><small>' + m.rank + '위</small>' : '–' }),
+        el('td', { class: 'r', text: fmt(avg(I), I.digits) })].filter(Boolean));
+    });
+    var p2 = panel(fullName(SN) + (isMe ? '' : ' · ' + D.me + '시') + ' · 강원 평균', '값이 클수록 위(판정 안 함) · 강원 평균 = 자료 있는 시·군 평균', el('table', { class: 'dt big' }, [
+      el('thead', {}, [el('tr', {}, ['항목', fullName(SN)].concat(isMe ? [] : [D.me + '시']).concat(['강원 평균']).map(function (h, j) { return el('th', { class: j ? 'r' : '', text: h }); }))]), el('tbody', {}, rows)]));
+    p2.style.gridRow = '2'; p2.style.gridColumn = '3';
+  }
+  // 수협 위판 · 최신(해양수산부 위판장별 위탁판매현황, 달마다)
+  function screenWipan() {
+    var WP = (D.life || {}).wipan || {}, MS = WP.months || {}, yms = Object.keys(MS).sort(), ym = WP.ym, CO = ((MS[ym] || {}).coops) || {};
+    var codes = Object.keys(CO).sort(function (a, b) { return (CO[b].amt || 0) - (CO[a].amt || 0); });
+    if (!wpSel || !CO[wpSel]) wpSel = WP.me;
+    var C = CO[wpSel] || {}, isMe = wpSel === WP.me;
+    function short(n) { return String(n || '').replace('수산업협동조합', '수협').replace('강원고성군', '고성군'); }
+    var ymL = ym ? ym.slice(0, 4) + '년 ' + (+ym.slice(4)) + '월' : '';
+    var py = ym ? (+ym.slice(0, 4) - 1) + ym.slice(4) : null, PC = py && MS[py] ? ((MS[py].coops || {})[wpSel]) : null;
+    var pm = yms[yms.indexOf(ym) - 1], PMC = pm ? ((MS[pm].coops || {})[wpSel]) : null;
+    lifeTitle(short(C.name) + ' 수협 위판', '해양수산부 위판장별 위탁판매현황(공공데이터포털, 달마다) · ' + ymL + ' 기준 · 강원 7개 수협 · 왼쪽 수협을 누르면 그 수협으로');
+    view.style.gridTemplateRows = '44px auto minmax(0, 1fr) minmax(0, 1fr)';
+    function pct(a, b) { return a != null && b ? (a - b) / b * 100 : null; }
+    function chip(v, lab) { return v == null ? null : [lab + (v > 0 ? '+' : '') + fmt(v, 1) + '%', v >= 0 ? 'good' : 'bad']; }
+    var spk = Object.keys(C.sp || {}), top = spk[0], days = Object.keys(C.days || {}).filter(function (d) { return C.days[d][0] > 0; });
+    var rk = codes.indexOf(wpSel) + 1;
+    cardsRow([
+      { l: '위판 금액', sub: ymL + ' 한 달', ic: 'coin', col: '#1F6FD1', bg: '#E4EEFB', v: fmt((C.amt || 0) / 1e8, 2), u: '억원',
+        chips: [chip(pct(C.amt, PC && PC.amt), '전년 같은 달 '), chip(pct(C.amt, PMC && PMC.amt), '전달 ')] },
+      { l: '위판 물량', sub: '위판중량 합계', ic: 'drop', col: '#0F8A8A', bg: '#DDF3F2', v: fmt((C.kg || 0) / 1000, 1), u: '톤',
+        chips: [chip(pct(C.kg, PC && PC.kg), '전년 같은 달 ')] },
+      { l: '강원 수협 중', sub: '위판 금액 순위', ic: 'trend', col: '#7A4FC4', bg: '#EFE9FB', v: rk ? rk + '위' : '–', u: '/ ' + codes.length,
+        chips: [['강원 7개 수협 합계 ' + fmt(codes.reduce(function (t, c) { return t + (CO[c].amt || 0); }, 0) / 1e8, 1) + '억원', 'navy']] },
+      { l: '가장 많이 판 어종', sub: '금액 기준', ic: 'pin', col: '#C0602B', bg: '#FDEBDD', v: top || '–', u: '',
+        chips: [top ? [fmt(C.sp[top][0] / 1e6, 0) + '백만원 · ' + fmt(C.sp[top][1] / 1000, 1) + '톤', ''] : null] },
+      { l: '위판한 날', sub: ymL, ic: 'sun', col: '#2E8B57', bg: '#E2F3E9', v: fmt(days.length, 0), u: '일',
+        chips: [days.length ? ['하루 평균 ' + fmt(C.amt / days.length / 1e6, 1) + '백만원', ''] : null] }
+    ]);
+    // 강원 수협 비교
+    var cb = el('div', { class: 'rows wide' }), mx = Math.max.apply(null, codes.map(function (c) { return CO[c].amt || 0; }).concat([1]));
+    codes.forEach(function (c, i) {
+      cb.appendChild(el('div', { class: 'row' + (c === wpSel ? ' sel' : ''), 'data-fit': '1', style: 'flex:none', onclick: function () { wpSel = (wpSel === c ? WP.me : c); render(); } }, [
+        el('span', { class: 'rk', text: String(i + 1) }), el('span', { text: short(CO[c].name) }),
+        el('div', { class: 'bar' }, [el('div', { style: 'width:' + ((CO[c].amt || 0) / mx * 100).toFixed(1) + '%;background:' + (c === WP.me ? '#1F6FD1' : '#8FB2E0') })]), el('span', { class: 'v', text: fmt(CO[c].amt / 1e8, 1) + '억' })]));
+    });
+    var p1 = panel('강원 수협 위판 금액', ymL + ' · 억원 · 누르면 그 수협', cb); p1.style.gridRow = '3 / span 2';
+    // 월별 추이(올해 vs 작년)
+    var Y = ym ? ym.slice(0, 4) : '', PY = String(+Y - 1), mm = []; for (var i = 1; i <= 12; i++) mm.push(('0' + i).slice(-2));
+    function mval(y, m) { var r = MS[y + m]; var c = r && (r.coops || {})[wpSel]; return c ? c.amt / 1e8 : null; }
+    panel('월별 위판 금액 · ' + short(C.name), PY + '년과 ' + Y + '년 · 억원', lineChart(mm.map(function (m) { return +m + '월'; }), [
+      { name: PY + '년', color: '#8FB2E0', width: 2, values: mm.map(function (m) { return mval(PY, m); }) },
+      { name: Y + '년', color: '#1F6FD1', width: 3, values: mm.map(function (m) { return mval(Y, m); }) }], { fit: true, d: 1 }));
+    // 어종별
+    var p3 = panel('어종별 위판 금액 · ' + short(C.name), ymL + ' · 백만원 · 괄호는 물량', agBars(spk.slice(0, 14).map(function (k) { return [k + ' (' + fmt(C.sp[k][1] / 1000, 1) + '톤)', C.sp[k][0] / 1e6, 0]; }), '', '#C0602B'));
+    p3.style.gridRow = '3 / span 2'; p3.style.gridColumn = '3';
+    // 일별(동해시수협만 일별 보관)
+    var dk = Object.keys(C.days || {}).sort();
+    panel('날짜별 위판 금액 · ' + short(C.name), ymL + ' · 백만원', dk.length ? lineChart(dk.map(function (d) { return +d.slice(8) + '일'; }), [{ name: '', color: '#1F6FD1', area: true, width: 3, values: dk.map(function (d) { return C.days[d][0] / 1e6; }) }], { fit: true, step: 3 }) : el('div', { class: 'empty', text: isMe ? '자료 없음' : '날짜별은 동해시수협만 봅니다' }));
   }
 
   var SCREENS = { agri: screenAgriTabs, flow: screenFlow, main: screenMain, admin: screenAdminTabs, welfare: screenWelfareTabs, social: screenSocial, traffic: screenTrafficTabs, env: screenEnvTabs, water: screenWater, power: screenPower, land: function () { window.DHLand.screen({ el: el, panel: panel, view: view, render: render, D: D, baseLayer: baseLayer, rankList: rankList }); }, tour: screenTourTabs, economy: screenEconomyTabs, finance: screenFinance, frame: screenFrame };

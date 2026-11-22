@@ -18,6 +18,7 @@ import power  # noqa: E402
 import admin_sync  # noqa: E402
 import landlaw  # noqa: E402
 import agri  # noqa: E402
+import wipan  # noqa: E402
 from rank import rank  # noqa: E402
 
 STATE = os.path.join(WEB_DATA, 'state.json')
@@ -278,6 +279,14 @@ def collect(state, S, C):
             ok(state, 'agri', ', '.join('%s %s' % (k, v['year']) for k, v in L['agri']['tables'].items()) + (' · 실패 %s' % list(L['agri']['errors']) if L['agri']['errors'] else ''))
         except Exception as e:  # noqa: BLE001
             fail(state, 'agri', e)
+    # 수협 위판(동해시수협 등 강원 7개 수협, 달마다) — 하루 1번 확인, 덜 받은 달이 있으면 이어서
+    WP = L.get('wipan') or {}
+    if stale('wipan', 1) or WP.get('errors') or len(WP.get('months') or {}) < wipan.KEEP_ME or '--force-wipan' in sys.argv:
+        try:
+            L['wipan'] = wipan.collect(WP)
+            ok(state, 'wipan', '%s 기준 %d개월' % (L['wipan']['ym'], len(L['wipan']['months'])) + (' · 이어 받을 달 %s' % list(L['wipan']['errors']) if L['wipan']['errors'] else ''))
+        except Exception as e:  # noqa: BLE001
+            fail(state, 'wipan', e)
     AG = (L.get('agri') or {}).get('tables') or {}
     def _ag(k, item, lab, f=None):
         t = AG.get(k)
@@ -700,7 +709,7 @@ def build(state, S, C):
     # 분야 화면이 비면 메뉴에서 숨김
     has_fin = any(i['id'] == 'fin_indep' for i in out['indicators'])
     L = out.get('life') or {}
-    need = {'wx_year': L.get('wx_year'), 'stores': L.get('stores'), 'water': L.get('water'), 'social': L.get('social'), 'economy': L.get('economy'), 'welfare': L.get('hospitals'), 'traffic': L.get('ev') or L.get('cars'), 'env': L.get('air'), 'power': L.get('power'), 'land': L.get('ordin'), 'tour': L.get('visit_months'), 'agri': (L.get('agri') or {}).get('tables')}
+    need = {'wx_year': L.get('wx_year'), 'stores': L.get('stores'), 'water': L.get('water'), 'social': L.get('social'), 'economy': L.get('economy'), 'welfare': L.get('hospitals'), 'traffic': L.get('ev') or L.get('cars'), 'env': L.get('air'), 'power': L.get('power'), 'land': L.get('ordin'), 'tour': L.get('visit_months'), 'agri': (L.get('agri') or {}).get('tables') or (L.get('wipan') or {}).get('months')}
     out['menu'] = [m for m in out['menu'] if not (m['id'] == 'finance' and not has_fin) and not (m['id'] in ('admin', 'compare') and not out['admin'])
                    and not (m['id'] in need and not need[m['id']])]
     return out
