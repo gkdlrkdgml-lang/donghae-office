@@ -418,6 +418,27 @@ def annex_probe():
         say('[annex] 시행령 실패 %s' % str(e)[:300])
 
 
+def lofinlist_probe():
+    import urllib.request, re as R, zipfile, io
+    h = {'User-Agent': 'Mozilla/5.0'}
+    t = urllib.request.urlopen(urllib.request.Request('https://www.data.go.kr/data/15160375/fileData.do', headers=h), timeout=40).read().decode('utf-8', 'replace')
+    ids = sorted(set(R.findall(r"(FILE_\d{6,})", t)))
+    say('[LL] 파일 id %s' % ids[:5])
+    sn = R.findall(r"fileDetailSn[^0-9]{0,10}(\d+)", t)[:3]
+    for fid in ids[:2]:
+        for u in ('https://www.data.go.kr/cmm/cmm/fileDownload.do?atchFileId=%s&fileDetailSn=1' % fid,):
+            try:
+                d = urllib.request.urlopen(urllib.request.Request(u, headers=h), timeout=60).read()
+                say('[LL] 받음 %d바이트 %r' % (len(d), d[:4]))
+                z = zipfile.ZipFile(io.BytesIO(d))
+                ss = R.findall(r'<t[^>]*>([^<]*)</t>', z.read('xl/sharedStrings.xml').decode('utf-8'))
+                for x in ss:
+                    if R.search(r'세입|세출|hub|lf/', x):
+                        say('[LL] ' + x[:200])
+            except Exception as e:  # noqa: BLE001
+                say('[LL] 실패 %s %s' % (u, str(e)[:150]))
+
+
 def lofin_probe():
     import sources
     S, C = settings(), codes()
@@ -513,6 +534,8 @@ def main():
     if os.environ.get('PROBE_ONLY') == 'lock':
         lock_probe(); return
     load_env()
+    if os.environ.get('PROBE_ONLY') == 'lofinlist':
+        lofinlist_probe(); return
     if os.environ.get('PROBE_ONLY') == 'lofin':
         lofin_probe(); return
     if os.environ.get('PROBE_ONLY') == 'bld':
