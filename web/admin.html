@@ -105,7 +105,10 @@
       <label>15~64세 <small>명 · 생산연령 비율 계산</small><input class="num" data-s="pop" data-k="age15_64"></label>
     </div>
     <div class="warn" id="popWarn"></div>
-    <details style="margin-top:12px"><summary>동별 인구·세대 (선택)</summary>
+    <details style="margin-top:12px" open><summary>행정동 인구 (선택 · 시장실 「행정동 3D 지도」와 행정동 표에 반영)</summary>
+      <table class="dongs"><thead><tr><th>행정동</th><th>인구(명)</th><th>65세 이상(명)</th><th>공식 최신</th></tr></thead><tbody id="admmBody"></tbody></table>
+    </details>
+    <details style="margin-top:12px"><summary>법정동 인구·세대 (선택 · 인구 비교 화면의 법정동 표에 반영)</summary>
       <table class="dongs"><thead><tr><th>동</th><th>인구(명)</th><th>세대</th><th>공식 최신</th></tr></thead><tbody id="dongBody"></tbody></table>
     </details>
   </section>
@@ -268,7 +271,12 @@
     D = window.DONGHAE_DATA || {}; var A = D.admin || {}, mo = (A.official_me) || (A.regions || {})[D.me] || {};
     var ym = A.live ? A.live.official_ym : A.ym;
     if (ym) { var lab = ym.slice(0, 4) + '년 ' + Number(ym.slice(4)) + '월'; $('popOff').textContent = '공식 최신(' + lab + ' 주민등록): 총인구 ' + fmt(mo.total) + '명 · 세대 ' + fmt(mo.hh) + ' · 남 ' + fmt(mo.male) + ' · 여 ' + fmt(mo.female); $('offInfo').textContent = '공식 자료 ' + lab; }
-    var body = $('dongBody'); Object.keys(A.dongs || {}).forEach(function (nm) {
+    var ab = $('admmBody'); ab.innerHTML = ''; Object.keys(A.admm || {}).forEach(function (nm) {
+      var o = A.admm[nm], tr = document.createElement('tr');
+      tr.innerHTML = '<td>' + esc(nm) + '</td><td><input class="num" data-admm="' + esc(nm) + '" data-k="total"></td><td><input class="num" data-admm="' + esc(nm) + '" data-k="age65"></td><td class="off">' + fmt(o.total) + '명 · 고령 ' + (o.elderly != null ? Number(o.elderly).toFixed(1) + '%' : '–') + '</td>';
+      ab.appendChild(tr);
+    });
+    var body = $('dongBody'); body.innerHTML = ''; Object.keys(A.dongs || {}).forEach(function (nm) {
       var o = A.dongs[nm]; var tr = document.createElement('tr');
       tr.innerHTML = '<td>' + esc(nm) + '</td><td><input class="num" data-dong="' + esc(nm) + '" data-k="total"></td><td><input class="num" data-dong="' + esc(nm) + '" data-k="hh"></td><td class="off">' + fmt(o.total) + '명 · ' + fmt(o.hh) + '세대</td>';
       body.appendChild(tr);
@@ -290,6 +298,11 @@
       var v = num(inp.value); if (v == null) return; if (isNaN(v)) { bad.push(inp.getAttribute('data-dong')); return; }
       ((e.dong = e.dong || {})[inp.getAttribute('data-dong')] = e.dong[inp.getAttribute('data-dong')] || {})[inp.getAttribute('data-k')] = v;
     });
+    if (canSec('dong')) document.querySelectorAll('[data-admm]').forEach(function (inp) {   // 행정동은 dong 안 _admm에
+      var v = num(inp.value); if (v == null) return; if (isNaN(v)) { bad.push(inp.getAttribute('data-admm')); return; }
+      var nm = inp.getAttribute('data-admm'); e.dong = e.dong || {}; e.dong._admm = e.dong._admm || {};
+      (e.dong._admm[nm] = e.dong._admm[nm] || {})[inp.getAttribute('data-k')] = v;
+    });
     return { e: e, bad: bad };
   }
   document.addEventListener('input', function () {
@@ -309,10 +322,11 @@
     return Object.keys(m).sort().reverse().map(function (k) { return m[k]; });
   }
   function fill(e) {
-    document.querySelectorAll('[data-s],[data-dong]').forEach(function (inp) { inp.value = ''; });
+    document.querySelectorAll('[data-s],[data-dong],[data-admm]').forEach(function (inp) { inp.value = ''; });
     $('date').value = e.date;
     document.querySelectorAll('[data-s]').forEach(function (inp) { var v = (e[inp.getAttribute('data-s')] || {})[inp.getAttribute('data-k')]; if (v != null) inp.value = v; });
     document.querySelectorAll('[data-dong]').forEach(function (inp) { var v = ((e.dong || {})[inp.getAttribute('data-dong')] || {})[inp.getAttribute('data-k')]; if (v != null) inp.value = v; });
+    document.querySelectorAll('[data-admm]').forEach(function (inp) { var v = (((e.dong || {})._admm || {})[inp.getAttribute('data-admm')] || {})[inp.getAttribute('data-k')]; if (v != null) inp.value = v; });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
   // ---------- 시장실 반영 상태

@@ -762,9 +762,11 @@ function startApp() {
     var diff = me.prev ? me.total - me.prev : null;
     var dm = me.prev_m ? me.total - me.prev_m : null;
     function sgn(v) { return (v >= 0 ? '+' : '') + fmt(v, 0); }
+    var liveIn = isMe && A.live && A.live.date;   // 동해시는 관리자 입력(공식 최신 달보다 늦은 기준일)이 쓰이는 중
+    var mLab = liveIn ? ymLabel(A.ym).replace(/^\d+년 /, '') + '보다' : '지난달보다', yLab = liveIn ? ymLabel(A.prev_ym) + '보다' : '1년 새';
     view.appendChild(el('div', { class: 'title' }, [
-      el('h1', { text: full + ' 인구 ' + fmt(me.total, 0) + '명' + (dm != null ? ' · 지난달보다 ' + sgn(dm) + '명' : '') + (diff != null ? ' · 1년 새 ' + sgn(diff) + '명' : '') }),
-      el('span', { text: (isMe ? '왼쪽 시·군을 누르면 그 지역 지표로 바뀝니다 · ' : '다시 누르면 동해시로 돌아옵니다 · ') + '행정안전부 주민등록 인구 · ' + ymLabel(A.ym) + ' 기준' })
+      el('h1', { text: full + ' 인구 ' + fmt(me.total, 0) + '명' + (dm != null ? ' · ' + mLab + ' ' + sgn(dm) + '명' : '') + (diff != null ? ' · ' + yLab + ' ' + sgn(diff) + '명' : '') }),
+      el('span', { text: (isMe ? '왼쪽 시·군을 누르면 그 지역 지표로 바뀝니다 · ' : '다시 누르면 동해시로 돌아옵니다 · ') + (liveIn ? '동해시는 ' + A.live.date + ' 기준 관리자 입력 · 다른 시·군은 행정안전부 주민등록 ' + ymLabel(A.ym) : '행정안전부 주민등록 인구 · ' + ymLabel(A.ym) + ' 기준') })
     ]));
     var k = el('div', { class: 'pr1 fin' });
     var cn = 0, CIC = [['people', '#fff', 'rgba(255,255,255,.18)'], ['trend', '#7A4FC4', '#EFE9FB'], ['house', '#2E8B57', '#E2F3E9'], ['youth', '#1F6FD1', '#E4EEFB'], ['senior', '#1B7A6B', '#E0F2EE']];
@@ -781,7 +783,7 @@ function startApp() {
     function jt(j) { return j === 'strong' ? 'good' : j === 'weak' ? 'bad' : j === 'excluded' ? 'mute' : 'navy'; }
     function jchip(j) { return j === 'strong' ? 'good' : j === 'weak' ? 'bad' : ''; }
     var ac = AG;
-    kpi('총인구', '', fmt(me.total, 0), '명', 'navy', [dm != null ? ['전월 ' + sgn(dm) + '명', up(dm)] : null, diff != null ? ['전년 ' + sgn(diff) + '명', up(diff)] : null]);
+    kpi('총인구', liveIn ? A.live.date + ' 관리자 입력' : '', fmt(me.total, 0), '명', 'navy', [dm != null ? [(liveIn ? ymLabel(A.ym).replace(/^\d+년 /, '') + ' 대비 ' : '전월 ') + sgn(dm) + '명', up(dm)] : null, diff != null ? [(liveIn ? ymLabel(A.prev_ym) + ' 대비 ' : '전년 ') + sgn(diff) + '명', up(diff)] : null]);
     kpi('인구 증감률', '전년 같은 달 대비', pc && pc.me ? fmt(pc.me.value, 2) : '–', '%', pc && pc.me ? jt(pc.me.judge) : 'mute',
       pc && pc.me ? [['도내 ' + pc.me.rank + '위 / ' + pc.n, jchip(pc.me.judge)], pc.me.judge === 'weak' ? ['하위 25%', 'bad'] : pc.me.judge === 'strong' ? ['상위 25%', 'good'] : null] : [], true);
     kpi('세대수', '', fmt(me.hh, 0), '세대', 'navy', [me.prev_m_hh ? ['전월 ' + sgn(me.hh - me.prev_m_hh) + '세대', up(me.hh - me.prev_m_hh)] : null, me.hh ? ['세대당 ' + fmt(me.total / me.hh, 2) + '명', ''] : null]);
@@ -992,7 +994,7 @@ function startApp() {
       old: { t: '고령 비율', u: '%', c: ['#F6CBA5', '#E8873F', '#B4531B'], d: 1, v: function (d) { return M[d].elderly; } },
       one: { t: '1인가구', u: '세대', c: ['#CDBDF0', '#7A4FC4', '#4E2A8E'], d: 0, v: function (d) { var h = ((V.hsmb || {}).dong || {})[d]; return h ? h.one : null; } },
       birth: { t: '출생', u: '명', c: ['#A9DCC0', '#2E8B57', '#1B5E3A'], d: 0, v: function (d) { var h = ((V.birth || {}).dong || {})[d]; return h ? h.total : null; } },
-      chg: { t: '지난달 대비', u: '명', c: ['#A9DCC0', '#2E8B57', '#C0392B'], d: 0, signed: true, v: function (d) { return M[d].prev_total != null ? M[d].total - M[d].prev_total : null; } }
+      chg: { t: A.admm_live ? '공식 최신 달 대비' : '지난달 대비', u: '명', c: ['#A9DCC0', '#2E8B57', '#C0392B'], d: 0, signed: true, v: function (d) { return M[d].prev_total != null ? M[d].total - M[d].prev_total : null; } }
     };
     Object.keys(MET).forEach(function (k) { if (dongs.every(function (d) { return MET[k].v(d) == null; })) delete MET[k]; });
     if (!MET[m3Metric]) m3Metric = 'pop';
@@ -1003,7 +1005,8 @@ function startApp() {
     var ymTxt = m3Metric === 'one' || m3Metric === 'birth' ? ymLabel(V.ym) : ymLabel(A.admm_ym || A.ym);
     view.style.gridTemplateColumns = 'minmax(0, 1.55fr) minmax(0, 1fr)';
     view.style.gridTemplateRows = '44px minmax(0, 1fr)';
-    view.appendChild(el('div', { class: 'title' }, [el('h1', { text: D.me + '시 행정동 ' + mt.t + ' 3D 지도' }), el('span', { class: 'basis', text: '행정안전부 주민등록 · ' + ymTxt + ' 기준' })]));
+    var AL = A.admm_live, liveM = AL && (m3Metric === 'pop' || m3Metric === 'old' || m3Metric === 'chg');
+    view.appendChild(el('div', { class: 'title' }, [el('h1', { text: D.me + '시 행정동 ' + mt.t + ' 3D 지도' }), el('span', { class: 'basis', text: liveM ? AL.date + ' 기준 관리자 입력' + (m3Metric === 'chg' ? ' · 공식 ' + ymLabel(AL.official_ym) + ' 대비' : ' (입력 안 한 동은 공식 ' + ymLabel(AL.official_ym) + ')') : '행정안전부 주민등록 · ' + ymTxt + ' 기준' })]));
     function colorOf(d) {
       var v = vals[d] || 0;
       if (mt.signed) return v < 0 ? '#D9534F' : v > 0 ? '#2E8B57' : '#B8C4D4';

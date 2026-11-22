@@ -627,8 +627,26 @@ def apply_admin_input(state, S):
                     I['values'] = dict(I['values'])
                     I['values'][me] = float(v[k]) / tot * 100
                     I['basis'] = I['basis'] + ' · 동해시는 %s 관리자 입력' % d
+    if A and live.get('dong') and A.get('admm'):
+        # 행정동(3D 지도·행정동 표): 인구, 65세 이상 → 고령 비율. 「지난달 대비」는 공식 최신 달 값과 비교
+        A['admm'] = {k: dict(v) for k, v in A['admm'].items()}
+        for nm, dv in ((live['dong']['v'] or {}).get('_admm') or {}).items():
+            if nm in A['admm'] and dv.get('total') is not None:
+                o = A['admm'][nm]
+                o['prev_total'] = o.get('total')
+                o['total'] = float(dv['total'])
+                if dv.get('age65') is not None and o['total']:
+                    o['elderly'] = float(dv['age65']) / o['total'] * 100
+        _in = (live['dong']['v'] or {}).get('_admm') or {}
+        if _in:
+            A['admm_live'] = {'date': live['dong']['date'], 'official_ym': A.get('admm_ym') or A.get('ym')}
+            for nm, o in A['admm'].items():   # 입력 안 한 동은 「공식 최신 달 대비」를 낼 수 없어 비움
+                if nm not in _in or (_in[nm] or {}).get('total') is None:
+                    o['prev_total'] = None
     if A and live.get('dong') and A.get('dongs'):
         for nm, dv in live['dong']['v'].items():
+            if nm == '_admm' or not isinstance(dv, dict):
+                continue
             if nm in A['dongs'] and dv.get('total') is not None:
                 A['dongs'][nm] = {'total': float(dv['total']), 'hh': float(dv.get('hh') or A['dongs'][nm].get('hh') or 0)}
     st['admin_live'] = live
