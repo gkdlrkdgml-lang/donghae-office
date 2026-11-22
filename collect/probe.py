@@ -419,27 +419,30 @@ def annex_probe():
 
 
 def busco_probe():
-    import urllib.request, urllib.parse, re as R
+    import urllib.request, urllib.parse
     key = urllib.parse.unquote(os.environ.get('DATA_GO_KR_KEY', ''))
-    h = {'User-Agent': 'Mozilla/5.0'}
-    t = urllib.request.urlopen(urllib.request.Request('https://www.data.go.kr/data/15139231/standard.do', headers=h), timeout=40).read().decode('utf-8', 'replace')
-    eps = sorted(set(R.findall(r'(tn_pubr_[a-z_]+api)', t)))
-    say('[BC] 페이지 endpoint %s' % eps)
-    for ep in eps + ['tn_pubr_public_bus_cmpny_api', 'tn_pubr_public_bus_entrps_api', 'tn_pubr_public_bus_company_api', 'tn_pubr_public_bus_bizes_api']:
-        for prm in ({}, {'ctprvnNm': '강원특별자치도'}):
-            u = 'https://api.data.go.kr/openapi/%s?' % ep + urllib.parse.urlencode(dict({'serviceKey': key, 'pageNo': 1, 'numOfRows': 100, 'type': 'json'}, **prm))
-            try:
-                x = urllib.request.urlopen(urllib.request.Request(u, headers=h), timeout=40).read().decode('utf-8', 'replace')
-                say('[BC] %s %s → %s' % (ep, prm, x[:700]))
-                if '"items"' in x:
-                    j = json.loads(x); it = j['response']['body']['items']
-                    say('[BC]   총 %s' % j['response']['body'].get('totalCount'))
-                    for r in it:
-                        if '강원' in json.dumps(r, ensure_ascii=False):
-                            say('[BC]   ' + json.dumps(r, ensure_ascii=False)[:300])
-                    break
-            except Exception as e:  # noqa: BLE001
-                say('[BC] %s %s 실패 %s' % (ep, prm, str(e)[:120]))
+    ep = 'https://api.data.go.kr/openapi/tn_pubr_public_bus_corp_api'
+    rows, page = [], 1
+    while page <= 30:
+        u = ep + '?' + urllib.parse.urlencode({'serviceKey': key, 'pageNo': page, 'numOfRows': 1000, 'type': 'json'})
+        try:
+            j = json.loads(urllib.request.urlopen(u, timeout=60).read().decode('utf-8'))
+        except Exception as e:  # noqa: BLE001
+            say('[BC] %d쪽 실패 %s' % (page, str(e)[:200])); break
+        b = j['response']['body']; it = b.get('items') or []
+        if page == 1:
+            say('[BC] 총 %s 키 %s' % (b.get('totalCount'), list(it[0].keys()) if it else None))
+        rows += it
+        if len(it) < 1000:
+            break
+        page += 1
+    gw = [r for r in rows if '강원' in str(r.get('ctprvnNm'))]
+    say('[BC] 강원 %d건' % len(gw))
+    from collections import Counter
+    say('[BC] 운영구분 %s' % Counter(r.get('operSeNm') or r.get('opratSeNm') or str({k: v for k, v in r.items() if 'Se' in k}) for r in rows).most_common(12))
+    say('[BC] 강원 시군 %s' % Counter(r.get('signguNm') for r in gw).most_common(20))
+    for r in gw:
+        say('[BC]   ' + json.dumps(r, ensure_ascii=False)[:400])
 
 
 def rebuild_probe():
