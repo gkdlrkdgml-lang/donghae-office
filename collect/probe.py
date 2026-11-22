@@ -418,6 +418,30 @@ def annex_probe():
         say('[annex] 시행령 실패 %s' % str(e)[:300])
 
 
+def busco_probe():
+    import urllib.request, urllib.parse, re as R
+    key = urllib.parse.unquote(os.environ.get('DATA_GO_KR_KEY', ''))
+    h = {'User-Agent': 'Mozilla/5.0'}
+    t = urllib.request.urlopen(urllib.request.Request('https://www.data.go.kr/data/15139231/standard.do', headers=h), timeout=40).read().decode('utf-8', 'replace')
+    eps = sorted(set(R.findall(r'(tn_pubr_[a-z_]+api)', t)))
+    say('[BC] 페이지 endpoint %s' % eps)
+    for ep in eps + ['tn_pubr_public_bus_cmpny_api', 'tn_pubr_public_bus_entrps_api', 'tn_pubr_public_bus_company_api', 'tn_pubr_public_bus_bizes_api']:
+        for prm in ({}, {'ctprvnNm': '강원특별자치도'}):
+            u = 'https://api.data.go.kr/openapi/%s?' % ep + urllib.parse.urlencode(dict({'serviceKey': key, 'pageNo': 1, 'numOfRows': 100, 'type': 'json'}, **prm))
+            try:
+                x = urllib.request.urlopen(urllib.request.Request(u, headers=h), timeout=40).read().decode('utf-8', 'replace')
+                say('[BC] %s %s → %s' % (ep, prm, x[:700]))
+                if '"items"' in x:
+                    j = json.loads(x); it = j['response']['body']['items']
+                    say('[BC]   총 %s' % j['response']['body'].get('totalCount'))
+                    for r in it:
+                        if '강원' in json.dumps(r, ensure_ascii=False):
+                            say('[BC]   ' + json.dumps(r, ensure_ascii=False)[:300])
+                    break
+            except Exception as e:  # noqa: BLE001
+                say('[BC] %s %s 실패 %s' % (ep, prm, str(e)[:120]))
+
+
 def rebuild_probe():
     import urllib.request, urllib.error, re as R
     key = os.environ.get('SUPABASE_SERVICE_KEY', '').strip()
@@ -531,6 +555,8 @@ def main():
     if os.environ.get('PROBE_ONLY') == 'lock':
         lock_probe(); return
     load_env()
+    if os.environ.get('PROBE_ONLY') == 'busco':
+        busco_probe(); return
     if os.environ.get('PROBE_ONLY') == 'rebuild':
         rebuild_probe(); return
     if os.environ.get('PROBE_ONLY') == 'lofinlist':
