@@ -24,7 +24,9 @@ async function roleOf(req: Request): Promise<string | null> {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json({ error: "POST만 됩니다" }, 405);
-  const role = await roleOf(req);
+  const svc = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+  const isSvc = !!svc && (req.headers.get("authorization") || "") === "Bearer " + svc;   // 점검(수집기 서버 키)
+  const role = isSvc ? "super" : await roleOf(req);
   if (role !== "admin" && role !== "super") return json({ error: "승인된 관리자만 쓸 수 있습니다" }, 401);
   const tok = Deno.env.get("GH_DISPATCH_TOKEN") || "";
   if (!tok) return json({ error: "no_token" }, 503);

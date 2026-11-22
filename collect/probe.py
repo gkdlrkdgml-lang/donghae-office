@@ -418,6 +418,17 @@ def annex_probe():
         say('[annex] 시행령 실패 %s' % str(e)[:300])
 
 
+def rebuild_probe():
+    import urllib.request, urllib.error, re as R
+    key = os.environ.get('SUPABASE_SERVICE_KEY', '').strip()
+    base = R.search(r"url:\s*'([^']+)'", open(os.path.join(ROOT, 'web', 'admin-config.js'), encoding='utf-8').read()).group(1).rstrip('/')
+    req = urllib.request.Request(base + '/functions/v1/rebuild', data=b'{}', method='POST', headers={'Authorization': 'Bearer ' + key, 'apikey': key, 'Content-Type': 'application/json'})
+    try:
+        say('[RB] %s' % urllib.request.urlopen(req, timeout=60).read().decode()[:300])
+    except urllib.error.HTTPError as e:
+        say('[RB] HTTP %s %s' % (e.code, e.read()[:300].decode('utf-8', 'replace')))
+
+
 def lofinlist_probe():
     import sources
     S, C = settings(), codes()
@@ -520,6 +531,8 @@ def main():
     if os.environ.get('PROBE_ONLY') == 'lock':
         lock_probe(); return
     load_env()
+    if os.environ.get('PROBE_ONLY') == 'rebuild':
+        rebuild_probe(); return
     if os.environ.get('PROBE_ONLY') == 'lofinlist':
         lofinlist_probe(); return
     if os.environ.get('PROBE_ONLY') == 'lofin':
