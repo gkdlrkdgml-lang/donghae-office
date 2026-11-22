@@ -72,8 +72,13 @@
   // ---------- 화면 ----------
   var css = document.createElement('style');
   css.textContent =
-    '#dhAideBtn{flex:none;width:42px;height:42px;margin-right:10px;padding:0;border:2px solid #C9D8EE;border-radius:50%;background:#E4EEFB url(img/aide_face.webp) center 45%/100% no-repeat;cursor:pointer;vertical-align:middle}' +
-    '#dhAideBtn:hover{border-color:#2F6DB5}body.dh-noaide #dhAideBtn{display:none}' +
+    '#dhAideBtn{position:fixed;right:10px;bottom:4px;z-index:850;display:flex;align-items:flex-end;gap:2px;border:0;background:none;padding:0;cursor:pointer;font-family:inherit}' +
+    '#dhAideBtn img{height:150px;display:block;filter:drop-shadow(0 6px 10px rgba(27,58,107,.25));animation:dhBob 3.2s ease-in-out infinite}' +
+    '#dhAideBtn .say{position:relative;margin-bottom:80px;background:#fff;border:1.5px solid #C9D8EE;border-radius:16px;padding:9px 14px;text-align:left;box-shadow:0 6px 18px rgba(27,58,107,.18);white-space:nowrap;transition:opacity .4s}' +
+    '#dhAideBtn .say:after{content:"";position:absolute;right:-8px;bottom:14px;border:8px solid transparent;border-left-color:#fff;border-right:0}' +
+    '#dhAideBtn .say b{display:block;font-size:13px;color:#2F6DB5;letter-spacing:.5px}' +
+    '#dhAideBtn .say span{font-size:15px;font-weight:700;color:#1B3A6B}' +
+    '#dhAideBtn:hover .say{border-color:#2F6DB5}body.dh-noaide #dhAideBtn{display:none}body:not(.dh-noaide) .help{right:100px!important}' +
     '#dhAide{position:fixed;inset:0;z-index:900;display:none;align-items:center;justify-content:center;background:rgba(20,35,60,.35);font-family:"Pretendard","Malgun Gothic",system-ui,sans-serif}' +
     '#dhAide.open{display:flex}' +
     '#dhAide .box{width:760px;max-width:94vw;height:620px;max-height:88vh;background:#fff;border-radius:22px;box-shadow:0 18px 60px rgba(27,58,107,.35);display:flex;overflow:hidden}' +
@@ -95,9 +100,10 @@
     '@keyframes dhBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}';
   document.head.appendChild(css);
 
-  // 위쪽 줄(시계 옆)의 작은 단추 → 누르면 가운데에 대화창
+  // 오른쪽 아래에 비서실장(전신) + 말풍선 → 누르면 가운데에 대화창
   var btn = document.createElement('button');
-  btn.id = 'dhAideBtn'; btn.type = 'button'; btn.title = 'AI 비서실장'; btn.setAttribute('aria-label', 'AI 비서실장');
+  btn.id = 'dhAideBtn'; btn.type = 'button'; btn.setAttribute('aria-label', 'AI 비서실장 열기');
+  btn.innerHTML = '<div class="say"><b>AI 비서실장</b><span>저를 누르시면 원하시는 화면으로 모시겠습니다</span></div><img src="img/aide.webp" alt="">';
   var root = document.createElement('div');
   root.id = 'dhAide';
   root.innerHTML =
@@ -106,8 +112,7 @@
     '<div class="log"></div><div class="qk"></div>' +
     '<form><input placeholder="예: 인구는 어디서 봐요?" autocomplete="off"><button type="submit">묻기</button></form></div></div>';
   function mount() {
-    var hr = document.querySelector('header .hright');
-    if (hr && !hr.contains(btn)) hr.insertBefore(btn, hr.firstChild);
+    if (!document.body.contains(btn)) document.body.appendChild(btn);
     if (!document.body.contains(root)) document.body.appendChild(root);
   }
   if (document.body) mount(); else document.addEventListener('DOMContentLoaded', mount);
