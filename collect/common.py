@@ -100,7 +100,7 @@ def http_get(url, params, tries=3, timeout=30):
     raise RuntimeError('호출 실패: %s (%s)' % (url, last))
 
 
-def kr_get(url, params, timeout=70):
+def kr_get(url, params, timeout=70, post=False):
     """해외에서 막히는 국내 사이트를 Supabase 중계(서울 지역)로 불러옵니다(supabase/functions/kr)."""
     import re as _re
     key = os.environ.get('SUPABASE_SERVICE_KEY', '').strip()
@@ -108,7 +108,7 @@ def kr_get(url, params, timeout=70):
         raise RuntimeError('SUPABASE_SERVICE_KEY 없음(국내 중계 불가)')
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     base = _re.search(r"url:\s*'([^']+)'", open(os.path.join(root, 'web', 'admin-config.js'), encoding='utf-8').read()).group(1).rstrip('/')
-    body = json.dumps({'url': url, 'params': {k: str(v) for k, v in params.items()}}).encode()
+    body = json.dumps({'url': url, 'params': {k: str(v) for k, v in params.items()}, 'post': post}).encode()
     last = None
     for i in range(2):
         try:
