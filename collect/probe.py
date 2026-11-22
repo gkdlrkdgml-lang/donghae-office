@@ -427,9 +427,11 @@ def kbus_probe():
             rows = json.loads(urllib.request.urlopen(u, timeout=60).read().decode('utf-8'))
             if not isinstance(rows, list) or not rows: break
             if pg == 1: say('[KB] 키 %s' % list(rows[0].keys()))
+            import re as R
             for r in rows:
-                if '운수업체' in (r.get('TBL_NM') or ''):
-                    say('[KB] %s | %s | %s | %s | %s~%s' % (r.get('ORG_ID'), r.get('ORG_NM'), r.get('TBL_ID'), r.get('STAT_NM'), r.get('STRT_PRD_DE'), r.get('END_PRD_DE')))
+                tn = R.sub(r'<[^>]+>', '', r.get('TBL_NM') or '')
+                if '운수' in tn or '버스' in tn:
+                    say('[KB] %s | %s | %s | %s | %s | %s~%s' % (r.get('ORG_ID'), R.sub(r'<[^>]+>', '', r.get('ORG_NM') or ''), r.get('TBL_ID'), tn, R.sub(r'<[^>]+>', '', r.get('STAT_NM') or ''), r.get('STRT_PRD_DE'), r.get('END_PRD_DE')))
 
 
 def busco_probe():
