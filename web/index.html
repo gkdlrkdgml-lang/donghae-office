@@ -35,8 +35,8 @@
   .brand .emblem { height: 34px; width: auto; display: block; }
   .brand .emblink { display: block; cursor: default; -webkit-tap-highlight-color: transparent; outline: none; }
   .brand i { width: 38px; height: 38px; border-radius: 8px; background: var(--blue); display: inline-block; }
-  nav { display: flex; gap: 2px; }
-  nav button { font: inherit; font-size: 14.5px; color: var(--sub); background: none; border: 0; padding: 8px 5px; white-space: nowrap; border-radius: 6px; cursor: pointer; min-height: 40px; }
+  nav { display: flex; gap: 7px; }
+  nav button { font: inherit; font-size: 14.5px; color: var(--sub); background: none; border: 0; padding: 8px 6px; white-space: nowrap; border-radius: 6px; cursor: pointer; min-height: 40px; }
   nav button[aria-current="page"] { background: var(--blue); color: #fff; font-weight: 700; }
   .hright { display: flex; align-items: center; gap: 14px; font-size: 14px; color: var(--sub); }
   .badge { padding: 5px 10px; border-radius: 999px; font-size: 13px; }
@@ -459,7 +459,7 @@ function startApp() {
           el('div', { class: 'fill', style: 'height:' + h + '%;background:' + judgeColor(m.judge) }),
           el('div', { class: 'lbl' }, [(m.rank ? m.rank + '위' : '–'), el('small', { style: 'white-space:nowrap' }, ['/ ' + i.n, el('br'), fmt(m.value, i.digits) + i.unit])])
         ]),
-        el('div', { class: 'pname', text: i.name }),
+        el('div', { class: 'pname' }, /\(/.test(i.name) ? [i.name.replace(/\s*\(.*$/, ''), el('br'), el('small', { style: 'white-space:nowrap;font-size:13px;font-weight:700;color:#556274', text: i.name.replace(/^[^(]*/, '') })] : [i.name]),
         el('div', { style: 'text-align:center' }, [el('span', { style: 'display:inline-block;font-size:' + (list.length > 9 ? 11.5 : 13) + 'px;font-weight:800;padding:2px ' + (list.length > 9 ? 5 : 8) + 'px;border-radius:999px;white-space:nowrap;color:' + dt[1] + ';background:' + dt[2], text: dt[0] })]),
         el('div', { style: 'text-align:center' }, [el('span', { class: 'tag ' + (m.judge || 'middle'), text: judgeLabel(m.judge) })])
       ]));

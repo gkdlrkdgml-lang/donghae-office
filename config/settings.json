@@ -74,11 +74,6 @@
       "show": true
     },
     {
-      "id": "frame",
-      "label": "액자",
-      "show": true
-    },
-    {
       "id": "flow",
       "label": "흘러가기",
       "show": true
