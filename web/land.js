@@ -8,7 +8,7 @@
 window.DHLand = (function () {
   var H = null;            // index.html이 넘겨주는 도구(el, panel, view, render, D ...)
   var sb = null, session = null, profile = null, authChecked = false;
-  var qAns = {}, tab = 'site', cur = null, busy = false, cmpZone = null, cmpKind = 'far', useSel = '', useSub = '', inArea = null, inFloor = null, inRoad = null;
+  var qDraft = null, qAns = {}, tab = 'site', cur = null, busy = false, cmpZone = null, cmpKind = 'far', useSel = '', useSub = '', inArea = null, inFloor = null, inRoad = null;
   var LV = { GREEN: { c: '#2E8B57', bg: '#E2F3E9', t: '추진 가능' }, YELLOW: { c: '#D99A00', bg: '#FFF4D6', t: '조건부 가능 · 검토 필요' }, RED: { c: '#D9534F', bg: '#FDE7E4', t: '추진 곤란 · 중대 제약' }, INFO: { c: '#1F6FD1', bg: '#E4EEFB', t: '참고' } };
   // 예정 용도 → 「건축법 시행령」 별표 1의 호 번호
   var USE_HO = { '단독주택': '1', '공동주택': '2', '제1종근린생활시설': '3', '제2종근린생활시설': '4', '문화및집회시설': '5', '종교시설': '6', '판매시설': '7', '운수시설': '8', '의료시설': '9', '교육연구시설': '10', '노유자시설': '11', '수련시설': '12', '운동시설': '13', '업무시설': '14', '숙박시설': '15', '위락시설': '16', '공장': '17', '창고시설': '18', '위험물저장및처리시설': '19', '자동차관련시설': '20', '주차장': '20', '동물및식물관련시설': '21', '자원순환관련시설': '22', '방송통신시설': '24', '발전시설': '25', '묘지관련시설': '26', '관광휴게시설': '27', '장례시설': '28', '야영장시설': '29' };
@@ -281,7 +281,7 @@ window.DHLand = (function () {
   function lookup(q) {
     q = String(q || '').trim();
     if (!q || busy) return;
-    busy = true; cur = { loading: '위치를 찾는 중…', q: q }; H.render();
+    busy = true; qDraft = null; cur = { loading: '위치를 찾는 중…', q: q }; H.render();
     var pnuIn = /^\d{19}$/.test(q) ? q : null, f;
     (pnuIn ? parcelBy({ attrFilter: 'pnu:=:' + pnuIn }) : geocode(q).then(function (g) {
       if (!g) throw new Error('주소를 찾지 못했습니다. 「천곡동 806」처럼 동 이름과 지번, 또는 도로명 주소로 넣어 주세요.');
@@ -522,8 +522,9 @@ window.DHLand = (function () {
   function full(node, row) { var s = H.el('section', { style: 'grid-column:1 / -1;grid-row:' + (row || '2 / span 3') }, [node]); H.view.appendChild(s); }
 
   function searchBar(el) {
-    var inp = el('input', { type: 'text', placeholder: '지번(예: 천곡동 806) · 도로명 주소 · PNU 19자리', value: (cur && cur.q) || '', style: 'flex:1;font:inherit;font-size:19px;padding:10px 14px;border:2px solid #C9D2DE;border-radius:10px;min-width:0' });
+    var inp = el('input', { type: 'text', placeholder: '지번(예: 천곡동 806) · 도로명 주소 · PNU 19자리', value: qDraft != null ? qDraft : ((cur && cur.q) || ''), style: 'flex:1;font:inherit;font-size:19px;padding:10px 14px;border:2px solid #C9D2DE;border-radius:10px;min-width:0' });
     inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') lookup(inp.value); e.stopPropagation(); });
+    inp.addEventListener('input', function () { qDraft = inp.value; });   // 용도를 바꿔 화면이 다시 그려져도 쓰던 주소 유지
     var SST = 'font:inherit;font-size:16px;padding:9px;border:2px solid #C9D2DE;border-radius:10px';
     function re() { if (cur && cur.ev) { cur.ev = evaluate(cur); H.render(); } }
     var sel = el('select', { style: SST }, USES.map(function (u) { var o = el('option', { value: u, text: u || '예정 용도(선택)' }); if (u === useSel) o.selected = true; return o; }));
