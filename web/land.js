@@ -407,6 +407,10 @@ window.DHLand = (function () {
           J.txt.length ? '해당 조항: ' + J.txt.join(' / ') : '「' + z + '」 ' + (J.T.kind === 'can' ? '허용' : '금지') + ' 목록(' + J.T.items.length + '개 항목)에 「' + nmU + '」(' + ho + ')이 없습니다.',
           (ordMe().name || '동해시 도시계획 조례') + ' ' + J.T.title + ' · 「' + ho.replace('건축법 시행령', '건축법 시행령」') );
         R[R.length - 1].qs = J.qs; R[R.length - 1].pin = true;
+        if (J.txt.some(function (t) { return /국토교통부령/.test(t); })) {
+          var ra = ((ordMe() || {}).related || []).filter(function (a) { return /휴게음식점 등을 건축할 수 없는 지역|숙박시설.*건축할 수 없는 지역/.test(a.title || ''); });
+          if (ra.length) R[R.length - 1].art = ra.map(function (a) { return a.title + '\n' + a.text; }).join('\n\n');
+        }
       });
     }
     // (2) 지목
@@ -437,7 +441,7 @@ window.DHLand = (function () {
         add(lvl, '규제', n + (at ? '(' + at + ')' : ''), r[4], lvl === 'RED' ? '부지 재선정 또는 해제·허가 가능성 검토가 필요합니다.' : '해당 법령 협의·허가 기간과 비용을 일정에 반영해야 합니다.', r[2]);
         // 지구 이름과 맞는 동해시 조례 조문 원문(경관지구·고도지구 등)
         var o2 = ordMe(), key2 = n.replace(/\(.*\)/, '').replace(/지구$/, '');
-        var arts = ((o2 && o2.related) || []).filter(function (a) { return a.title && (a.title.indexOf(n.replace(/\(.*\)/, '')) >= 0 || (key2.length >= 2 && a.title.indexOf(key2) >= 0)); });
+        var arts = ((o2 && o2.related) || []).filter(function (a) { return a.title && (a.title.indexOf(n.replace(/\(.*\)/, '')) >= 0 || (key2.length >= 2 && a.title.indexOf(key2) >= 0) || (/경관지구/.test(n) && /^경관지구/.test(a.title))); });
         if (arts.length) { R[R.length - 1].art = arts.map(function (a) { return a.text; }).join('\n\n'); R[R.length - 1].cite += ' · 동해시 도시계획 조례 ' + arts.map(function (a) { return a.title; }).join(', '); }
         return;
       }
