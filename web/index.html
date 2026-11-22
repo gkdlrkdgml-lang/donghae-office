@@ -1753,7 +1753,7 @@ function startApp() {
     var rk = el('div', { class: 'rows wide' }), mxv = Math.max.apply(null, ord.map(function (n) { return at(n, day0) || 0; }).concat([1]));
     ord.forEach(function (n, i) {
       var v = at(n, day0), lv = clv(v || 0);
-      rk.appendChild(el('div', { class: 'row' + (n === spotSel ? ' sel' : ''), onclick: function () { spotSel = n; render(); } }, [
+      rk.appendChild(el('div', { class: 'row' + (n === spotSel ? ' sel' : ''), 'data-fit': '1', style: 'flex:none', onclick: function () { spotSel = n; render(); } }, [
         el('span', { class: 'rk', text: String(i + 1) }), el('span', { text: n }),
         el('div', { class: 'bar' }, [el('div', { style: 'width:' + ((v || 0) / mxv * 100).toFixed(1) + '%;background:' + lv[1] })]), el('span', { class: 'v', text: fmt(v, 0) })]));
     });
