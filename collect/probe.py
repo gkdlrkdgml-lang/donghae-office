@@ -415,6 +415,21 @@ def annex_probe():
         say('[annex] 시행령 실패 %s' % str(e)[:300])
 
 
+def bld_probe():
+    import urllib.request, urllib.parse
+    key = urllib.parse.unquote(os.environ.get('DATA_GO_KR_KEY', ''))
+    for op in ('getBrTitleInfo', 'getBrRecapTitleInfo', 'getBrBasisOulnInfo'):
+        for prm in ({'bun': '0806', 'ji': '0000'}, {'bun': '0806'}):
+            q = dict({'sigunguCd': '51170', 'bjdongCd': '10100', 'platGbCd': '0', 'serviceKey': key, '_type': 'json', 'numOfRows': '20', 'pageNo': '1'}, **prm)
+            try:
+                t = urllib.request.urlopen('https://apis.data.go.kr/1613000/BldRgstHubService/' + op + '?' + urllib.parse.urlencode(q), timeout=40).read().decode()
+                j = json.loads(t); b = j['response']['body']; it = (b.get('items') or {}) if isinstance(b.get('items'), dict) else {}
+                it = it.get('item') or []; it = it if isinstance(it, list) else [it]
+                say('[bld] %s %s → %s건 %s' % (op, prm, b.get('totalCount'), [(x.get('platPlc'), x.get('bun'), x.get('ji'), x.get('bldNm'), x.get('mainPurpsCdNm'), x.get('useAprDay')) for x in it[:8]]))
+            except Exception as e:  # noqa: BLE001
+                say('[bld] %s %s 실패 %s' % (op, prm, str(e)[:200]))
+
+
 def annex3_probe():
     import landlaw, urllib.request, hwp
     it = landlaw.find_ordinance('동해시')
@@ -482,6 +497,8 @@ def main():
     if os.environ.get('PROBE_ONLY') == 'lock':
         lock_probe(); return
     load_env()
+    if os.environ.get('PROBE_ONLY') == 'bld':
+        bld_probe(); return
     if os.environ.get('PROBE_ONLY') == 'annex3':
         annex3_probe(); return
     if os.environ.get('PROBE_ONLY') == 'annex2':
