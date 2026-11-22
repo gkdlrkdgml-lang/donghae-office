@@ -70,6 +70,11 @@
   section.zoom .zbtn { background: var(--blue); color: #fff; }
   /* 지도(Leaflet) 안쪽 층이 크게 보기 창 위로 올라오지 않게 지도마다 따로 묶음 */
   #view .leaflet-container { z-index: 0; isolation: isolate; }
+  #flowBadge { position: fixed; right: 18px; bottom: 14px; z-index: 80; display: flex; align-items: center; gap: 10px; background: #1B3A6B; color: #fff; font-weight: 800; font-size: 15px; padding: 8px 10px 10px 14px; border-radius: 22px; box-shadow: 0 4px 14px rgba(0,0,0,.18); overflow: hidden; }
+  #flowBadge button { font: inherit; font-size: 14px; font-weight: 800; border: 0; border-radius: 14px; padding: 4px 10px; background: #fff; color: #1B3A6B; cursor: pointer; }
+  #flowBadge .fl-dot { width: 9px; height: 9px; border-radius: 50%; background: #5BE38F; animation: pulse 1.6s infinite; }
+  #flowBadge .fl-bar { position: absolute; left: 0; bottom: 0; height: 3px; background: #5BE38F; width: 0; animation-name: flbar; animation-timing-function: linear; animation-fill-mode: forwards; }
+  @keyframes flbar { from { width: 0; } to { width: 100%; } }
   #zoomBack { position: fixed; inset: 0; background: rgba(23,32,44,.45); z-index: 50; }
   .donut { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 12px; min-height: 0; }
   .dsvg { min-height: 0; display: flex; justify-content: center; }
@@ -2386,7 +2391,130 @@ function startApp() {
   function screenWelfareTabs() {
     screenWelfare();
   }
-  var SCREENS = { main: screenMain, admin: screenAdminTabs, welfare: screenWelfareTabs, social: screenSocial, traffic: screenTrafficTabs, env: screenEnvTabs, water: screenWater, power: screenPower, land: function () { window.DHLand.screen({ el: el, panel: panel, view: view, render: render, D: D, baseLayer: baseLayer, rankList: rankList }); }, tour: screenTourTabs, economy: screenEconomyTabs, finance: screenFinance, frame: screenFrame };
+
+  // ---------- 흘러가기: 고른 화면만 정해진 간격으로 계속 돌려 보여 줌(새로 고침 뒤에도 이어서) ----------
+  var FLOW_KEY = 'dh_flow', flowTimer = null, flowRun = null;   // flowRun = { list:[{id,sub,label}], i, sec }
+  function flowLoad() { try { return JSON.parse(localStorage.getItem(FLOW_KEY) || '{}'); } catch (e) { return {}; } }
+  function flowSave(o) { try { localStorage.setItem(FLOW_KEY, JSON.stringify(o)); } catch (e) {} }
+  function subButtons() { return Array.prototype.slice.call(view.querySelectorAll('.title .subtabs button, .title [data-subtab]')); }
+  // 각 메뉴의 아래 탭 이름을 알아냄(화면을 잠깐 그려 보고 지움)
+  var flowCatalog = null;
+  function flowDiscover() {
+    if (flowCatalog) return flowCatalog;
+    var keep = current, list = [];
+    D.menu.forEach(function (m) {
+      if (m.id === 'flow' || m.id === 'frame') return;
+      current = m.id; view.textContent = ''; view.className = '';
+      var subs = [];
+      try { (SCREENS[m.id] || screenMain)(); subs = subButtons().map(function (b) { return b.textContent.trim(); }).filter(Boolean); } catch (e) {}
+      list.push({ id: m.id, label: m.label, subs: subs });
+    });
+    if (order.indexOf('frame') >= 0) list.push({ id: 'frame', label: (D.menu.filter(function (m) { return m.id === 'frame'; })[0] || {}).label || '액자', subs: [] });
+    current = keep; view.textContent = '';
+    flowCatalog = list;
+    return list;
+  }
+  function flowKey(id, sub) { return id + '|' + (sub || ''); }
+  function screenFlow() {
+    var cat = flowDiscover(), st = flowLoad(), sel = {};
+    (st.sel || []).forEach(function (k) { sel[k] = 1; });
+    var secs = st.sec || 20;
+    view.style.gridTemplateColumns = 'repeat(4, minmax(0, 1fr))';
+    view.style.gridTemplateRows = '44px minmax(0, 1fr) auto';
+    var cnt = el('b', { text: '' });
+    function count() { cnt.textContent = Object.keys(sel).length + '개 화면'; }
+    view.appendChild(el('div', { class: 'title' }, [el('h1', { text: '흘러가기' }), el('span', { class: 'basis', text: '보고 싶은 화면을 고르고 「실행」을 누르면 그 화면만 계속 돌아가며 보여 줍니다 · 새로 고침돼도 이어서 돌아감' })]));
+    var grid = el('section', { class: 'nozoom', style: 'grid-column:1 / -1;overflow:auto' });
+    var cols = el('div', { style: 'display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px' });
+    cat.forEach(function (m) {
+      var items = m.subs.length ? m.subs : [''];
+      var boxes = [];
+      var card = el('div', { style: 'border:1px solid #DDE3EC;border-radius:12px;padding:12px 14px;background:#FAFBFD' });
+      var head = el('label', { style: 'display:flex;align-items:center;gap:8px;font-size:19px;font-weight:900;color:#1B3A6B;cursor:pointer' });
+      var all = el('input', { type: 'checkbox', style: 'width:20px;height:20px' });
+      head.appendChild(all); head.appendChild(document.createTextNode(m.label));
+      card.appendChild(head);
+      items.forEach(function (sub) {
+        var k = flowKey(m.id, sub), cb = el('input', { type: 'checkbox', style: 'width:18px;height:18px' });
+        cb.checked = !!sel[k]; boxes.push(cb);
+        cb.addEventListener('change', function () { if (cb.checked) sel[k] = 1; else delete sel[k]; sync(); });
+        if (sub) card.appendChild(el('label', { style: 'display:flex;align-items:center;gap:8px;font-size:16px;margin:6px 0 0 6px;cursor:pointer' }, [cb, document.createTextNode(sub)]));
+        else { all = cb; head.replaceChild(cb, head.firstChild); }
+      });
+      function sync() { if (m.subs.length) { all.checked = boxes.every(function (b) { return b.checked; }); all.indeterminate = !all.checked && boxes.some(function (b) { return b.checked; }); } count(); }
+      if (m.subs.length) all.addEventListener('change', function () { boxes.forEach(function (b, j) { b.checked = all.checked; var k = flowKey(m.id, items[j]); if (all.checked) sel[k] = 1; else delete sel[k]; }); sync(); });
+      sync();
+      cols.appendChild(card);
+    });
+    grid.appendChild(cols); view.appendChild(grid);
+    var secSel = el('select', { style: 'font:inherit;font-size:18px;padding:8px 10px;border:2px solid #C9D2DE;border-radius:10px' }, [10, 15, 20, 30, 45, 60, 120].map(function (v) { var o = el('option', { value: v, text: v < 60 ? v + '초' : (v / 60) + '분' }); if (v === secs) o.selected = true; return o; }));
+    function btn(t, bg, fn) { return el('button', { type: 'button', style: 'font:inherit;font-weight:800;font-size:18px;border:0;border-radius:10px;padding:10px 20px;cursor:pointer;background:' + bg + ';color:' + (bg === '#fff' ? '#1B3A6B' : '#fff') + (bg === '#fff' ? ';border:2px solid #C9D2DE' : ''), text: t, onclick: fn }); }
+    var bar = el('section', { class: 'nozoom', style: 'grid-column:1 / -1;flex-direction:row;align-items:center;gap:14px;padding:12px 18px' }, [
+      btn('전체 선택', '#fff', function () { cat.forEach(function (m) { (m.subs.length ? m.subs : ['']).forEach(function (sb) { sel[flowKey(m.id, sb)] = 1; }); }); flowSave({ sel: Object.keys(sel), sec: +secSel.value }); render(); }),
+      btn('모두 해제', '#fff', function () { sel = {}; flowSave({ sel: [], sec: +secSel.value }); render(); }),
+      el('span', { style: 'font-size:18px;color:#38475A' }, [document.createTextNode('한 화면에 '), secSel, document.createTextNode(' 씩')]),
+      el('span', { style: 'font-size:18px;color:#1B3A6B;margin-left:auto' }, [cnt, document.createTextNode(' 선택')]),
+      btn('▶ 실행', '#1B3A6B', function () {
+        var list = [];
+        cat.forEach(function (m) { (m.subs.length ? m.subs : ['']).forEach(function (sb) { if (sel[flowKey(m.id, sb)]) list.push({ id: m.id, sub: sb }); }); });
+        if (!list.length) { alert('돌려 볼 화면을 하나 이상 골라 주세요.'); return; }
+        flowSave({ sel: Object.keys(sel), sec: +secSel.value, running: true, i: 0, list: list });
+        flowStart(list, +secSel.value, 0);
+      })]);
+    view.appendChild(bar);
+    count();
+  }
+  function flowStart(list, sec, i) {
+    flowRun = { list: list, sec: sec, i: i % list.length };
+    flowShow();
+  }
+  function flowShow() {
+    if (!flowRun) return;
+    clearTimeout(flowTimer);
+    var tries = 0;
+    while (tries++ < flowRun.list.length) {
+      var it = flowRun.list[flowRun.i];
+      if (order.indexOf(it.id) >= 0) {
+        current = it.id; zoomIdx = null; finDetail = null; admDetail = null; regSel = null;
+        if (location.hash !== '#' + it.id) history.replaceState(null, '', '#' + it.id);
+        render();
+        if (it.sub) {
+          var b = subButtons().filter(function (x) { return x.textContent.trim() === it.sub; })[0];
+          if (b) { if (!b.classList.contains('on')) b.click(); }
+          else { flowRun.i = (flowRun.i + 1) % flowRun.list.length; continue; }   // 지금은 없는 화면 → 건너뜀
+        }
+        break;
+      }
+      flowRun.i = (flowRun.i + 1) % flowRun.list.length;
+    }
+    var st = flowLoad(); st.i = flowRun.i; st.running = true; flowSave(st);
+    flowBadge();
+    flowTimer = setTimeout(function () { if (!flowRun) return; flowRun.i = (flowRun.i + 1) % flowRun.list.length; flowShow(); }, flowRun.sec * 1000);
+  }
+  function flowStop(goSetup) {
+    clearTimeout(flowTimer); flowRun = null;
+    var st = flowLoad(); st.running = false; flowSave(st);
+    var b = document.getElementById('flowBadge'); if (b) b.remove();
+    if (goSetup) go('flow');
+  }
+  function flowBadge() {
+    var b = document.getElementById('flowBadge');
+    if (!b) { b = el('div', { id: 'flowBadge' }); document.body.appendChild(b); }
+    b.textContent = '';
+    var it = flowRun.list[flowRun.i];
+    b.appendChild(el('span', { class: 'fl-dot' }));
+    b.appendChild(el('span', { text: '흘러가기 ' + (flowRun.i + 1) + '/' + flowRun.list.length + ' · ' + flowRun.sec + '초' }));
+    b.appendChild(el('button', { type: 'button', text: '■ 멈춤', onclick: function () { flowStop(true); } }));
+    var bar = el('i', { class: 'fl-bar' }); b.appendChild(bar);
+    bar.style.animationDuration = flowRun.sec + 's';
+  }
+  // 사람이 메뉴·아래 탭을 직접 누르면 흘러가기 멈춤(멈춤 버튼·Esc도)
+  document.addEventListener('click', function (e) {
+    if (!flowRun || !e.isTrusted) return;
+    if (e.target.closest && (e.target.closest('#nav') || e.target.closest('.title .subtabs') || e.target.closest('.title [data-subtab]'))) flowStop(false);
+  }, true);
+  document.addEventListener('keydown', function (e) { if (flowRun && (e.key === 'Escape' || e.key === ' ' )) { e.preventDefault(); flowStop(true); } }, true);
+  var SCREENS = { flow: screenFlow, main: screenMain, admin: screenAdminTabs, welfare: screenWelfareTabs, social: screenSocial, traffic: screenTrafficTabs, env: screenEnvTabs, water: screenWater, power: screenPower, land: function () { window.DHLand.screen({ el: el, panel: panel, view: view, render: render, D: D, baseLayer: baseLayer, rankList: rankList }); }, tour: screenTourTabs, economy: screenEconomyTabs, finance: screenFinance, frame: screenFrame };
   function render() {
     view.textContent = '';
     view.className = '';
@@ -2463,6 +2591,10 @@ function startApp() {
   setTimeout(function () { location.reload(); }, 30 * 60 * 1000);
 
   render();
+  (function () {   // 새로 고침(30분마다) 뒤에도 흘러가기를 이어서 돌림
+    var st = flowLoad();
+    if (st.running && st.list && st.list.length) flowStart(st.list, st.sec || 20, (st.i || 0) + 1);
+  })();
 }
 
 // 데이터 파일은 매번 새로 받습니다(주소 뒤 ?t=…로 브라우저 캐시를 피함). 못 받으면 오프라인 캐시를 씁니다.

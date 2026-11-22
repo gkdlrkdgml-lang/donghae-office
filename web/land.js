@@ -214,7 +214,7 @@ window.DHLand = (function () {
     if (tab === 'hist') tab = 'site';
     view.appendChild(el('div', { class: 'title' }, [el('h1', { text: H.D.me + '시 토지 및 건축' }),
       el('div', { class: 'chips', style: 'flex-wrap:nowrap;gap:6px;margin-left:12px' }, tabs.map(function (t) {
-        return el('button', { type: 'button', class: 'chip', style: 'cursor:pointer;border:0;font-weight:800;font-size:15px' + (t[0] === tab ? ';background:#1B3A6B;color:#fff' : ''), text: t[1], onclick: function () { tab = t[0]; H.render(); } }); })),
+        return el('button', { type: 'button', 'data-subtab': '1', class: 'chip' + (t[0] === tab ? ' on' : ''), style: 'cursor:pointer;border:0;font-weight:800;font-size:15px' + (t[0] === tab ? ';background:#1B3A6B;color:#fff' : ''), text: t[1], onclick: function () { tab = t[0]; H.render(); } }); })),
       el('span', { class: 'basis', text: tab === 'ord' ? '국가법령정보센터 자치법규 원문 · ' + (((H.D.life || {}).ordin || {}).at || '') + ' 확인' : '브이월드(국토교통부) · 건축HUB 건축물대장 · 동해시 도시계획 조례 원문' })]));
     if (tab === 'ord') return screenOrd(el);
     screenSite(el);
