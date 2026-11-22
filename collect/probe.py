@@ -415,6 +415,28 @@ def annex_probe():
         say('[annex] 시행령 실패 %s' % str(e)[:300])
 
 
+def annex3_probe():
+    import landlaw, urllib.request, hwp
+    it = landlaw.find_ordinance('동해시')
+    j = landlaw._get(landlaw.SERVICE, {'target': 'ordin', 'MST': it.get('자치법규일련번호')})
+    bs = landlaw._as_list(((j.get('LawService') or {}).get('별표') or {}).get('별표단위'))
+    for b in bs:
+        u = (b.get('별표첨부파일명') or '').replace('http://', 'https://')
+        d = urllib.request.urlopen(urllib.request.Request(u, headers={'User-Agent': 'Mozilla/5.0'}), timeout=60).read()
+        md = hwp.hwp_text(d)
+        p = landlaw.parse_uses(md, b.get('별표제목')) or {}
+        say('[B] ===== %s | 항목 %d | 머리말 %s' % (b.get('별표제목'), len(p.get('items') or []), p.get('note')))
+        for x in p.get('items') or []:
+            say('[B] %s. ho=%s | %s' % (x['k'], ','.join(x['ho']), x['t']))
+            for s_ in x['subs']:
+                say('[B]      %s' % s_)
+        for e in p.get('extra') or []:
+            say('[B] !! 남은 줄: %s' % e)
+        if not p:
+            for ln in md.split('\n'):
+                say('[B] md %s' % ln)
+
+
 def annex2_probe():
     import landlaw, urllib.request, hwp
     it = landlaw.find_ordinance('동해시')
@@ -460,6 +482,8 @@ def main():
     if os.environ.get('PROBE_ONLY') == 'lock':
         lock_probe(); return
     load_env()
+    if os.environ.get('PROBE_ONLY') == 'annex3':
+        annex3_probe(); return
     if os.environ.get('PROBE_ONLY') == 'annex2':
         annex2_probe(); return
     if os.environ.get('PROBE_ONLY') == 'annex':

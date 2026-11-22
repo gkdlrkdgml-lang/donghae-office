@@ -106,6 +106,8 @@ def parse_uses(md, title):
                                  'ho': sorted(set(a + (b or '') for a, b in HO.findall(t)))})
         elif re.match(r'^\(\d+\)', ln) and out['items']:
             out['items'][-1]['subs'].append(ln)
+        elif out['items'] and not re.match(r'^[\[■]', ln):
+            out.setdefault('extra', []).append(ln)   # 항목 형식이 아닌 줄(점검용)
     return out
 
 
