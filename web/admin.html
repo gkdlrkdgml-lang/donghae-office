@@ -81,6 +81,12 @@
   </section>
 
   <div id="app" class="hide" style="display:grid;gap:16px">
+  <section id="nowSec">
+    <h2>지금 시장실 화면에 나오는 동해시 값</h2>
+    <p class="sub">관리자 입력은 <b>공식 자료보다 기준일이 늦을 때만</b> 화면에 쓰입니다. 공식 자료가 더 최신이면 공식 값이 그대로 나옵니다.</p>
+    <div id="nowBox" class="off">불러오는 중…</div>
+  </section>
+
   <section>
     <h2>① 기준일</h2>
     <p class="sub">이 날짜 기준의 동해시 값을 넣습니다. 같은 기준일로 다시 저장하면 덮어씁니다. 빈칸은 저장하지 않습니다.</p>
@@ -131,13 +137,13 @@
 
   <div id="saveBar">
     <button id="save">저장하고 시장실에 반영</button>
-    <span class="off">저장하면 10분 안에 시장실 화면에 반영됩니다</span>
+    <span class="off">저장하면 다음 시장실 갱신 때 반영됩니다(아래 「시장실 반영」 칸에서 확인)</span>
   </div>
 
   <section>
     <h2>저장된 입력</h2>
     <p class="sub">기준일을 누르면 그 값을 위 칸에 불러옵니다. 같은 기준일로 다시 저장하면 새 값이 쓰이고, 예전 값은 기록으로 남습니다.</p>
-    <table><thead><tr><th>기준일</th><th>총인구</th><th>세대</th><th>출생</th><th>사망</th><th>전입</th><th>전출</th><th>고용률</th><th>마지막 입력</th><th></th></tr></thead><tbody id="hist"></tbody></table>
+    <table><thead><tr><th>기준일</th><th>총인구</th><th>세대</th><th>출생</th><th>사망</th><th>전입</th><th>전출</th><th>고용률</th><th>시장실 반영</th><th>마지막 입력</th><th></th></tr></thead><tbody id="hist"></tbody></table>
   </section>
 
   <section id="mgr" class="hide">
@@ -256,7 +262,7 @@
     D = {};
     sb.storage.from('dash').download('data/data.json.gz?t=' + Date.now()).then(function (r) {
       if (r.error) throw r.error; return gunzip(r.data);
-    }).then(function (t) { window.DONGHAE_DATA = JSON.parse(t); showRef(); }).catch(function (e) { $('offInfo').textContent = '공식 자료를 못 받음: ' + kerr(e); });
+    }).then(function (t) { window.DONGHAE_DATA = JSON.parse(t); showRef(); drawNow(); drawHist(); }).catch(function (e) { $('offInfo').textContent = '공식 자료를 못 받음: ' + kerr(e); });
   }
   function showRef() {
     D = window.DONGHAE_DATA || {}; var A = D.admin || {}, mo = (A.official_me) || (A.regions || {})[D.me] || {};
@@ -309,19 +315,58 @@
     document.querySelectorAll('[data-dong]').forEach(function (inp) { var v = ((e.dong || {})[inp.getAttribute('data-dong')] || {})[inp.getAttribute('data-k')]; if (v != null) inp.value = v; });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
+  // ---------- 시장실 반영 상태
+  var SECN = { pop: '인구', dong: '동별', vital: '인구 변동', employ: '고용' };
+  function ymLab(ym) { ym = String(ym || ''); return ym.length >= 6 ? ym.slice(0, 4) + '년 ' + Number(ym.slice(4, 6)) + '월' : ym; }
+  function halfLab(p) { p = String(p || ''); return p.length === 6 ? p.slice(0, 4) + '년 ' + (p.slice(4) === '01' ? '상' : '하') + '반기' : p; }
+  function offEnd(sec) {   // 공식 자료가 덮는 마지막 날(YYYYMMDD)
+    if (!D || !D.admin) return '';
+    if (sec === 'employ') { var p = String(((D.life || {}).employ || {}).period || ''); return p.length === 6 ? p.slice(0, 4) + (p.slice(4) === '01' ? '0630' : '1231') : ''; }
+    return D.admin.ym ? D.admin.ym + '31' : '';
+  }
+  function offLab(sec) { return sec === 'employ' ? halfLab(((D.life || {}).employ || {}).period) : ymLab(D.admin && D.admin.ym); }
+  function status(e) {   // 기준일 한 줄의 분야별 반영 상태
+    if (!D || !D.admin) return '<span class="off">확인 중</span>';
+    var L = D.admin_live || {}, out = [];
+    ['pop', 'dong', 'vital', 'employ'].forEach(function (sec) {
+      if (!e[sec]) return;
+      var t, c;
+      if (L[sec] && L[sec].date === e.date) { t = '반영 중'; c = '#1B7A4B'; }
+      else if (e.date.replace(/-/g, '') <= offEnd(sec)) { t = '공식 ' + offLab(sec) + ' 자료가 더 최신 → 공식 값 사용'; c = '#8693A4'; }
+      else if (D.generated_at && e.last && new Date(e.last) > new Date(D.generated_at.replace(' ', 'T') + ':00+09:00')) { t = '반영 대기(곧 반영)'; c = '#D99A00'; }
+      else { t = '더 최근 입력이 반영 중'; c = '#8693A4'; }
+      out.push('<span style="color:' + c + ';font-weight:800">' + SECN[sec] + ': ' + t + '</span>');
+    });
+    return out.join('<br>') || '–';
+  }
+  function drawNow() {
+    var box = $('nowBox'); if (!box || !D || !D.admin) return;
+    var A = D.admin, me = D.me, L = D.admin_live || {}, r = (A.regions || {})[me] || {}, off = A.official_me || r;
+    var V = A.vital || {}, b = ((V.birth || {}).cur || {})[me] || {}, dth = ((V.death || {}).cur || {})[me] || {};
+    var E = (D.life || {}).employ || {}, em = ((E.data || {})[E.period] || {})[me] || {};
+    function row(name, val, src, live) { return '<tr><td><b>' + name + '</b></td><td style="text-align:right;font-weight:800">' + val + '</td><td>' + (live ? '<span style="color:#1B7A4B;font-weight:800">관리자 입력</span> · ' : '<span style="color:#1F6FD1;font-weight:800">공식 자료</span> · ') + src + '</td></tr>'; }
+    var lp = L.pop, lv = L.vital, le = L.employ;
+    box.className = '';
+    box.innerHTML = '<table><thead><tr><th>항목</th><th style="text-align:right">화면 값</th><th>어디서 온 값인지</th></tr></thead><tbody>' +
+      row('총인구', fmt(r.total) + '명', lp ? '기준일 ' + esc(lp.date) + ' (공식 ' + ymLab(A.ym) + ' ' + fmt(off.total) + '명)' : ymLab(A.ym) + ' 주민등록', !!lp) +
+      row('세대', fmt(r.hh), lp ? '기준일 ' + esc(lp.date) : ymLab(A.ym) + ' 주민등록', !!lp) +
+      row('출생 · 사망', lv ? fmt(lv.v.birth) + ' · ' + fmt(lv.v.death) : fmt(b.total) + ' · ' + fmt(dth.total), lv ? '기준일 ' + esc(lv.date) : ymLab(V.ym) + ' 행정안전부', !!lv) +
+      row('고용률(15~64세)', le && le.v.rate != null ? esc(le.v.rate) + '%' : (em.rate_1564 != null ? em.rate_1564 + '%' : '–'), le ? '기준일 ' + esc(le.date) : halfLab(E.period) + ' 지역별고용조사', !!le) +
+      '</tbody></table><p class="sub" style="margin-top:8px">시장실 화면 마지막 갱신: <b>' + esc(D.generated_at || '') + '</b>. 새로 저장한 값은 다음 갱신 때 반영됩니다.</p>';
+  }
   function drawHist() {
     var tb = $('hist'); tb.innerHTML = '';
     byDate().forEach(function (e) {
       var tr = document.createElement('tr'), p = e.pop || {}, v = e.vital || {}, m = e.employ || {};
       var when = e.last ? new Date(e.last).toLocaleString('ko-KR', { hour12: false }) : '';
-      tr.innerHTML = '<td><a href="#" style="font-weight:800;color:#1F6FD1">' + e.date + '</a></td><td>' + fmt(p.total) + '</td><td>' + fmt(p.hh) + '</td><td>' + fmt(v.birth) + '</td><td>' + fmt(v.death) + '</td><td>' + fmt(v['in']) + '</td><td>' + fmt(v.out) + '</td><td>' + (m.rate != null ? esc(m.rate) + '%' : '–') + '</td><td class="off">' + esc(e.who) + ' · ' + when + '</td><td><button class="danger" style="padding:4px 10px">삭제</button></td>';
+      tr.innerHTML = '<td><a href="#" style="font-weight:800;color:#1F6FD1">' + e.date + '</a></td><td>' + fmt(p.total) + '</td><td>' + fmt(p.hh) + '</td><td>' + fmt(v.birth) + '</td><td>' + fmt(v.death) + '</td><td>' + fmt(v['in']) + '</td><td>' + fmt(v.out) + '</td><td>' + (m.rate != null ? esc(m.rate) + '%' : '–') + '</td><td style="font-size:13px;line-height:1.5">' + status(e) + '</td><td class="off">' + esc(e.who) + ' · ' + when + '</td><td><button class="danger" style="padding:4px 10px">삭제</button></td>';
       tr.querySelector('a').onclick = function (ev) { ev.preventDefault(); fill(e); };
       tr.querySelector('button').onclick = function () {
         var secs = ['pop', 'dong', 'vital', 'employ'].filter(function (s) { return e[s] && canSec(s); });
         if (!secs.length) { say('이 기준일에서 지울 수 있는 분야가 없습니다.', 'err'); return; }
         if (!confirm(e.date + ' 입력을 삭제할까요? 시장실 화면에서도 빠집니다.')) return;
         sb.from('entries').update({ deleted: true }).eq('ref_date', e.date).in('section', secs).then(function (r) {
-          if (r.error) say(kerr(r.error), 'err'); else { say(e.date + ' 입력을 지웠습니다. 10분 안에 화면에서도 빠집니다.', 'ok'); loadEntries(); }
+          if (r.error) say(kerr(r.error), 'err'); else { say(e.date + ' 입력을 지웠습니다. 다음 갱신 때 화면에서도 빠집니다.', 'ok'); loadEntries(); }
         });
       };
       tb.appendChild(tr);
@@ -342,7 +387,7 @@
     $('save').disabled = true; say('저장 중…', 'info');
     sb.from('entries').insert(secs.map(function (s) { return { ref_date: e.date, section: s, data: e[s], author: me.id, author_name: prof.name }; })).then(function (q) {
       if (q.error) say('저장 실패: ' + kerr(q.error), 'err');
-      else { say('저장했습니다. 10분 안에 시장실 화면에 반영됩니다.', 'ok'); loadEntries(); }
+      else { say('저장했습니다. 아래 「시장실 반영」 칸에서 반영 여부를 확인하세요.', 'ok'); loadEntries(); }
       $('save').disabled = false;
     });
   };
