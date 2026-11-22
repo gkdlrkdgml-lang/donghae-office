@@ -103,12 +103,12 @@
   // 오른쪽 아래에 비서실장(전신) + 말풍선 → 누르면 가운데에 대화창
   var btn = document.createElement('button');
   btn.id = 'dhAideBtn'; btn.type = 'button'; btn.setAttribute('aria-label', 'AI 비서실장 열기');
-  btn.innerHTML = '<div class="say"><b>AI 비서실장</b><span>저를 누르시면 원하시는 화면으로 모시겠습니다</span></div><img src="img/aide.webp" alt="">';
+  btn.innerHTML = '<div class="say"><b>AI 비서실장 이정후</b><span>저를 누르시면 원하시는 화면으로 모시겠습니다</span></div><img src="img/aide.webp" alt="">';
   var root = document.createElement('div');
   root.id = 'dhAide';
   root.innerHTML =
     '<div class="box"><div class="pic"><img src="img/aide.webp" alt="AI 비서실장"></div><div class="main">' +
-    '<div class="hd"><div><b>AI 비서실장</b><small>궁금한 내용을 말씀하시면 볼 화면을 알려 드립니다</small></div><button class="x" type="button" aria-label="닫기">✕</button></div>' +
+    '<div class="hd"><div><b>AI 비서실장 이정후</b><small>궁금한 내용을 말씀하시면 볼 화면을 알려 드립니다</small></div><button class="x" type="button" aria-label="닫기">✕</button></div>' +
     '<div class="log"></div><div class="qk"></div>' +
     '<form><input placeholder="예: 인구는 어디서 봐요?" autocomplete="off"><button type="submit">묻기</button></form></div></div>';
   function mount() {
@@ -139,7 +139,7 @@
   QUICK.forEach(function (q) { var b = document.createElement('button'); b.type = 'button'; b.textContent = q; b.onclick = function () { answer(q); }; qk.appendChild(b); });
   function open() {
     root.classList.add('open');
-    if (!log.children.length) bubble('bot', '안녕하세요, <b>AI 비서실장</b>입니다. 무엇이 궁금하세요? 보실 화면을 찾아 바로 열어 드릴게요.');
+    if (!log.children.length) bubble('bot', '안녕하세요, <b>AI 비서실장 이정후</b>입니다. 무엇이 궁금하세요? 보실 화면을 찾아 바로 열어 드릴게요.');
     setTimeout(function () { try { inp.focus(); } catch (e) {} }, 50);
   }
   function close() { root.classList.remove('open'); }
