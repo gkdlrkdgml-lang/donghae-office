@@ -158,6 +158,11 @@ def collect(state, S, C):
                 fail(state, key, e)
     if L.get('hospitals'):
         set_ind(state, 'medical', {k: v['total'] for k, v in L['hospitals']['regions'].items()}, L['hospitals']['at'] + ' 기준 요양기관(약국 포함)')
+        _A = state.get('admin') or {}
+        _pop = {k: (v or {}).get('total') for k, v in (_A.get('regions') or {}).items()}
+        _ym = str(_A.get('ym') or '')
+        set_ind(state, 'doc_per', {k: v['doctors'] / _pop[k] * 1000 for k, v in L['hospitals']['regions'].items() if v.get('doctors') is not None and _pop.get(k)},
+                L['hospitals']['at'] + ' 기준 의사 수 ÷ ' + (_ym[:4] + '년 ' + str(int(_ym[4:])) + '월 ' if len(_ym) == 6 else '') + '주민등록인구')
     if L.get('ev'):
         set_ind(state, 'ev', {k: v['total'] for k, v in L['ev']['regions'].items()}, L['ev']['at'] + ' 기준 충전기')
     try:

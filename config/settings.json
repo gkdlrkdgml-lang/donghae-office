@@ -120,6 +120,28 @@
       "note": "고령화가 덜 된 쪽을 좋게 봄(낮을수록 좋음)"
     },
     {
+      "id": "emp_rate",
+      "no": 27,
+      "field": "경제",
+      "name": "고용률(15~64세)",
+      "unit": "%",
+      "dir": 1,
+      "digits": 1,
+      "source": "통계청 지역별고용조사",
+      "show": true
+    },
+    {
+      "id": "biz_yoy",
+      "no": 28,
+      "field": "경제",
+      "name": "사업자 증감률(전년 같은 달)",
+      "unit": "%",
+      "dir": 1,
+      "digits": 2,
+      "source": "국세통계포털",
+      "show": true
+    },
+    {
       "id": "medical",
       "no": 4,
       "field": "보건",
@@ -131,26 +153,16 @@
       "show": true
     },
     {
-      "id": "traffic_death",
-      "no": 5,
-      "field": "안전",
-      "name": "인구 10만명당 교통사고 사망자",
+      "id": "doc_per",
+      "no": 51,
+      "name": "인구 1천명당 의사 수",
+      "field": "보건",
       "unit": "명",
-      "dir": -1,
-      "digits": 1,
-      "source": "도로교통공단 TAAS",
-      "show": false
-    },
-    {
-      "id": "shelter",
-      "no": 6,
-      "field": "재해",
-      "name": "대피시설 수용률",
-      "unit": "%",
       "dir": 1,
-      "digits": 1,
-      "source": "행안부 민방위 대피시설",
-      "show": false
+      "digits": 2,
+      "source": "건강보험심사평가원 병원정보",
+      "note": "요양기관 의사 수 ÷ 주민등록인구 × 1,000",
+      "show": true
     },
     {
       "id": "ev",
@@ -162,6 +174,52 @@
       "digits": 0,
       "source": "환경공단 충전소",
       "show": true
+    },
+    {
+      "id": "visitors",
+      "no": 9,
+      "field": "관광",
+      "name": "연간 방문자",
+      "unit": "만명",
+      "dir": 1,
+      "digits": 1,
+      "source": "한국관광공사",
+      "show": true
+    },
+    {
+      "id": "budget",
+      "no": 11,
+      "field": "예산",
+      "name": "예산 규모",
+      "unit": "억 원",
+      "dir": 1,
+      "digits": 0,
+      "source": "지방재정365",
+      "show": true
+    },
+    {
+      "id": "traffic_death",
+      "no": 5,
+      "field": "안전",
+      "name": "인구 10만명당 교통사고 사망자",
+      "unit": "명",
+      "dir": -1,
+      "digits": 1,
+      "source": "도로교통공단 TAAS",
+      "show": false,
+      "main": false
+    },
+    {
+      "id": "shelter",
+      "no": 6,
+      "field": "재해",
+      "name": "대피시설 수용률",
+      "unit": "%",
+      "dir": 1,
+      "digits": 1,
+      "source": "행안부 민방위 대피시설",
+      "show": false,
+      "main": false
     },
     {
       "id": "cars",
@@ -234,18 +292,8 @@
       "dir": -1,
       "digits": 1,
       "source": "에어코리아",
-      "show": false
-    },
-    {
-      "id": "visitors",
-      "no": 9,
-      "field": "관광",
-      "name": "연간 방문자",
-      "unit": "만명",
-      "dir": 1,
-      "digits": 1,
-      "source": "한국관광공사",
-      "show": true
+      "show": false,
+      "main": false
     },
     {
       "id": "tour_exp",
@@ -268,18 +316,8 @@
       "dir": 1,
       "digits": 0,
       "source": "KOSIS 전국사업체조사",
-      "show": false
-    },
-    {
-      "id": "budget",
-      "no": 11,
-      "field": "예산",
-      "name": "예산 규모",
-      "unit": "억 원",
-      "dir": 1,
-      "digits": 0,
-      "source": "지방재정365",
-      "show": true
+      "show": false,
+      "main": false
     },
     {
       "id": "fin_indep",
@@ -303,7 +341,8 @@
       "dir": 1,
       "digits": 1,
       "source": "KOSIS 지역별고용조사",
-      "show": false
+      "show": false,
+      "main": false
     },
     {
       "id": "biz_active",
@@ -390,30 +429,6 @@
       "main": false
     },
     {
-      "id": "emp_rate",
-      "no": 27,
-      "field": "경제",
-      "name": "고용률(15~64세)",
-      "unit": "%",
-      "dir": 1,
-      "digits": 1,
-      "source": "통계청 지역별고용조사",
-      "show": true,
-      "main": false
-    },
-    {
-      "id": "biz_yoy",
-      "no": 28,
-      "field": "경제",
-      "name": "사업자 증감률(전년 같은 달)",
-      "unit": "%",
-      "dir": 1,
-      "digits": 2,
-      "source": "국세통계포털",
-      "show": true,
-      "main": false
-    },
-    {
       "id": "sew_rate",
       "no": 29,
       "field": "상하수도",
@@ -423,7 +438,7 @@
       "digits": 1,
       "source": "환경부 하수도통계",
       "show": true,
-      "main": true,
+      "main": false,
       "note": "공공하수처리구역 인구 ÷ 총인구"
     },
     {
