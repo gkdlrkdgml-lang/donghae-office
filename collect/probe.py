@@ -419,19 +419,25 @@ def annex_probe():
 
 
 def kbus_probe():
-    import urllib.request, urllib.parse
+    import urllib.request, urllib.parse, re as R
     key = os.environ.get('KOSIS_KEY', '').strip()
-    for q in ('업종별 운수업체',):
-        for pg in range(1, 6):
-            u = 'https://kosis.kr/openapi/statisticsSearch.do?' + urllib.parse.urlencode({'method': 'getList', 'apiKey': key, 'searchNm': q, 'format': 'json', 'jsonVD': 'Y', 'resultCount': '200', 'startCount': str((pg - 1) * 200 + 1)})
-            rows = json.loads(urllib.request.urlopen(u, timeout=60).read().decode('utf-8'))
-            if not isinstance(rows, list) or not rows: break
-            if pg == 1: say('[KB] 키 %s' % list(rows[0].keys()))
-            import re as R
+    seen = set()
+    for q in ('업종별 운수업체', '운수업체', '강원 운수업체', '노선버스', '여객자동차'):
+        for pg in range(1, 11):
+            u = 'https://kosis.kr/openapi/statisticsSearch.do?' + urllib.parse.urlencode({'method': 'getList', 'apiKey': key, 'searchNm': q, 'format': 'json', 'jsonVD': 'Y', 'resultCount': '100', 'startCount': str(pg)})
+            try:
+                rows = json.loads(urllib.request.urlopen(u, timeout=60).read().decode('utf-8'))
+            except Exception as e:  # noqa: BLE001
+                say('[KB] %s %d 실패 %s' % (q, pg, e)); break
+            if not isinstance(rows, list) or not rows:
+                say('[KB] %s %d → %s' % (q, pg, str(rows)[:120])); break
             for r in rows:
-                tn = R.sub(r'<[^>]+>', '', r.get('TBL_NM') or '')
-                if '운수' in tn or '버스' in tn:
-                    say('[KB] %s | %s | %s | %s | %s | %s~%s' % (r.get('ORG_ID'), R.sub(r'<[^>]+>', '', r.get('ORG_NM') or ''), r.get('TBL_ID'), tn, R.sub(r'<[^>]+>', '', r.get('STAT_NM') or ''), r.get('STRT_PRD_DE'), r.get('END_PRD_DE')))
+                k = (r.get('ORG_ID'), r.get('TBL_ID'))
+                if k in seen: continue
+                seen.add(k)
+                if str(r.get('ORG_ID')) == '211' or '강원' in R.sub(r'<[^>]+>', '', (r.get('ORG_NM') or '') + (r.get('TBL_NM') or '')):
+                    say('[KB] %s | %s | %s | %s | %s~%s' % (r.get('ORG_ID'), R.sub(r'<[^>]+>', '', r.get('ORG_NM') or ''), r.get('TBL_ID'), R.sub(r'<[^>]+>', '', r.get('TBL_NM') or ''), r.get('STRT_PRD_DE'), r.get('END_PRD_DE')))
+    say('[KB] 본 표 %d' % len(seen))
 
 
 def busco_probe():
