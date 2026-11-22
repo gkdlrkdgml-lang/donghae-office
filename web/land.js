@@ -60,14 +60,14 @@ window.DHLand = (function () {
   function pureEx(x) { return /(을|를|은|는)\s*제외한다\s*[)\]]$/.test(x) && !/로서|따라|밖|거리|경우|지역에|대지에|해당하는/.test(x); }
   // 필지 안 격자점으로 용도지역별 면적 비율(예상치)
   function zoneShares(f, list) {
-    if (!f || !f.geometry || !list.length) return null;
+    if (!f || !f.geometry || !list.length) return { why: '용도지역 경계 자료 없음(' + list.length + '건)', parts: [] };
     var Rg = rings(f.geometry); if (!Rg.length) return null;
     var xs = [], ys = []; Rg[0].forEach(function (p) { xs.push(p[0]); ys.push(p[1]); });
     var x0 = Math.min.apply(null, xs), x1 = Math.max.apply(null, xs), y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys), N = 70, cnt = {}, tot = 0;
     var polys = f.geometry.type === 'MultiPolygon' ? f.geometry.coordinates : [f.geometry.coordinates];
     function inP(pt, g) { var P = g.type === 'MultiPolygon' ? g.coordinates : g.type === 'Polygon' ? [g.coordinates] : []; return P.some(function (pg) { return inRing(pt, pg[0]) && !pg.slice(1).some(function (h) { return inRing(pt, h); }); }); }
     var Z = list.map(function (x) { var nm = ''; Object.keys(x.p || {}).forEach(function (k) { var v = String(x.p[k] || ''); var m = v.match(/(제\d종)?[가-힣]*(주거|상업|공업|녹지)지역/); if (m && !nm) nm = m[0]; }); return { z: nm, g: x.g }; }).filter(function (x) { return x.z && x.g; });
-    if (!Z.length) return null;
+    if (!Z.length) return { why: '경계 자료에서 용도지역 이름을 못 찾음(속성 ' + Object.keys((list[0] || {}).p || {}).join(',') + ')', parts: [] };
     for (var i = 0; i < N; i++) for (var j = 0; j < N; j++) {
       var pt = [x0 + (x1 - x0) * (i + 0.5) / N, y0 + (y1 - y0) * (j + 0.5) / N];
       if (!polys.some(function (pg) { return inRing(pt, pg[0]); })) continue;
@@ -75,7 +75,7 @@ window.DHLand = (function () {
       for (var k = 0; k < Z.length; k++) if (inP(pt, Z[k].g)) { cnt[Z[k].z] = (cnt[Z[k].z] || 0) + 1; break; }
     }
     var got = Object.keys(cnt).reduce(function (a, k) { return a + cnt[k]; }, 0);
-    if (!tot || got < tot * 0.9) return null;          // 경계 자료가 필지를 다 덮지 못하면 쓰지 않음
+    if (!tot || got < tot * 0.9) return { why: '경계 자료가 필지의 ' + (tot ? Math.round(got / tot * 100) : 0) + '%만 덮음', parts: [] };          // 다 덮지 못하면 쓰지 않음
     return { parts: Object.keys(cnt).map(function (k) { return { z: k, r: cnt[k] / got }; }).sort(function (a, b) { return b.r - a.r; }) };
   }
   function useJudge(zoneNm, use, sub, inp) {
@@ -378,7 +378,7 @@ window.DHLand = (function () {
         (small <= 330 ? '가장 작은 부분이 330㎡ 이하라 건폐율·용적률은 가중평균, 그 밖의 건축 제한은 가장 넓은 「' + SH.parts[0].z + '」 기준입니다.' : '가장 작은 부분도 330㎡를 넘어 건폐율·용적률·용도 제한을 각 부분마다 그 용도지역 기준으로 적용합니다.'),
         '「국토계획법」 제84조, 같은 법 시행령 제94조');
       if (rule.mixed) R.forEach(function (x) { if (x.tag === zone && x.level === 'GREEN') x.impact = '걸친 면적을 나눠 계산하면 바닥면적 최대 약 ' + fmt(effB) + '㎡, 연면적 최대 약 ' + fmt(effF) + '㎡ (예상치, 아래 「용도지역 두 개에 걸침」 참고)'; });
-    } else if (zones[1]) add('YELLOW', '토지', '용도지역 두 개에 걸침', zone + '와(과) ' + zones[1] + '에 걸쳐 있습니다.', '걸친 면적 비율에 따라 건폐율·용적률을 나눠 적용합니다(「국토계획법」 제84조).', '「국토계획법」 제84조');
+    } else if (zones[1]) add('YELLOW', '토지', '용도지역 두 개에 걸침', zone + '와(과) ' + zones[1] + '에 걸쳐 있습니다.', '걸친 면적 비율에 따라 건폐율·용적률을 나눠 적용합니다(「국토계획법」 제84조).' + (SH && SH.why ? ' (면적 자동 계산 못 함: ' + SH.why + ')' : ''), '「국토계획법」 제84조');
     if (useSel) {
       var nmU = useSel + (useSub ? '(' + useSub + ')' : '');
       var rn = ch.roadSideCodeNm || '', RR = /광대/.test(rn) ? [25, null] : /중로/.test(rn) ? [12, 25] : /소로/.test(rn) ? [8, 12] : /세로/.test(rn) ? [0, 8] : /맹지/.test(rn) ? [0, 0] : null;
