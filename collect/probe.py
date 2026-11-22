@@ -419,25 +419,29 @@ def annex_probe():
 
 
 def kbus_probe():
-    import urllib.request, urllib.parse, re as R
-    key = os.environ.get('KOSIS_KEY', '').strip()
-    seen = set()
-    for q in ('업종별 운수업체', '운수업체', '강원 운수업체', '노선버스', '여객자동차'):
-        for pg in range(1, 11):
-            u = 'https://kosis.kr/openapi/statisticsSearch.do?' + urllib.parse.urlencode({'method': 'getList', 'apiKey': key, 'searchNm': q, 'format': 'json', 'jsonVD': 'Y', 'resultCount': '100', 'startCount': str(pg)})
-            try:
-                rows = json.loads(urllib.request.urlopen(u, timeout=60).read().decode('utf-8'))
-            except Exception as e:  # noqa: BLE001
-                say('[KB] %s %d 실패 %s' % (q, pg, e)); break
-            if not isinstance(rows, list) or not rows:
-                say('[KB] %s %d → %s' % (q, pg, str(rows)[:120])); break
-            for r in rows:
-                k = (r.get('ORG_ID'), r.get('TBL_ID'))
-                if k in seen: continue
-                seen.add(k)
-                if str(r.get('ORG_ID')) == '211' or '강원' in R.sub(r'<[^>]+>', '', (r.get('ORG_NM') or '') + (r.get('TBL_NM') or '')):
-                    say('[KB] %s | %s | %s | %s | %s~%s' % (r.get('ORG_ID'), R.sub(r'<[^>]+>', '', r.get('ORG_NM') or ''), r.get('TBL_ID'), R.sub(r'<[^>]+>', '', r.get('TBL_NM') or ''), r.get('STRT_PRD_DE'), r.get('END_PRD_DE')))
-    say('[KB] 본 표 %d' % len(seen))
+    from sources import kosis_meta, _call
+    for org, tbl in (('211', 'DT_211002_J004'), ('654', 'DT_65401_J000073')):
+        try:
+            meta = kosis_meta({'key_env': 'KOSIS_KEY', 'meta_url': 'https://kosis.kr/openapi/statisticsData.do', 'params': {'orgId': org, 'tblId': tbl}})
+        except Exception as e:  # noqa: BLE001
+            say('[KB] meta %s 실패 %s' % (tbl, e)); continue
+        for m in meta:
+            say('[KB] M %s %s | %s | %s | up %s | %s' % (tbl, m.get('OBJ_ID'), m.get('ITM_ID'), m.get('ITM_NM'), m.get('UP_ITM_ID'), m.get('UNIT_NM')))
+        od = {}
+        for m in meta:
+            od.setdefault(m.get('OBJ_ID'), []).append(m)
+        params = {'method': 'getList', 'format': 'json', 'jsonVD': 'Y', 'orgId': org, 'tblId': tbl, 'prdSe': 'Y', 'newEstPrdCnt': '1', 'itmId': 'ALL'}
+        i = 0
+        for oid in od:
+            if oid == 'ITEM': continue
+            i += 1; params['objL%d' % i] = 'ALL'
+        try:
+            rows = _call({'key_env': 'KOSIS_KEY', 'key_param': 'apiKey', 'url': 'https://kosis.kr/openapi/Param/statisticsParameterData.do', 'params': params}, {}, 'kb')
+        except Exception as e:  # noqa: BLE001
+            say('[KB] data %s 실패 %s' % (tbl, e)); continue
+        say('[KB] rows %s %d' % (tbl, len(rows)))
+        for r in rows[:400]:
+            say('[KB] D %s %s | %s | %s | %s | %s %s' % (tbl, r.get('PRD_DE'), r.get('C1_NM'), r.get('C2_NM'), r.get('ITM_NM'), r.get('DT'), r.get('UNIT_NM')))
 
 
 def busco_probe():
