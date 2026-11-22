@@ -39,24 +39,49 @@ def _headers(extra=None):
 
 
 def get(path):
-    req = urllib.request.Request('%s/storage/v1/object/%s/%s' % (_url(), BUCKET, path), headers=_headers())
-    try:
-        with urllib.request.urlopen(req, timeout=120) as r:
-            return r.read()
-    except urllib.error.HTTPError as e:
-        if e.code in (400, 404):
-            return None
-        raise RuntimeError('내려받기 %s → %s %s' % (path, e.code, e.read()[:200]))
+    import time
+    for i in range(5):
+        req = urllib.request.Request('%s/storage/v1/object/%s/%s' % (_url(), BUCKET, path), headers=_headers())
+        try:
+            with urllib.request.urlopen(req, timeout=120) as r:
+                return r.read()
+        except urllib.error.HTTPError as e:
+            if e.code in (400, 404):
+                return None
+            msg = e.read()[:200]
+            if e.code >= 500 and i < 4:
+                time.sleep(5 * (i + 1))
+                continue
+            raise RuntimeError('내려받기 %s → %s %s' % (path, e.code, msg))
+        except (urllib.error.URLError, TimeoutError) as e:
+            if i < 4:
+                time.sleep(5 * (i + 1))
+                continue
+            raise RuntimeError('내려받기 %s → %s' % (path, e))
 
 
 def put(path, body, ctype):
-    req = urllib.request.Request('%s/storage/v1/object/%s/%s' % (_url(), BUCKET, path), data=body, method='POST',
-                                 headers=_headers({'Content-Type': ctype, 'x-upsert': 'true', 'Cache-Control': 'no-cache'}))
-    try:
-        with urllib.request.urlopen(req, timeout=300) as r:
-            r.read()
-    except urllib.error.HTTPError as e:
-        raise RuntimeError('올리기 %s → %s %s' % (path, e.code, e.read()[:300]))
+    # Supabase(Cloudflare)가 가끔 520·502·503을 냄 → 잠깐 쉬었다 4번까지 다시 시도
+    import time
+    for i in range(5):
+        req = urllib.request.Request('%s/storage/v1/object/%s/%s' % (_url(), BUCKET, path), data=body, method='POST',
+                                     headers=_headers({'Content-Type': ctype, 'x-upsert': 'true', 'Cache-Control': 'no-cache'}))
+        try:
+            with urllib.request.urlopen(req, timeout=300) as r:
+                r.read()
+            return
+        except urllib.error.HTTPError as e:
+            msg = e.read()[:300]
+            if e.code >= 500 and i < 4:
+                print('올리기 %s → %s, %d초 뒤 다시' % (path, e.code, 5 * (i + 1)))
+                time.sleep(5 * (i + 1))
+                continue
+            raise RuntimeError('올리기 %s → %s %s' % (path, e.code, msg))
+        except (urllib.error.URLError, TimeoutError) as e:
+            if i < 4:
+                time.sleep(5 * (i + 1))
+                continue
+            raise RuntimeError('올리기 %s → %s' % (path, e))
 
 
 def pull():
