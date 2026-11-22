@@ -89,9 +89,10 @@ KOSIS(여러 표), 국세통계포털 TASIS(월별 가동·신규 사업자), �
 - 15개 탭이라 위쪽 줄 메뉴 글자 14.5px·간격 좁힘, 「최종 갱신」은 두 줄.
 
 ## 국내 중계(2026-11-22) — `supabase/functions/kr`
-- 해외(GitHub 서버) 접속이 막힌 국내 사이트를 Supabase 함수가 서울 지역(`x-region: ap-northeast-2`)에서 대신 부름. 서비스 키(SUPABASE_SERVICE_KEY)만 허용, 허용 주소만(지금은 lofin365 hub). `common.kr_get`, settings 소스에 `kr_relay: true`면 바로 해 보고 실패 시 중계.
+- 해외(GitHub 서버) 접속이 막힌 국내 사이트를 Supabase 함수가 서울 지역(`x-region: ap-northeast-2`)에서 대신 부름. 서비스 키(SUPABASE_SERVICE_KEY)만 허용, 허용 주소만(lofin365 hub·portal 안내 화면·resources/js·데이터셋 안내 POST). `common.kr_get`, settings 소스에 `kr_relay: true`면 바로 해 보고 실패 시 중계.
 - 지방재정365(재정자립도 당초 DCFCE·최종 JFIED, 예산 규모): **fyr(회계연도) 필수** → 해마다 따로 받음(당초 내년~2년 전, 최종 올해~2년 전), 못 받은 해만 manual/lofin_*.json. LOFIN_KEY 없으면 LOFIN_KEY_FINAL 사용(key_env_alt). 점검: `probe.yml -f only=lofin`.
-- 아직 수동: manual/budget_accounts_<연도>.json(회계별 세입예산, 지방재정365 XLSX) — 해마다 당초예산 공시(2~3월) 뒤 한 번.
+- 회계별 세입예산: 지방재정365 hub **ARBGT**(fyr 필수, pfa_amt1 세입총계·2 일반·3 공기업특별·4 기타특별·5 기금, 원 → 백만원) 자동(내년~작년), manual/budget_accounts_*.json은 못 받은 해 대비용.
+- 다른 지방재정365 API 찾는 법: data.go.kr 「지방재정365_○○」 페이지 「바로가기」 → pdtaId → 중계로 POST `/lf/pfinDtaOpen/dtst/dtstSvi/retvDtstDtsApi.do`(pdtaId) → 요청주소 hub 코드·인자·출력 항목이 나옴(probe `lofinlist` 참고).
 
 ## 남은 일
 - **전력 탭(「에너지·전력」) — 2026-11-21 만듦**: `collect/power.py`(한전 `KEPCO_KEY`, metroCd 51).
