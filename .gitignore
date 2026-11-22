@@ -3,3 +3,6 @@ raw/
 logs/
 probe_결과.txt
 __pycache__/
+
+# 전체 로그인 잠금: 수집 자료는 Supabase 비공개 저장소(dash)에만
+web/data/

@@ -26,6 +26,14 @@ KOSIS(여러 표), 국세통계포털 TASIS(월별 가동·신규 사업자), �
 복지로 복지통계, 심평원·NMC 의료기관, 관광자원통계 GW(`B551940`, 유료관광지 월 입장객),
 환경부 상·하수도 통계, 지방공기업 경영정보, 기상청 ASOS 일자료, 에어코리아 대기오염통계(7월~만 제공), 국립환경과학원 수질 DB.
 
+## 전체 로그인 잠금(2026-11-22, 무료 방식)
+- 시장실 화면(`index.html`)은 `web/auth.js`가 먼저 로그인 → 승인 계정(role viewer 보기 전용·admin·super)만 열림. 세션은 `dh_admin_auth`(admin.html과 공유), 클라이언트는 `window.DH_SB` 하나.
+- 자료는 **GitHub에 없음**: `collect/store.py`가 Supabase 비공개 버킷 `dash`에 `data/data.json.gz`(화면 자료, 승인 계정 읽기)·`cache/*.json.gz`(state·stores_snap, 서버 키만) 올리고 받음. collect.yml이 pull → run → push, Pages 올리기 전 `web/data` 삭제. `web/data/`는 .gitignore.
+- 화면은 저장소에서 받아 gzip 풀어 `window.DONGHAE_DATA`; 실패 시 Cache API `dh-data-v1`의 마지막 자료.
+- Edge Function `land`도 승인 계정 JWT 필요. 잠금 점검: `gh workflow run probe.yml -f only=lock`(임시 보기 전용 계정 만들어 시험 후 삭제).
+- 새 TV·PC는 한 번 로그인. 계정은 admin.html 「관리자 관리」에서 역할 「보기 전용」 지정. 정책 SQL: `supabase/lock.sql`.
+- git 예전 기록에는 잠금 전 자료가 남아 있음(사용자가 지우라고 하지 않음).
+
 ## 관리자 입력 — 아이디·비밀번호 방식(2026-11-22 바꿈, Supabase)
 - 사용자 요청: 관리자 아이디를 만들어 관리자(약 15명)가 로그인해서 동해시 자료(행정·경제, 기준일별)를 넣게.
 - `web/admin.html`: 아이디·비밀번호 로그인 / 가입 신청 → 최고관리자가 승인·분야(행정 admin, 경제 economy) 지정·사용 중지·비밀번호 초기화.
