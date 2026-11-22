@@ -25,6 +25,63 @@ window.DHLand = (function () {
   }
   function isAdmin() { return profile && (profile.role === 'admin' || profile.role === 'super'); }
 
+  // ------------------------------------------------------------ 지도 레이어(브이월드 WMS·WMTS)
+  var OVER = [
+    { k: 'cad', t: '연속지적', on: 1, layers: 'lp_pa_cbnd_bubun', styles: ['lp_pa_cbnd_bubun_line', 'lp_pa_cbnd_bubun'], minZoom: 15 },
+    { k: 'road', t: '도시계획도로', on: 1, layers: 'lt_c_upisuq151', op: 0.75 },
+    { k: 'wsp', t: '상수원보호', on: 1, layers: 'lt_c_um710', op: 0.7 },
+    { k: 'emd', t: '법정동 경계', on: 1, layers: 'lt_c_ademd' },
+    { k: 'sgg', t: '시·군 경계', on: 0, layers: 'lt_c_adsigg' },
+    { k: 'zone', t: '용도지역', on: 0, layers: 'lt_c_uq111', op: 0.55 },
+    { k: 'dup', t: '지구단위계획', on: 0, layers: 'lt_c_upisuq161', op: 0.6 },
+    { k: 'ind', t: '산업단지', on: 0, layers: 'lt_c_damdan', op: 0.6 }
+  ];
+  var MAP = null;
+  function layerState() {
+    var st = {}; try { st = JSON.parse(localStorage.getItem('dh_land_layers') || '{}'); } catch (e) {}
+    if (st.base == null) st.base = 'base';
+    OVER.forEach(function (o) { if (st[o.k] == null) st[o.k] = !!o.on; });
+    return st;
+  }
+  function layerSave(k, v) { var st = layerState(); st[k] = v; try { localStorage.setItem('dh_land_layers', JSON.stringify(st)); } catch (e) {} }
+  var C900913 = window.L ? window.L.extend({}, window.L.CRS.EPSG3857, { code: 'EPSG:900913' }) : null;
+  function setBase(kind) {
+    if (!MAP) return; var L = window.L, m = MAP.m, vk = (H.D.map || {}).vworld;
+    (MAP.baseL || []).forEach(function (x) { m.removeLayer(x); });
+    if (kind === 'sat' && vk) {
+      MAP.baseL = [L.tileLayer('https://api.vworld.kr/req/wmts/1.0.0/' + vk + '/Satellite/{z}/{y}/{x}.jpeg', { maxZoom: 19, attribution: '© 국토교통부 브이월드' }),
+        L.tileLayer('https://api.vworld.kr/req/wmts/1.0.0/' + vk + '/Hybrid/{z}/{y}/{x}.png', { maxZoom: 19 })];
+    } else MAP.baseL = [H.baseLayer()];
+    MAP.baseL.forEach(function (x) { x.addTo(m); x.bringToBack(); });
+  }
+  function setOver(k, on) {
+    if (!MAP) return; var L = window.L, m = MAP.m, o = OVER.filter(function (x) { return x.k === k; })[0], vk = (H.D.map || {}).vworld;
+    if (MAP.over[k]) { m.removeLayer(MAP.over[k]); delete MAP.over[k]; }
+    if (!on || !o || !vk) return;
+    var styles = o.styles || [o.layers], si = 0, ok = 0, bad = 0;
+    var t = L.tileLayer.wms('https://api.vworld.kr/req/wms', { layers: o.layers, styles: styles[0], format: 'image/png', transparent: true, version: '1.3.0', crs: C900913,
+      key: vk, domain: location.origin, exceptions: 'text/xml', opacity: o.op || 1, maxZoom: 19, minZoom: o.minZoom || 0, zIndex: 5 });
+    t.on('tileload', function () { ok++; });
+    t.on('tileerror', function () { bad++; if (!ok && bad >= 2 && si + 1 < styles.length) { si++; bad = 0; t.setParams({ styles: styles[si] }); } });
+    MAP.over[k] = t.addTo(m);
+    if (MAP.parcel) MAP.parcel.bringToFront();
+  }
+  function layerBar() {
+    var el = H.el, st = layerState(), box = el('div', { class: 'chips', style: 'gap:5px;flex-wrap:wrap;font-size:13px' });
+    function chip(label, active, fn) {
+      var b = el('button', { class: 'chip', style: 'cursor:pointer;border:1px solid #C9D2DE;font-weight:700;' + (active ? 'background:#1B3A6B;color:#fff' : 'background:#fff;color:#38475A'), text: label });
+      b.onclick = function (e) { e.stopPropagation(); fn(b); }; return b;
+    }
+    [['base', '일반지도'], ['sat', '항공사진']].forEach(function (x) {
+      box.appendChild(chip(x[1], st.base === x[0], function () { layerSave('base', x[0]); setBase(x[0]); box.querySelectorAll('[data-b]').forEach(function (b) { var a = b.getAttribute('data-b') === x[0]; b.style.background = a ? '#1B3A6B' : '#fff'; b.style.color = a ? '#fff' : '#38475A'; }); }));
+      box.lastChild.setAttribute('data-b', x[0]);
+    });
+    OVER.forEach(function (o) {
+      box.appendChild(chip(o.t, st[o.k], function (b) { var v = !layerState()[o.k]; layerSave(o.k, v); setOver(o.k, v); b.style.background = v ? '#1B3A6B' : '#fff'; b.style.color = v ? '#fff' : '#38475A'; }));
+    });
+    return box;
+  }
+
   // ------------------------------------------------------------ 브이월드(브라우저에서 JSONP로)
   var seq = 0;
   function qs(o) { return Object.keys(o).map(function (k) { return k + '=' + encodeURIComponent(o[k]); }).join('&'); }
@@ -49,6 +106,31 @@ window.DHLand = (function () {
     }
     var parcelFirst = /\d+(-\d+)?\s*$/.test(q) && !/(로|길)\s*\d/.test(q);
     return one(parcelFirst ? 'parcel' : 'road').then(function (r) { return r || one(parcelFirst ? 'road' : 'parcel'); });
+  }
+  // 필지 주변(반경 km 상자) 공간자료: 경계 안/밖과 경계까지 거리(m, 지도 좌표로 계산)
+  function near(id, f, km) {
+    var c = center(f.geometry), dy = km / 111, dx = km / (111 * Math.cos(c[1] * Math.PI / 180));
+    return vw('https://api.vworld.kr/req/data', { service: 'data', request: 'GetFeature', data: id, size: 100, geometry: 'true', attribute: 'true', crs: 'EPSG:4326',
+      geomFilter: 'BOX(' + (c[0] - dx) + ',' + (c[1] - dy) + ',' + (c[0] + dx) + ',' + (c[1] + dy) + ')' })
+      .then(function (j) {
+        var r = (j || {}).response || {};
+        if (r.status === 'NOT_FOUND') return { list: [] };
+        if (r.status !== 'OK') return { _err: (r.error && r.error.text) || r.status || '응답 없음' };
+        return { list: ((r.result || {}).featureCollection || {}).features.map(function (g) {
+          var m = distTo(f.geometry, g.geometry); return { p: g.properties || {}, inside: m.inside, dist: m.dist };
+        }).sort(function (a, b) { return a.dist - b.dist; }) };
+      }).catch(function (e) { return { _err: e.message }; });
+  }
+  function rings(g) { return !g ? [] : g.type === 'Polygon' ? g.coordinates : g.type === 'MultiPolygon' ? [].concat.apply([], g.coordinates) : []; }
+  function center(g) { var x = 0, y = 0, n = 0; rings(g).slice(0, 1).forEach(function (r) { r.forEach(function (p) { x += p[0]; y += p[1]; n++; }); }); return n ? [x / n, y / n] : [129.11, 37.52]; }
+  function inRing(pt, r) { var c = false; for (var i = 0, j = r.length - 1; i < r.length; j = i++) { if (((r[i][1] > pt[1]) !== (r[j][1] > pt[1])) && (pt[0] < (r[j][0] - r[i][0]) * (pt[1] - r[i][1]) / (r[j][1] - r[i][1]) + r[i][0])) c = !c; } return c; }
+  function distTo(a, b) {   // 필지(a)와 구역(b): 겹침 여부 + 가장 가까운 꼭짓점·변 사이 거리(m)
+    var A = rings(a), B = rings(b), lat = center(a)[1], kx = 111320 * Math.cos(lat * Math.PI / 180), ky = 110540, best = Infinity, inside = false;
+    var polys = b && b.type === 'MultiPolygon' ? b.coordinates : b && b.type === 'Polygon' ? [b.coordinates] : [];
+    function inPoly(pt) { return polys.some(function (pg) { return inRing(pt, pg[0]) && !pg.slice(1).some(function (h) { return inRing(pt, h); }); }); }
+    function seg(p, q, r) { var px = p[0] * kx, py = p[1] * ky, qx = q[0] * kx, qy = q[1] * ky, rx = r[0] * kx, ry = r[1] * ky, dx = rx - qx, dy = ry - qy, L2 = dx * dx + dy * dy, t = L2 ? Math.max(0, Math.min(1, ((px - qx) * dx + (py - qy) * dy) / L2)) : 0; return Math.hypot(px - qx - t * dx, py - qy - t * dy); }
+    A.forEach(function (ra) { ra.forEach(function (p) { if (inPoly(p)) inside = true; B.forEach(function (rb) { for (var i = 1; i < rb.length; i++) best = Math.min(best, seg(p, rb[i - 1], rb[i])); }); }); });
+    return { inside: inside, dist: inside ? 0 : best };
   }
   function parcelBy(prm) {
     return vw('https://api.vworld.kr/req/data', Object.assign({ service: 'data', request: 'GetFeature', data: 'LP_PA_CBND_BUBUN', size: 1, geometry: 'true', attribute: 'true', crs: 'EPSG:4326' }, prm))
@@ -77,10 +159,11 @@ window.DHLand = (function () {
         ned('getLandUseAttr', { pnu: pnu }),
         ned('getLandCharacteristics', { pnu: pnu, stdrYear: String(yr) }).then(function (j) { return arr(((j || {}).landCharacteristicss || {}).field).length ? j : ned('getLandCharacteristics', { pnu: pnu, stdrYear: String(yr - 1) }); }),
         ned('ladfrlList', { pnu: pnu }),
+        near('LT_C_UM710', f, 3),
         (sb ? sb.functions.invoke('land', { body: { pnu: pnu } }) : Promise.reject(new Error('연결 설정 없음'))).then(function (r) { return r.error ? { _err: r.error.message } : r.data; }).catch(function (e) { return { _err: e.message }; })
       ]).then(function (res) {
-        var d = { q: q, pnu: pnu, feat: f, use: arr(((res[0] || {}).landUses || {}).field), ch: arr(((res[1] || {}).landCharacteristicss || {}).field), lad: arr(((res[2] || {}).ladfrlVOList || {}).ladfrlVOList), bld: res[3] || {},
-          errs: [res[0] && res[0]._err ? '토지이용계획: ' + res[0]._err : null, res[1] && res[1]._err ? '토지특성: ' + res[1]._err : null, res[2] && res[2]._err ? '토지대장: ' + res[2]._err : null, res[3] && res[3]._err ? '건축물대장: ' + res[3]._err : null].filter(Boolean) };
+        var d = { q: q, pnu: pnu, feat: f, use: arr(((res[0] || {}).landUses || {}).field), ch: arr(((res[1] || {}).landCharacteristicss || {}).field), lad: arr(((res[2] || {}).ladfrlVOList || {}).ladfrlVOList), wsp: res[3] || {}, bld: res[4] || {},
+          errs: [res[0] && res[0]._err ? '토지이용계획: ' + res[0]._err : null, res[1] && res[1]._err ? '토지특성: ' + res[1]._err : null, res[2] && res[2]._err ? '토지대장: ' + res[2]._err : null, res[3] && res[3]._err ? '상수원보호구역 조회: ' + res[3]._err : null, res[4] && res[4]._err ? '건축물대장: ' + res[4]._err : null].filter(Boolean) };
         d.ch.sort(function (a, b) { return String(b.stdrYear).localeCompare(String(a.stdrYear)); });
         d.ev = evaluate(d);
         cur = d;
@@ -112,7 +195,26 @@ window.DHLand = (function () {
     [/(경관지구)/, 'YELLOW', '「국토계획법」 제76조, 동해시 도시계획 조례 제37조', '경관지구', '건폐율·높이·형태 제한이 추가될 수 있습니다.'],
     [/(중요시설물보호지구|보호지구)/, 'YELLOW', '「국토계획법」 제37조·제76조', '보호지구', '보호 대상 시설 기능을 해치는 건축이 제한될 수 있습니다.'],
     [/(가축사육제한구역)/, 'INFO', '「가축분뇨의 관리 및 이용에 관한 법률」 제8조', '가축사육제한구역', '축사 신축이 제한되는 곳입니다(일반 건축에는 영향 적음).'],
-    [/(상수원보호구역|수변구역)/, 'YELLOW', '「수도법」 제7조', '상수원보호구역', '오염 우려 시설·행위가 제한됩니다.'],
+    [/상수원보호구역/, 'RED', '「수도법」 제7조', '상수원보호구역', '건축물 신축·증축, 토지 형질변경 등이 금지되거나 허가 대상입니다(주민 생활시설 등 일부만 허용).'],
+    [/수변구역/, 'YELLOW', '수계별 물관리 및 주민지원에 관한 법률', '수변구역', '폐수배출시설·숙박·음식점 등 오염원 시설 설치가 제한됩니다.'],
+    [/공장설립(제한|승인)지역/, 'YELLOW', '「수도법」 제7조의2', '공장설립 제한·승인지역(상수원 상류)', '상수원 보호를 위해 공장 설립이 금지되거나 승인을 받아야 합니다. 공장이 아니면 영향이 적습니다.'],
+    [/수질보전특별대책지역/, 'YELLOW', '「환경정책기본법」 제38조', '수질보전특별대책지역', '오염물질 배출시설 입지와 규모가 제한됩니다.'],
+    [/배출시설설치제한/, 'YELLOW', '「물환경보전법」', '배출시설 설치 제한지역', '폐수배출시설 설치가 제한됩니다.'],
+    [/경제자유구역/, 'YELLOW', '「경제자유구역의 지정 및 운영에 관한 특별법」', '경제자유구역', '경제자유구역 개발계획·실시계획에 맞춰야 하며, 개발사업 시행자 협의가 필요할 수 있습니다.'],
+    [/개발행위허가제한지역/, 'RED', '「국토의 계획 및 이용에 관한 법률」 제63조', '개발행위허가 제한지역', '지정 기간 동안 건축·형질변경 등 개발행위 허가가 제한됩니다.'],
+    [/토지거래.*허가구역/, 'YELLOW', '「부동산 거래신고 등에 관한 법률」 제11조', '토지거래허가구역', '토지 매매 시 시장·군수 허가가 필요합니다.'],
+    [/접도구역/, 'YELLOW', '「도로법」 제40조', '접도구역', '접도구역 안에서는 건축물 신축과 형질변경이 제한됩니다.'],
+    [/홍수관리구역/, 'YELLOW', '「하천법」 제12조', '홍수관리구역', '홍수 흐름을 방해하는 건축·성토가 제한됩니다.'],
+    [/소하천/, 'YELLOW', '「소하천정비법」', '소하천구역·예정지', '소하천 점용허가 없이 건축할 수 없습니다.'],
+    [/(자연공원|공원구역|공원자연)/, 'RED', '「자연공원법」 제23조', '자연공원', '공원계획에 맞지 않는 건축·개발이 금지됩니다.'],
+    [/백두대간/, 'RED', '「백두대간 보호에 관한 법률」 제7조', '백두대간보호지역', '핵심구역은 대부분의 개발이 금지되고, 완충구역도 행위 제한이 있습니다.'],
+    [/산림보호구역/, 'YELLOW', '「산림보호법」 제9조', '산림보호구역', '건축·형질변경 등 행위가 제한됩니다.'],
+    [/(습지보호|습지주변관리)/, 'YELLOW', '「습지보전법」 제13조', '습지보호지역', '건축물 신축 등 행위가 제한됩니다.'],
+    [/(야생생물|야생동식물)/, 'YELLOW', '「야생생물 보호 및 관리에 관한 법률」', '야생생물 보호구역', '보호구역 안 행위가 제한될 수 있습니다.'],
+    [/(관광단지|관광지)/, 'YELLOW', '「관광진흥법」 제54조', '관광지·관광단지', '조성계획에 맞는 시설만 지을 수 있습니다.'],
+    [/(산업단지|농공단지)/, 'YELLOW', '「산업입지 및 개발에 관한 법률」', '산업단지', '관리기본계획의 입주 업종·시설 기준을 따라야 합니다.'],
+    [/(연안육역|연안해역|연안관리)/, 'INFO', '「연안관리법」', '연안 관리 지역', '연안정비·연안관리계획 협의가 필요할 수 있습니다.'],
+    [/(대기환경규제|대기관리권역)/, 'INFO', '「대기환경보전법」', '대기환경 규제지역', '대기오염물질 배출시설 기준이 강화됩니다(일반 건축에는 영향 적음).'],
     [/(공원|녹지)$/, 'YELLOW', '「도시공원 및 녹지 등에 관한 법률」', '도시계획시설(공원·녹지)', '공원·녹지 부지는 일반 건축이 제한됩니다.']
   ];
   function evaluate(d) {
@@ -158,6 +260,16 @@ window.DHLand = (function () {
         return;
       }
     });
+    // (4-2) 상수원보호구역(지도 경계로 직접 확인, 반경 3km)
+    var W = d.wsp || {};
+    if (!W._err) {
+      var w0 = (W.list || [])[0], wn = function (w) { var p = w.p; return (p.alias || p.remark || '상수원보호구역') + (p.dyear ? ' (' + p.dyear + '년 고시' + (p.dnum ? ' ' + p.dnum : '') + ')' : ''); };
+      var already = R.some(function (r) { return /상수원보호구역/.test(r.tag); });
+      if (w0 && w0.inside && !already) add('RED', '환경', '상수원보호구역 안', '필지가 「' + wn(w0) + '」 경계 안에 있습니다(브이월드 상수원보호 경계도).', '건축물 신축·증축, 토지 형질변경 등이 금지되거나 허가 대상입니다.', '「수도법」 제7조');
+      else if (w0 && !w0.inside && w0.dist <= 1000) add('YELLOW', '환경', '상수원보호구역 ' + fmt(w0.dist) + 'm', '「' + wn(w0) + '」 경계에서 약 ' + fmt(w0.dist) + 'm 떨어져 있습니다(경계도 기준 직선거리).', '보호구역 밖이지만 상류 쪽이면 공장설립 제한·승인지역에 해당할 수 있습니다. 토지이용계획에 「공장설립」 지정이 있는지 함께 보세요.', '「수도법」 제7조·제7조의2');
+      else if (w0 && !w0.inside) add('INFO', '환경', '상수원보호구역 ' + fmt(w0.dist) + 'm', '가장 가까운 「' + wn(w0) + '」 경계까지 약 ' + fmt(w0.dist) + 'm입니다(경계도 기준 직선거리).', '보호구역 밖입니다.', '「수도법」 제7조');
+      else add('GREEN', '환경', '상수원보호구역 없음(반경 3km)', '필지 반경 약 3km 안에 상수원보호구역 경계가 없습니다(브이월드 상수원보호 경계도).', '상수원보호구역 행위 제한은 해당하지 않습니다.', '「수도법」 제7조');
+    }
     // (5) 지형
     if (/급경사|고지/.test(ch.tpgrphHgCodeNm || '')) add('YELLOW', '토지', '지형 ' + ch.tpgrphHgCodeNm, '지형 높이가 「' + ch.tpgrphHgCodeNm + '」입니다.', '절·성토 등 토목 공사비가 늘어날 수 있습니다.', '「국토계획법」 제58조(개발행위허가 기준)');
     if (/부정형|자루형|삼각형/.test(ch.tpgrphFrmCodeNm || '')) add('INFO', '토지', '땅 모양 ' + ch.tpgrphFrmCodeNm, '땅 모양이 「' + ch.tpgrphFrmCodeNm + '」입니다.', '건물 배치가 불리해 실제 지을 수 있는 면적이 줄 수 있습니다.', '토지특성 조사(국토교통부)');
@@ -275,15 +387,23 @@ window.DHLand = (function () {
       ['이용상황', (d.ch[0] || {}).ladUseSittnNm || '–'], ['소유 구분', (d.lad[0] || {}).posesnSeCodeNm || '–'],
       ['위반건축물 여부', 'API 미제공 항목 <small>(세움터 확인)</small>']]));
     p2.style.gridRow = '4';
-    // ③ 지도(필지 경계)
-    var mb = el('div', { style: 'flex:1;min-height:0;border-radius:10px;overflow:hidden;background:#EEF3F8' });
-    var p3 = H.panel('위치 · 필지 경계', (p.jibun || '') + ' · 브이월드 지도', mb);
+    // ③ 지도(필지 경계 + 브이월드 레이어 켜고 끄기)
+    var mb = el('div', { style: 'position:absolute;inset:0' });
+    var mwrap = el('div', { style: 'flex:1;min-height:0;border-radius:10px;overflow:hidden;background:#EEF3F8;position:relative' }, [mb]);
+    var ll = center(d.feat.geometry);
+    var p3 = H.panel('위치 · 필지 경계', (p.jibun || '') + ' · 브이월드 지도', el('div', { style: 'display:flex;flex-direction:column;gap:6px;flex:1;min-height:0' }, [
+      layerBar(), mwrap,
+      el('div', { class: 'chips', style: 'gap:6px;font-size:13px;flex-wrap:wrap' }, [
+        el('a', { class: 'chip', href: 'https://map.ngii.go.kr/ms/map/NlipMap.do', target: '_blank', rel: 'noopener', text: '항공사진 연혁 (국토정보플랫폼) ↗' }),
+        el('a', { class: 'chip', href: 'https://map.kakao.com/link/map/' + encodeURIComponent(p.jibun || '부지') + ',' + ll[1] + ',' + ll[0], target: '_blank', rel: 'noopener', text: '카카오맵 과거 스카이뷰 ↗' })])]));
     p3.style.gridRow = '3'; p3.style.gridColumn = '2';
     setTimeout(function () {
       if (!window.L || !window.L.map) return;
-      var m = window.L.map(mb, { zoomControl: false });
-      H.baseLayer().addTo(m);
-      try { var g = window.L.geoJSON(d.feat.geometry, { style: { color: S.c, weight: 4, fillOpacity: 0.25 } }).addTo(m); m.fitBounds(g.getBounds(), { maxZoom: 18, padding: [20, 20] }); } catch (e) { m.setView([37.52, 129.11], 16); }
+      var m = window.L.map(mb, { zoomControl: false, maxZoom: 19 });
+      MAP = { m: m, base: null, over: {} };
+      setBase(layerState().base);
+      try { var g = window.L.geoJSON(d.feat.geometry, { style: { color: S.c, weight: 4, fillOpacity: 0.2 } }).addTo(m); g.bringToFront(); MAP.parcel = g; m.fitBounds(g.getBounds(), { maxZoom: 18, padding: [20, 20] }); } catch (e) { m.setView([ll[1], ll[0]], 16); }
+      OVER.forEach(function (o) { if (layerState()[o.k]) setOver(o.k, true); });
     }, 30);
     // ④ 토지이용계획 목록
     var U = d.use.slice().sort(function (a, b) { return String(a.cnflcAt).localeCompare(String(b.cnflcAt)); });

@@ -50,8 +50,11 @@ KOSIS(여러 표), 국세통계포털 TASIS(월별 가동·신규 사업자), �
 
 ## 국토·건축 탭(2026-11-22 만듦) — `web/land.js`
 - 부지 검토(로그인 없이 — 사용자가 이력·로그인 불필요하다고 함. 최근 검토는 브라우저 localStorage `dh_land_recent`에만): 지번·도로명·PNU → 브이월드(브라우저 JSONP: 지오코더·연속지적·토지이용계획·토지특성·토지임야)
-  + 건축물대장은 Supabase Edge Function `land`(supabase/functions/land, 시장실 Origin만 허용 + IP당 10분 60회, 관리자 JWT도 허용, DATA_GO_KR_KEY는 Supabase 비밀값) → 신호등 판정·근거 조문·토지이음 링크·1장 브리핑(인쇄).
+  + 건축물대장은 Supabase Edge Function `land`(supabase/functions/land, 승인 계정 JWT 필요 + IP당 10분 60회, DATA_GO_KR_KEY는 Supabase 비밀값) → 신호등 판정·근거 조문·토지이음 링크·1장 브리핑(인쇄).
   브이월드는 GitHub 서버(해외)에서 막힘 → 반드시 브라우저에서 호출. 판정 규칙은 참고자료/신호등 엔진 + 동해시 조례 원문 수치. 사용자 요청: 「도시과 확인 필요」 같은 문구 넣지 말 것(근거·원본을 최대한 보여 주기).
+- 지도 레이어(2026-11-22): 브이월드 WMS(EPSG:900913, STYLES=레이어명) 켜고 끄기 — 연속지적·도시계획도로(lt_c_upisuq151)·상수원보호(lt_c_um710)·법정동(lt_c_ademd)·시군경계·용도지역·지구단위·산업단지, 일반/항공사진(WMTS Satellite+Hybrid). 선택은 localStorage `dh_land_layers`.
+  레이어 이름 출처: UrbanWatcherKr/korean-land-mcp, clazic/vworld(.2ddata_cache). **경제자유구역 레이어는 브이월드에 없음** → 토지이용계획 목록의 「경제자유구역」으로 판정만. 과거 항공사진은 공개 API 없음 → 국토정보플랫폼·카카오맵 링크.
+  상수원보호구역은 `near('LT_C_UM710', 필지, 3km)`로 경계까지 거리 계산(안=빨강, 1km 이내=노랑, 그 밖=참고, 없음=초록). 토지이용계획 규칙(RULES)에 공장설립제한·수질보전특별대책·접도·홍수관리·자연공원·백두대간·경자구역 등 추가.
 - 검토 이력: 서버 저장 안 함(표 `site_reviews`는 만들어 두었으나 미사용). SQL은 `gh workflow run db_sql.yml -f file=…`로 실행(SUPABASE_ACCESS_TOKEN).
 - 조례 비교: `collect/landlaw.py`가 18개 시·군 도시계획(군계획) 조례에서 용도지역별 건폐율·용적률 추출(주 1회, LAW_OC). 일부 시·군은 조문 형식이 달라 몇 개 용도지역 값이 빠짐(원주·홍천·화천·인제 상업지역 용적률 등) → 빠진 곳은 비교에서 제외(추정 안 함).
 - Edge Function 배포: `supabase/functions/**` 고치고 push하면 deploy_functions.yml이 자동 배포.
