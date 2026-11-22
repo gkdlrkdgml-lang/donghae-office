@@ -207,9 +207,9 @@ def lock_probe():
     def code(url, data=None, h=None):
         try:
             r = urllib.request.urlopen(urllib.request.Request(url, data=data, headers=h or {}), timeout=30)
-            return r.status, r.read()[:150]
+            return r.status, r.read()
         except urllib.error.HTTPError as e:
-            return e.code, e.read()[:150]
+            return e.code, e.read()[:300]
     site = 'https://gkdlrkdgml-lang.github.io/donghae-office/'
     for u in ['', 'auth.js', 'data/data.js', 'data/state.json', 'data/stores_snap.json']:
         say('공개 사이트 %s → %s' % (u or '(첫 화면)', code(site + u + '?x=%d' % random.randint(1, 9999))[0]))
@@ -220,7 +220,7 @@ def lock_probe():
     say('land 익명 → %s %s' % code(sb + '/functions/v1/land', b'{"pnu":"5117010100108060000"}', {'apikey': k, 'Content-Type': 'application/json', 'Origin': 'https://gkdlrkdgml-lang.github.io'}))
     sk = os.environ.get('SUPABASE_SERVICE_KEY', '')
     st, b = code(sb + '/storage/v1/object/dash/data/version.txt', h={'apikey': sk})
-    say('서버 키 version.txt → %s %s' % (st, b))
+    say('서버 키 version.txt → %s %s' % (st, b[:40]))
     # 임시 보기 전용 계정으로 실제 로그인 → 자료 받기 → 계정 삭제
     import json as J, secrets
     ah = {'apikey': sk, 'Content-Type': 'application/json'}
