@@ -88,6 +88,11 @@ KOSIS(여러 표), 국세통계포털 TASIS(월별 가동·신규 사업자), �
 - 농진청 병해충 예찰 `collect/ncpms.py`(GitHub Secret NCPMS_KEY, ncpms.rda.go.kr/npmsAPI/service, serviceType AA003, SVC51 회차 → SVC53 sidoCode=42 강원). **동해는 예찰 조사 지역이 아님** → 이웃 강릉(4215)·삼척(4223) 값을 「농업 현황」 왼쪽 위 칸에(동해 자료 아님 표시). 전국 예측 경보(SVC31)는 위험 단계 뜻이 확인 안 돼 안 씀.
 - 15개 탭이라 위쪽 줄 메뉴 글자 14.5px·간격 좁힘, 「최종 갱신」은 두 줄.
 
+## 국내 중계(2026-11-22) — `supabase/functions/kr`
+- 해외(GitHub 서버) 접속이 막힌 국내 사이트를 Supabase 함수가 서울 지역(`x-region: ap-northeast-2`)에서 대신 부름. 서비스 키(SUPABASE_SERVICE_KEY)만 허용, 허용 주소만(지금은 lofin365 hub). `common.kr_get`, settings 소스에 `kr_relay: true`면 바로 해 보고 실패 시 중계.
+- 지방재정365(재정자립도 당초 DCFCE·최종 JFIED, 예산 규모): **fyr(회계연도) 필수** → 해마다 따로 받음(당초 내년~2년 전, 최종 올해~2년 전), 못 받은 해만 manual/lofin_*.json. LOFIN_KEY 없으면 LOFIN_KEY_FINAL 사용(key_env_alt). 점검: `probe.yml -f only=lofin`.
+- 아직 수동: manual/budget_accounts_<연도>.json(회계별 세입예산, 지방재정365 XLSX) — 해마다 당초예산 공시(2~3월) 뒤 한 번.
+
 ## 남은 일
 - **전력 탭(「에너지·전력」) — 2026-11-21 만듦**: `collect/power.py`(한전 `KEPCO_KEY`, metroCd 51).
   계약종별·가구평균은 시·군 월별 25개월 보관(지난 달은 다시 안 받음), 산업분류는 최신 달만. 지표 pw_total·pw_house·pw_house_bill·pw_yoy·pw_ind_share(모두 dir 0).
