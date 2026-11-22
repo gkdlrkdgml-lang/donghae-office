@@ -281,7 +281,21 @@ def agri_probe():
         say('== %s → %s' % (nm, t[:400].replace('\n', ' ')))
 
 
+def agri2_probe():
+    import agri
+    o = agri.collect(codes())
+    say('오류: %s' % o['errors'])
+    for k, t in o['tables'].items():
+        yrs = sorted(t['data'])
+        d = t['data'][t['year']]
+        say('== %s %s 연도 %s~%s 지역 %d' % (k, t['tbl'], yrs[0], yrs[-1], len(d)))
+        say('   동해: ' + str({a: b for a, b in list((d.get('동해') or {}).items())[:16]}))
+        say('   강원: ' + str({a: b for a, b in list((d.get('강원') or {}).items())[:6]}))
+
+
 def main():
+    if os.environ.get('PROBE_ONLY') == 'agri2':
+        agri2_probe(); return
     if os.environ.get('PROBE_ONLY') == 'agri':
         agri_probe(); return
     if os.environ.get('PROBE_ONLY') == 'lock':
