@@ -412,6 +412,35 @@ def annex_probe():
         say('[annex] 시행령 실패 %s' % str(e)[:300])
 
 
+def annex2_probe():
+    import landlaw, urllib.request, hwp
+    it = landlaw.find_ordinance('동해시')
+    j = landlaw._get(landlaw.SERVICE, {'target': 'ordin', 'MST': it.get('자치법규일련번호')})
+    bs = landlaw._as_list(((j.get('LawService') or {}).get('별표') or {}).get('별표단위'))
+    for b in bs:
+        if b.get('별표번호') not in ('0004', '0008', '0016', '0019', '0013'):
+            continue
+        u = (b.get('별표첨부파일명') or '').replace('http://', 'https://')
+        d = urllib.request.urlopen(urllib.request.Request(u, headers={'User-Agent': 'Mozilla/5.0'}), timeout=60).read()
+        try:
+            t = hwp.hwp_text(d)
+        except Exception as e:  # noqa: BLE001
+            t = '실패 %s' % e
+        say('[A조례] ===== %s' % b.get('별표제목'))
+        for ln in t.split('\n'):
+            say('[A조례] ' + ln)
+    s = landlaw._get(landlaw.SEARCH, {'target': 'law', 'query': '국토의 계획 및 이용에 관한 법률 시행령', 'display': '5'})
+    law = [x for x in landlaw._as_list((s.get('LawSearch') or {}).get('law')) if x.get('법령명한글') == '국토의 계획 및 이용에 관한 법률 시행령'][0]
+    lj = landlaw._get(landlaw.SERVICE, {'target': 'law', 'MST': law.get('법령일련번호')})
+    for b in landlaw._as_list(((lj.get('법령') or {}).get('별표') or {}).get('별표단위')):
+        if b.get('별표번호') in ('0005', '0009', '0017', '0020', '0014') and b.get('별표가지번호') in (None, '', '00'):
+            c = b.get('별표내용')
+            c = '\n'.join(sum(c, [])) if isinstance(c, list) and c and isinstance(c[0], list) else ('\n'.join(c) if isinstance(c, list) else str(c))
+            say('[A시행령] ===== %s %s' % (b.get('별표번호'), b.get('별표제목')))
+            for ln in c.split('\n'):
+                say('[A시행령] ' + ln)
+
+
 def main():
     if os.environ.get('PROBE_ONLY') == 'ncpms2':
         ncpms2_probe(); return
@@ -428,6 +457,8 @@ def main():
     if os.environ.get('PROBE_ONLY') == 'lock':
         lock_probe(); return
     load_env()
+    if os.environ.get('PROBE_ONLY') == 'annex2':
+        annex2_probe(); return
     if os.environ.get('PROBE_ONLY') == 'annex':
         annex_probe(); return
     if os.environ.get('PROBE_ONLY') == 'ordin':
