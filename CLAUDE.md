@@ -7,6 +7,7 @@
 - `collect/` 파이썬 수집기 → GitHub Actions(`collect.yml`)가 돌며 `web/data/data.js`를 만들고 Pages로 배포.
   **push만으로는 다시 배포되지 않음** → `gh workflow run collect.yml --ref main` (돌고 있는 실행이 끝난 뒤).
 - 화면은 `web/index.html` 한 파일(바닐라 JS). 탭 순서: 한눈에 보기, 행정, 경제, 보건 및 의료, 복지, 관광, 예산, 토지 및 건축, 교통, 농업 및 수산(10번, 사용자 지정), 환경, 상하수도, 에너지·전력, 흘러가기(액자는 2026-11-23 사용자 요청으로 메뉴에서 뺌, 화면 코드는 남음). 메뉴 간격 gap 7px·padding 6px(더 넓히면 1920 폭을 넘음).
+- 인쇄(2026-11-23): 위쪽 줄 오른쪽 🖨 단추(#printBtn) → `dhPrint()`가 지금 보이는 탭을 A4 가로 1장(@media print, #stage zoom 0.562, 비서실장·설치 단추 숨김), 파일 이름 「동해시 AI 시장실 탭 아래탭 날짜」. 위쪽 줄이 딱 1920px(header padding 18px, hright gap 9px) — 더 넣으면 넘침.
 - 흘러가기(`screenFlow`): 메뉴·아래 탭을 골라 정해진 간격(10초~2분)으로 계속 돌림. 선택·진행은 localStorage `dh_flow`(30분 새로 고침 뒤에도 이어서). 아래 탭은 `.title .subtabs button` 또는 `[data-subtab]` 글자로 찾아 누름. 메뉴·아래 탭을 사람이 누르거나 Esc·스페이스·「멈춤」이면 멈춤.
 - 지표 정의: `config/settings.json` indicators(dir: 1 높을수록 좋음, -1 낮을수록 좋음, 0 판정 안 함). 순위는 **좋은 쪽이 1위**.
 - 수집 결과 캐시는 `L[key]['at']`, `stale(key, days)`로 다시 받을지 결정.
