@@ -635,7 +635,7 @@ window.DHLand = (function () {
         r.cite ? el('div', { style: 'font-size:13px;margin-top:4px;color:#556274', text: '근거: ' + r.cite }) : null]));
       if (r.pin) { det.open = true; det.removeAttribute('data-fit'); det.style.maxHeight = '300px'; det.style.overflow = 'auto'; det.style.flexShrink = '0'; }   // 예정 용도: 숨기지 말고 맨 위에(길면 칸 안에서 굴림)
       if (r.art) det.appendChild(el('div', { style: 'font-size:12px;margin-top:6px;color:#38475A;white-space:pre-wrap;max-height:140px;overflow:auto;background:#fff;padding:6px;border-radius:6px', text: '[조례 원문] ' + r.art }));
-      if (r.area === '토지' && /건폐율/.test(r.detail) && artText('bcr')) det.appendChild(el('div', { style: 'font-size:12px;margin-top:6px;color:#38475A;white-space:pre-wrap;max-height:120px;overflow:auto;background:#fff;padding:6px;border-radius:6px', text: '[조례 원문] ' + artText('bcr') + '\n\n' + artText('far') }));
+      if (r.area === '토지' && !r.pin && /건폐율/.test(r.detail) && artText('bcr')) det.appendChild(el('div', { style: 'font-size:12px;margin-top:6px;color:#38475A;white-space:pre-wrap;max-height:120px;overflow:auto;background:#fff;padding:6px;border-radius:6px', text: '[조례 원문] ' + artText('bcr') + '\n\n' + artText('far') }));
       return det; }));
     var p5 = H.panel('판정 근거 · 확인할 것', '빨강·노랑부터 · 눌러서 근거 조문 보기', [list].concat(d.errs.length ? [el('div', { class: 'chips', style: 'margin-top:8px;gap:6px;flex-wrap:wrap' }, d.errs.map(function (e) { return el('span', { class: 'chip bad', text: e }); }))] : []));
     p5.style.gridRow = '4'; p5.style.gridColumn = '3';
