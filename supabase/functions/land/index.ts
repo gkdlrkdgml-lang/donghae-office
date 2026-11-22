@@ -45,8 +45,17 @@ async function whoIs(req: Request): Promise<string | null> {
 
 async function hub(op: string, prm: Record<string, string>, key: string) {
   const q = new URLSearchParams({ ...prm, serviceKey: key, _type: "json", numOfRows: "100", pageNo: "1" });
-  const r = await fetch(HUB + op + "?" + q.toString());
-  const t = await r.text();
+  // 건축HUB가 자주 503을 냄 → 4번까지 다시 시도
+  let t = "", st = 0;
+  for (let i = 0; i < 4; i++) {
+    try {
+      const r = await fetch(HUB + op + "?" + q.toString());
+      st = r.status; t = await r.text();
+      if (st < 500 && t.trim().startsWith("{")) break;
+    } catch (e) { t = String(e); }
+    await new Promise((ok) => setTimeout(ok, 600 * (i + 1)));
+  }
+  if (st >= 500) return { error: "건축HUB 서버 응답 없음(" + st + ")", items: [] };
   try {
     const j = JSON.parse(t);
     const head = j?.response?.header;

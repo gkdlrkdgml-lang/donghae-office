@@ -435,7 +435,8 @@ window.DHLand = (function () {
       price: +(ch.pblntfPclnd || (d.feat.properties || {}).jiga || 0), priceYear: ch.stdrYear || (d.feat.properties || {}).gosi_year };
   }
   function buildings(bld) {
-    var t = (bld && bld.title && bld.title.items) || [];
+    var t = (bld && bld.title && bld.title.items) || [], rc = !t.length && bld && bld.recap && bld.recap.items || [];
+    if (rc.length) t = rc.map(function (x) { return Object.assign({}, x, { bldNm: (x.bldNm || '').trim() + ' (총괄표제부)' }); });
     return t.map(function (x) {
       var ap = String(x.useAprDay || '').trim(), y = +ap.slice(0, 4), now = new Date();
       var age = y > 1800 ? now.getFullYear() - y - ((now.getMonth() + 1) * 100 + now.getDate() < (+ap.slice(4, 6) || 1) * 100 + (+ap.slice(6, 8) || 1) ? 1 : 0) : null;
@@ -600,6 +601,9 @@ window.DHLand = (function () {
     var d8 = function (v) { v = String(v || '').trim(); return v.length >= 8 ? v.slice(0, 4) + '.' + v.slice(4, 6) + '.' + v.slice(6, 8) : '–'; };
     var bbody;
     if (d.bld && d.bld._err) bbody = el('div', { class: 'empty', style: 'color:#D9534F', text: '건축물대장 조회 실패: ' + d.bld._err });
+    else if (!B.length && d.bld && ((d.bld.title || {}).error || (d.bld.recap || {}).error)) bbody = el('div', { class: 'empty', style: 'color:#D9534F' }, [
+      el('div', { text: '건축물대장 조회 실패: ' + ((d.bld.title || {}).error || (d.bld.recap || {}).error) }),
+      el('button', { type: 'button', class: 'chip', style: 'margin-top:8px;cursor:pointer;border:0;font-weight:800', text: '↻ 다시 조회', onclick: function () { lookup(d.pnu); } })]);
     else if (!B.length) bbody = el('div', { class: 'empty', text: '건축물대장에 등록된 건물이 없습니다(나대지 또는 미등재).' });
     else bbody = el('div', { class: 'landlist', style: 'min-height:0;display:flex;flex-direction:column;gap:8px' }, B.map(function (b) {
       var oldC = b.age != null && b.age >= 30 ? '#D9534F' : '#1B3A6B';
