@@ -248,7 +248,37 @@ def lock_probe():
         say('임시 계정 삭제 → %s' % urllib.request.urlopen(req, timeout=30).status)
 
 
+def agri_probe():
+    import urllib.request, urllib.parse, json as J
+    def get(url, prm):
+        u = url + '?' + urllib.parse.urlencode(prm)
+        try:
+            r = urllib.request.urlopen(urllib.request.Request(u, headers={'User-Agent': 'Mozilla/5.0'}), timeout=60)
+            return r.read().decode('utf-8', 'replace')
+        except Exception as e:  # noqa: BLE001
+            return 'ERR %s %s' % (e, getattr(e, 'read', lambda: b'')()[:200])
+    kk = os.environ.get('KOSIS_KEY', '')
+    for q in ['농림어업총조사 시군', '시군별 농가', '시군별 어가', '시군구별 경지면적', '어업생산 시군', '농가 시군구 2025', '어가 시군구 2025', '해수면어가']:
+        t = get('https://kosis.kr/openapi/statisticsSearch.do', {'method': 'getList', 'apiKey': kk, 'searchNm': q, 'format': 'json', 'jsonVD': 'Y', 'resultCount': '20'})
+        say('== KOSIS 검색 %s' % q)
+        try:
+            for x in J.loads(t)[:20]:
+                say('  %s %s | %s | %s~%s' % (x.get('ORG_ID'), x.get('TBL_ID'), x.get('TBL_NM'), x.get('STRT_PRD_DE'), x.get('END_PRD_DE')))
+        except Exception:  # noqa: BLE001
+            say('  ' + t[:300])
+    import urllib.parse as UP
+    key = UP.unquote(os.environ.get('DATA_GO_KR_KEY', ''))
+    for nm, url, prm in [
+        ('위판(일자별위탁판매, 파일→API)', 'https://api.odcloud.kr/api/15102791/v1/uddi:', {}),
+        ('수협 위판정보 API', 'https://apis.data.go.kr/1192000/select0040List/getselect0040List', {'pageNo': 1, 'numOfRows': 5, 'type': 'json'}),
+    ]:
+        t = get(url, dict(prm, serviceKey=key))
+        say('== %s → %s' % (nm, t[:400].replace('\n', ' ')))
+
+
 def main():
+    if os.environ.get('PROBE_ONLY') == 'agri':
+        agri_probe(); return
     if os.environ.get('PROBE_ONLY') == 'lock':
         lock_probe(); return
     load_env()
