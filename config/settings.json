@@ -24,6 +24,11 @@
       "show": true
     },
     {
+      "id": "agri",
+      "label": "농업 및 수산",
+      "show": true
+    },
+    {
       "id": "welfare",
       "label": "보건 및 의료",
       "show": true
@@ -685,6 +690,71 @@
       "no": 50,
       "field": "에너지·전력",
       "source": "한전 전력데이터 개방포털",
+      "show": true,
+      "main": false
+    },
+    {
+      "id": "ag_farms",
+      "name": "농가 수",
+      "unit": "가구",
+      "dir": 0,
+      "digits": 0,
+      "note": "농가(논·밭 10a 이상 직접 경작 등)",
+      "no": 52,
+      "field": "농업·수산",
+      "source": "국가데이터처 KOSIS",
+      "show": true,
+      "main": false
+    },
+    {
+      "id": "ag_land",
+      "name": "경지면적",
+      "unit": "ha",
+      "dir": 0,
+      "digits": 1,
+      "note": "논+밭",
+      "no": 53,
+      "field": "농업·수산",
+      "source": "국가데이터처 KOSIS",
+      "show": true,
+      "main": false
+    },
+    {
+      "id": "ag_old",
+      "name": "고령 경영주 농가 비율",
+      "unit": "%",
+      "dir": 0,
+      "digits": 1,
+      "note": "경영주 65세 이상 농가 ÷ 전체 농가",
+      "no": 54,
+      "field": "농업·수산",
+      "source": "국가데이터처 KOSIS",
+      "show": true,
+      "main": false
+    },
+    {
+      "id": "ag_eco",
+      "name": "친환경 인증 농가",
+      "unit": "호",
+      "dir": 0,
+      "digits": 0,
+      "note": "유기·무농약 인증 농가",
+      "no": 55,
+      "field": "농업·수산",
+      "source": "국립농산물품질관리원(KOSIS)",
+      "show": true,
+      "main": false
+    },
+    {
+      "id": "fs_hh",
+      "name": "해수면 어가",
+      "unit": "가구",
+      "dir": 0,
+      "digits": 0,
+      "note": "바다에서 어업을 하는 가구",
+      "no": 56,
+      "field": "농업·수산",
+      "source": "국가데이터처 KOSIS",
       "show": true,
       "main": false
     }
