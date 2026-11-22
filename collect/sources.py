@@ -7,11 +7,11 @@ import os
 import urllib.parse
 
 from common import (http_get, parse_body, find_items, check_error, pick, to_num,
-                    match_region, read_manual, save_raw, ym_shift, now, log, load_json, save_json)
+                    match_region, read_manual, save_raw, ym_shift, now, log, load_json, save_json, kr_get)
 
 
 def _call(src, extra, raw_name):
-    key = os.environ.get(src['key_env'], '').strip()
+    key = os.environ.get(src['key_env'], '').strip() or os.environ.get(src.get('key_env_alt') or '_', '').strip()
     if '%' in key:  # Encoding 키를 넣었어도 동작하도록 한 번 풀어 줍니다.
         key = urllib.parse.unquote(key)
     if not key:
@@ -27,7 +27,14 @@ def _call(src, extra, raw_name):
     while True:
         if 'numOfRows' in params:
             params['pageNo'] = str(page)
-        text = http_get(src['url'], params)
+        if src.get('kr_relay'):   # 해외 접속이 막힌 사이트: 바로 해 보고 안 되면 서울 중계로
+            try:
+                text = http_get(src['url'], params, tries=1, timeout=20)
+            except Exception as e:  # noqa: BLE001
+                log('%s 해외 접속 실패(%s) → 국내 중계' % (raw_name, str(e)[:80]))
+                text = kr_get(src['url'], params)
+        else:
+            text = http_get(src['url'], params)
         obj = parse_body(text)
         err = check_error(obj)
         if isinstance(obj, dict) and obj.get('err'):

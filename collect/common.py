@@ -100,6 +100,35 @@ def http_get(url, params, tries=3, timeout=30):
     raise RuntimeError('호출 실패: %s (%s)' % (url, last))
 
 
+def kr_get(url, params, timeout=70):
+    """해외에서 막히는 국내 사이트를 Supabase 중계(서울 지역)로 불러옵니다(supabase/functions/kr)."""
+    import re as _re
+    key = os.environ.get('SUPABASE_SERVICE_KEY', '').strip()
+    if not key:
+        raise RuntimeError('SUPABASE_SERVICE_KEY 없음(국내 중계 불가)')
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    base = _re.search(r"url:\s*'([^']+)'", open(os.path.join(root, 'web', 'admin-config.js'), encoding='utf-8').read()).group(1).rstrip('/')
+    body = json.dumps({'url': url, 'params': {k: str(v) for k, v in params.items()}}).encode()
+    last = None
+    for i in range(2):
+        try:
+            req = urllib.request.Request(base + '/functions/v1/kr', data=body, method='POST', headers={
+                'Authorization': 'Bearer ' + key, 'apikey': key, 'Content-Type': 'application/json', 'x-region': 'ap-northeast-2'})
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                j = json.loads(r.read().decode('utf-8'))
+            if j.get('error'):
+                raise RuntimeError(j['error'])
+            if int(j.get('status') or 0) >= 400:
+                raise RuntimeError('HTTP %s %s' % (j.get('status'), str(j.get('text'))[:200]))
+            return j.get('text') or ''
+        except urllib.error.HTTPError as e:
+            last = '%s %s' % (e, e.read()[:200].decode('utf-8', 'replace'))
+        except Exception as e:  # noqa: BLE001
+            last = e
+        time.sleep(5)
+    raise RuntimeError('국내 중계 실패: %s' % last)
+
+
 def parse_body(text):
     """JSON이면 JSON으로, 아니면 XML을 dict로 바꿉니다."""
     t = text.strip()

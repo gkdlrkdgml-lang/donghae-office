@@ -418,6 +418,19 @@ def annex_probe():
         say('[annex] 시행령 실패 %s' % str(e)[:300])
 
 
+def lofin_probe():
+    import sources
+    S, C = settings(), codes()
+    for k in ('finance', 'finance_final'):
+        try:
+            rows = sources._call(S['sources'][k], {}, k)
+            ys = sorted(set(str(r.get('fyr')) for r in rows))
+            dh = [r for r in rows if '동해' in str(r)]
+            say('[lofin] %s 직접/중계 성공 %d줄 연도 %s 동해 예 %s' % (k, len(rows), ys, str(dh[:1])[:300]))
+        except Exception as e:  # noqa: BLE001
+            say('[lofin] %s 실패 %s' % (k, str(e)[:300]))
+
+
 def bld_probe():
     import urllib.request, urllib.parse
     key = urllib.parse.unquote(os.environ.get('DATA_GO_KR_KEY', ''))
@@ -500,6 +513,8 @@ def main():
     if os.environ.get('PROBE_ONLY') == 'lock':
         lock_probe(); return
     load_env()
+    if os.environ.get('PROBE_ONLY') == 'lofin':
+        lofin_probe(); return
     if os.environ.get('PROBE_ONLY') == 'bld':
         bld_probe(); return
     if os.environ.get('PROBE_ONLY') == 'annex3':
