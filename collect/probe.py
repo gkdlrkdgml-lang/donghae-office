@@ -419,20 +419,29 @@ def annex_probe():
 
 
 def lofinlist_probe():
-    import re as R
+    import re as R, urllib.request
     from common import kr_get
-    for page, prm in (('LF5100000', {}), ('LF5110000', {}), ('LF5100000', {'srchKwd': '세입예산'}), ('LF5100000', {'searchKeyword': '세입예산'})):
+    hits = []
+    for n in range(15138680, 15138880):
         try:
-            t = kr_get('https://www.lofin365.go.kr/portal/%s.do' % page, prm)
-            say('[LL] %s %s 길이 %d 제목 %s' % (page, prm, len(t), R.findall(r'<title>([^<]*)', t)[:1]))
-            for m in R.finditer(r'pdtaId=([A-Z0-9]+)[^<]{0,200}', t):
-                pass
-            ids = R.findall(r"([A-Z0-9]{20,})", t)
-            for m in R.finditer(r'세입예산|세출예산', t):
-                say('[LL]   주변 ' + R.sub(r'\s+', ' ', t[max(0, m.start() - 300):m.start() + 100]))
-            say('[LL]   id 예 %s' % ids[:10])
-        except Exception as e:  # noqa: BLE001
-            say('[LL] %s 실패 %s' % (page, str(e)[:200]))
+            t = urllib.request.urlopen(urllib.request.Request('https://www.data.go.kr/catalog/%d/openapi.json' % n, headers={'User-Agent': 'Mozilla/5.0'}), timeout=20).read().decode('utf-8', 'replace')
+            j = json.loads(t)
+            nm = j.get('name', '')
+            if '지방재정365' in nm and ('세입' in nm or '세출예산' in nm):
+                u = R.findall(r'pdtaId=([A-Z0-9]+)', t)
+                hits.append((n, nm, u[:1]))
+                say('[LL] %d %s %s' % (n, nm, u[:1]))
+        except Exception:  # noqa: BLE001
+            pass
+    for n, nm, u in hits:
+        if u and nm.endswith('세입예산'):
+            try:
+                t = kr_get('https://www.lofin365.go.kr/portal/LF5110000.do', {'pdtaId': u[0]})
+                say('[LL] 상세 길이 %d hub %s' % (len(t), sorted(set(R.findall(r'lf/hub/([A-Z]+)', t)))))
+                for m in R.finditer(r'요청|인자|fyr|출력', t):
+                    say('[LL]   ' + R.sub(r'<[^>]+>|\s+', ' ', t[m.start():m.start() + 300])[:200]); break
+            except Exception as e:  # noqa: BLE001
+                say('[LL] 상세 실패 %s' % str(e)[:200])
 
 
 def lofin_probe():
