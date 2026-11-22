@@ -239,7 +239,10 @@ window.DHLand = (function () {
     var el = H.el, key = (H.D.map || {}).vworld, old = document.getElementById('dh3d'); if (old) old.remove();
     var box = el('div', { style: 'position:absolute;inset:0;border-radius:12px;overflow:hidden;background:#DDE5EF' });
     var note = el('div', { style: 'font-size:14px;color:#38475A', text: '주변 건물을 불러오는 중…' });
-    var rot = null, planBar = el('div', { style: 'display:none;flex-wrap:wrap;gap:8px 14px;align-items:center;font-size:15px;background:#F3F6FA;border-radius:10px;padding:8px 12px' });
+    var rot = null, planBar = el('div', { style: 'display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;font-size:15px;background:#FFF6E5;border:2px dashed #F0A030;border-radius:10px;padding:8px 12px' }, [
+      el('b', { style: 'color:#B4531B;font-size:16px', text: '📐 설계 도면으로 미리 세워 보기' }),
+      el('span', { html: '① 오른쪽 위 <b>「📐 CAD 도면 올리기(DXF)」</b> 누르기 → ② 도면 파일 고르기(DWG는 CAD에서 <b>DXF로 저장</b>) → ③ 층수·층고 넣고 회전·이동으로 자리 맞추기 → ④ 건폐율·용적률·대지 경계 안 여부가 바로 나옵니다' }),
+      el('span', { style: 'color:#556274;font-size:13px', text: '건물 외곽은 닫힌 폴리라인이어야 읽힙니다 · 도면은 이 브라우저 안에서만 열리고 서버에 올라가지 않습니다' })]);
     var fileIn = el('input', { type: 'file', accept: '.dxf', style: 'display:none' });
     fileIn.addEventListener('change', function () { var f = fileIn.files[0]; if (!f) return; var rd = new FileReader(); rd.onload = function () { loadPlan(String(rd.result), f.name); }; rd.readAsText(f); fileIn.value = ''; });
     function close() { if (rot) cancelAnimationFrame(rot); ov.remove(); }
@@ -305,7 +308,7 @@ window.DHLand = (function () {
         chipS(inside ? '대지 경계 안' : '대지 경계를 벗어남 — 위치·방향을 맞춰 주세요', inside)].forEach(function (x) { if (x) statBox.appendChild(x); });
     }
     function drawPlanBar() {
-      planBar.style.display = 'flex'; planBar.innerHTML = '';
+      planBar.style.display = 'flex'; planBar.innerHTML = ''; planBar.style.background = '#F3F6FA'; planBar.style.border = '0';
       function num(lbl, v, step, set, w) { var i = el('input', { type: 'number', value: v, step: step, style: 'font:inherit;width:' + (w || 70) + 'px;padding:4px;border:1px solid #C9D2DE;border-radius:6px' }); i.addEventListener('input', function () { if (i.value !== '') { set(+i.value); drawPlan(); } }); return el('label', { style: 'display:flex;gap:4px;align-items:center;font-weight:700' }, [lbl, i]); }
       function rng(lbl, v, mn, mx, set) { var i = el('input', { type: 'range', min: mn, max: mx, value: v, style: 'width:150px' }), o = el('b', { text: v }); i.addEventListener('input', function () { set(+i.value); o.textContent = i.value; drawPlan(); }); return el('label', { style: 'display:flex;gap:4px;align-items:center;font-weight:700' }, [lbl, i, o]); }
       var sel = el('select', { style: 'font:inherit;padding:4px;border:1px solid #C9D2DE;border-radius:6px;max-width:300px' }, PL.loops.map(function (l, i) { return el('option', { value: i, text: (i + 1) + '. 레이어 ' + l.layer + ' · ' + fmt(l.a, 1) + '㎡' }); }));
@@ -731,7 +734,7 @@ window.DHLand = (function () {
     // ③ 지도(필지 경계 + 브이월드 레이어 켜고 끄기)
     var mb = el('div', { style: 'position:absolute;inset:0' });
     var mwrap = el('div', { style: 'flex:1;min-height:0;border-radius:10px;overflow:hidden;background:#EEF3F8;position:relative' }, [mb,
-      el('button', { type: 'button', style: 'position:absolute;right:10px;top:10px;z-index:500;font:inherit;font-size:17px;font-weight:900;cursor:pointer;border:0;border-radius:10px;padding:8px 14px;background:#D9534F;color:#fff;box-shadow:0 3px 10px rgba(0,0,0,.25)', text: '🏢 3D로 보기', onclick: function (e) { e.stopPropagation(); open3D(d); } })]);
+      el('button', { type: 'button', style: 'position:absolute;right:10px;top:10px;z-index:500;font:inherit;font-size:17px;font-weight:900;cursor:pointer;border:0;border-radius:10px;padding:8px 14px;background:#D9534F;color:#fff;box-shadow:0 3px 10px rgba(0,0,0,.25)', text: '🏢 3D로 보기 · 도면 올리기', onclick: function (e) { e.stopPropagation(); open3D(d); } })]);
     var ll = center(d.feat.geometry);
     var p3 = H.panel('위치 · 필지 경계', (p.jibun || '') + ' · 브이월드 지도', el('div', { style: 'display:flex;flex-direction:column;gap:6px;flex:1;min-height:0' }, [
       layerBar(), mwrap,
