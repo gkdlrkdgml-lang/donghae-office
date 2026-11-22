@@ -323,7 +323,41 @@ def wipan_probe():
     t0 = time.time(); r = q({'cond[산지조합명::EQ]': '동해시수산업협동조합'}, 5000); say('5000건 받기 %.1f초 currentCount %s' % (time.time() - t0, r.get('currentCount')))
 
 
+def ncpms_probe():
+    import urllib.request, urllib.parse, json as J
+    k = urllib.parse.quote(os.environ.get('NCPMS_KEY', '').strip(), safe='')
+    def call(**p):
+        u = 'https://ncpms.rda.go.kr/npmsAPI/service?apiKey=' + k + '&' + urllib.parse.urlencode(dict({'serviceType': 'AA003'}, **p))
+        t = urllib.request.urlopen(urllib.request.Request(u, headers={'User-Agent': 'Mozilla/5.0'}), timeout=60).read().decode('utf-8', 'replace')
+        try:
+            return J.loads(t).get('service', {})
+        except Exception:  # noqa: BLE001
+            return {'raw': t[:300]}
+    s31 = call(serviceCode='SVC31', proxyUrl='http://x', div_id='r')
+    say('SVC31 키 %s 오류 %s' % (list(s31)[:5], s31.get('errorCode')))
+    for crop in ['FC010101', 'FT010601', 'VC011205', 'VC021001', 'FC030301']:
+        s = call(serviceCode='SVC51', searchKncrCode=crop, displayCount=5, startPoint=1)
+        L = s.get('list') or []
+        say('== %s 회차 %s 오류 %s' % (crop, s.get('totalCount'), s.get('errorCode')))
+        for r in L[:3]:
+            say('   %s %s %s차 %s %s' % (r.get('insectKey'), r.get('examinYear'), r.get('examinTmrd'), r.get('inputStdrDatetm'), urllib.parse.unquote(str(r.get('examinSpchcknNm')))))
+        if L:
+            ik = L[0]['insectKey']
+            s52 = call(serviceCode='SVC52', insectKey=ik).get('structList') or []
+            sid = sorted({(x.get('sidoCode'), urllib.parse.unquote(str(x.get('sidoNm')))) for x in s52})
+            say('   시도 %s' % sid)
+            gw = [c for c, n in sid if '강원' in n]
+            if gw:
+                s53 = call(serviceCode='SVC53', insectKey=ik, sidoCode=gw[0]).get('structList') or []
+                sg = sorted({(x.get('sigunguCode'), urllib.parse.unquote(str(x.get('sigunguNm')))) for x in s53})
+                say('   강원 시군 %s' % sg)
+                dh = [x for x in s53 if '동해' in urllib.parse.unquote(str(x.get('sigunguNm')))]
+                say('   동해 %s' % [(urllib.parse.unquote(str(x.get('dbyhsNm'))), x.get('inqireValue')) for x in dh[:8]])
+
+
 def main():
+    if os.environ.get('PROBE_ONLY') == 'ncpms':
+        ncpms_probe(); return
     if os.environ.get('PROBE_ONLY') == 'wipan':
         wipan_probe(); return
     if os.environ.get('PROBE_ONLY') == 'chk':

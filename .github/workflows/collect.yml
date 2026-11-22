@@ -39,6 +39,7 @@ jobs:
           SAFETY_DATA_KEY: ${{ secrets.SAFETY_DATA_KEY }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           LAW_OC: ${{ secrets.LAW_OC }}
+          NCPMS_KEY: ${{ secrets.NCPMS_KEY }}
         run: |
           set -e
           # 전체 잠금: 수집 캐시는 Supabase 비공개 저장소에서 받아 옴(없으면 저장소에 남은 파일)

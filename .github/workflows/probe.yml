@@ -28,6 +28,7 @@ jobs:
           SAFETY_DATA_KEY: ${{ secrets.SAFETY_DATA_KEY }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           LAW_OC: ${{ secrets.LAW_OC }}
+          NCPMS_KEY: ${{ secrets.NCPMS_KEY }}
         run: python collect/probe.py
       - uses: actions/upload-artifact@v4
         with:
