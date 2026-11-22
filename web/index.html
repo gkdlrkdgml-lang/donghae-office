@@ -2087,8 +2087,8 @@ function startApp() {
       { l: '고용률', sub: pd ? pd.slice(0, 4) + '년 ' + (pd.slice(-2) === '01' ? '상' : '하') + '반기 · 15~64세' : '15~64세', ic: 'people', col: '#7A4FC4', bg: '#EFE9FB', v: fmt(e.rate_1564, 1), u: '%',
         chips: [e.emp_all != null ? ['취업자 ' + fmt(e.emp_all * 1000, 0) + '명', 'navy'] : null, e.rate_1529 != null ? ['청년(15~29) ' + fmt(e.rate_1529, 1) + '%', 'violet'] : null] },
       (function () { var E = ((D.admin_live || {}).employ || {}); if (!E.v || !isMe) return null; var x = E.v;
-        return { l: x.rate != null ? '고용률(시 집계)' : '일자리 사업', sub: E.date + (x.note ? ' · ' + x.note : ''), ic: 'people', col: '#0F8A8A', bg: '#DDF3F2', v: x.rate != null ? fmt(x.rate, 1) : fmt(x.job_people, 0), u: x.rate != null ? '%' : '명',
-          chips: [x.employed != null ? ['취업자 ' + fmt(x.employed, 0) + '명', ''] : null, x.jobs != null ? ['일자리 ' + fmt(x.jobs, 0) + '개', 'good'] : null, x.rate != null && x.job_people != null ? ['사업 참여 ' + fmt(x.job_people, 0) + '명', ''] : null] }; })(),
+        return { l: x.rate != null ? '고용률(시 집계)' : x.job_people != null ? '일자리 사업 참여' : '일자리 창출', sub: E.date + (x.note ? ' · ' + x.note : ''), ic: 'people', col: '#0F8A8A', bg: '#DDF3F2', v: x.rate != null ? fmt(x.rate, 1) : x.job_people != null ? fmt(x.job_people, 0) : fmt(x.jobs, 0), u: x.rate != null ? '%' : x.job_people != null ? '명' : '개',
+          chips: [x.employed != null ? ['취업자 ' + fmt(x.employed, 0) + '명', ''] : null, x.jobs != null && (x.rate != null || x.job_people != null) ? ['일자리 ' + fmt(x.jobs, 0) + '개', 'good'] : null, x.rate != null && x.job_people != null ? ['사업 참여 ' + fmt(x.job_people, 0) + '명', ''] : null] }; })(),
       (function () { var ye0 = ((TS.prev_ye || {})[SN] || {})['00']; if (c['00'] == null || ye0 == null) return null; var v = c['00'] - ye0;
         return { l: '올해 순증 사업자', sub: TS.ym.slice(0, 4) + '년 1~' + Number(TS.ym.slice(4)) + '월', ic: 'trend', col: '#1F6FD1', bg: '#E4EEFB', v: sg(v), u: '개',
           chips: [rankChip(indFor(ind('biz_net'), SN)), meChip(((TS.cur || {})[D.me] || {})['00'] - (((TS.prev_ye || {})[D.me] || {})['00']), '개')] }; })(),

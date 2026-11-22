@@ -331,7 +331,7 @@
     ['pop', 'dong', 'vital', 'employ'].forEach(function (sec) {
       if (!e[sec]) return;
       var t, c;
-      if (L[sec] && L[sec].date === e.date) { t = '반영 중'; c = '#1B7A4B'; }
+      if (L[sec] && L[sec].date === e.date) { t = sec === 'employ' && L.employ.v && L.employ.v.rate == null && e.employ && (e.employ.rate != null || e.employ.employed != null) ? '일자리 값 반영 중 · 고용률·취업자는 공식 ' + offLab('employ') + ' 값' : '반영 중'; c = '#1B7A4B'; }
       else if (e.date.replace(/-/g, '') <= offEnd(sec)) { t = '공식 ' + offLab(sec) + ' 자료가 더 최신 → 공식 값 사용'; c = '#8693A4'; }
       else if (D.generated_at && e.last && new Date(e.last) > new Date(D.generated_at.replace(' ', 'T') + ':00+09:00')) { t = '반영 대기(곧 반영)'; c = '#D99A00'; }
       else { t = '더 최근 입력이 반영 중'; c = '#8693A4'; }
@@ -351,7 +351,10 @@
       row('총인구', fmt(r.total) + '명', lp ? '기준일 ' + esc(lp.date) + ' (공식 ' + ymLab(A.ym) + ' ' + fmt(off.total) + '명)' : ymLab(A.ym) + ' 주민등록', !!lp) +
       row('세대', fmt(r.hh), lp ? '기준일 ' + esc(lp.date) : ymLab(A.ym) + ' 주민등록', !!lp) +
       row('출생 · 사망', lv ? fmt(lv.v.birth) + ' · ' + fmt(lv.v.death) : fmt(b.total) + ' · ' + fmt(dth.total), lv ? '기준일 ' + esc(lv.date) : ymLab(V.ym) + ' 행정안전부', !!lv) +
-      row('고용률(15~64세)', le && le.v.rate != null ? esc(le.v.rate) + '%' : (em.rate_1564 != null ? em.rate_1564 + '%' : '–'), le ? '기준일 ' + esc(le.date) : halfLab(E.period) + ' 지역별고용조사', !!le) +
+      row('취업자 수', le && le.v.employed != null ? fmt(le.v.employed) + '명' : (em.emp_all != null ? fmt(em.emp_all * 1000) + '명' : '–'), le && le.v.employed != null ? '기준일 ' + esc(le.date) : halfLab(E.period) + ' 지역별고용조사', !!(le && le.v.employed != null)) +
+      row('일자리 사업 참여자', le && le.v.job_people != null ? fmt(le.v.job_people) + '명' : '–', le && le.v.job_people != null ? '기준일 ' + esc(le.date) + (le.v.note ? ' · ' + esc(le.v.note) : '') : '<span class="off">입력 없음(공식 자료 없음 · 입력하면 경제 화면에 표시)</span>', !!(le && le.v.job_people != null)) +
+      row('일자리 창출', le && le.v.jobs != null ? fmt(le.v.jobs) + '개' : '–', le && le.v.jobs != null ? '기준일 ' + esc(le.date) : '<span class="off">입력 없음(공식 자료 없음 · 입력하면 경제 화면에 표시)</span>', !!(le && le.v.jobs != null)) +
+      row('고용률(15~64세)', le && le.v.rate != null ? esc(le.v.rate) + '%' : (em.rate_1564 != null ? em.rate_1564 + '%' : '–'), le && le.v.rate != null ? '기준일 ' + esc(le.date) : halfLab(E.period) + ' 지역별고용조사', !!(le && le.v.rate != null)) +
       '</tbody></table><p class="sub" style="margin-top:8px">시장실 화면 마지막 갱신: <b>' + esc(D.generated_at || '') + '</b>. 새로 저장한 값은 다음 갱신 때 반영됩니다.</p>';
   }
   function drawHist() {

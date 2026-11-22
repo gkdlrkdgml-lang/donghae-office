@@ -593,7 +593,12 @@ def apply_admin_input(state, S):
     if 'employ' in live and len(ep) == 6:
         e_end = ep[:4] + ('0630' if ep[4:] == '01' else '1231')   # 고용률 공식 반기 끝날
         if live['employ']['date'].replace('-', '') <= e_end:
-            del live['employ']
+            # 고용률·취업자는 공식 반기 자료가 더 최신 → 공식 값. 일자리 사업·창출은 공식 자료가 없어 입력값을 그대로 씀
+            jv = {k: v for k, v in (live['employ']['v'] or {}).items() if k in ('job_people', 'jobs', 'note') and v not in (None, '')}
+            if any(k in jv for k in ('job_people', 'jobs')):
+                live['employ'] = dict(live['employ'], v=jv)
+            else:
+                del live['employ']
     if A and live.get('pop'):
         d, v = live['pop']['date'], live['pop']['v']
         if A['regions'].get(me):
