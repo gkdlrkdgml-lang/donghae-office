@@ -444,6 +444,73 @@ def bus_corp(C):
     return out
 
 
+# ---------------------------------------------------------------- 업종별 운수업체(KOSIS 강원 기본통계 + 시·군 기본통계의 농어촌버스)
+BUS_KINDS = ('시내버스', '농어촌버스', '마을버스', '전세버스', '시외버스', '택시(업체)', '개인택시')
+SGG_TBL = {'춘천': ('651', 'DT_65101_J000029'), '원주': ('652', 'DT_65201_J000073'), '강릉': ('653', 'DT_65301_J000073'), '동해': ('654', 'DT_65401_J000073'),
+           '태백': ('655', 'DT_65503_J000029'), '속초': ('656', 'DT_65601_J000073'), '삼척': ('657', 'DT_65701_J000029'), '홍천': ('658', 'DT_65801_J000073'),
+           '횡성': ('659', 'DT_65901_J000161'), '영월': ('660', 'DT_66001_J000029'), '평창': ('661', 'DT_661001_J250004'), '철원': ('663', 'DT_66301_J000029'),
+           '화천': ('664', 'DT_66401_J000029'), '양구': ('665', 'DT_66501_J000029'), '인제': ('666', 'DT_66601_J000029'), '고성': ('667', 'DT_66701_J000029'),
+           '양양': ('668', 'DT_66801_J000029')}
+
+
+def _kosis_rows(org, tbl, years):
+    from sources import kosis_meta
+    meta = kosis_meta({'key_env': 'KOSIS_KEY', 'meta_url': 'https://kosis.kr/openapi/statisticsData.do', 'params': {'orgId': org, 'tblId': tbl}})
+    params = {'method': 'getList', 'format': 'json', 'jsonVD': 'Y', 'orgId': org, 'tblId': tbl, 'prdSe': 'Y', 'newEstPrdCnt': str(years), 'itmId': 'ALL'}
+    objs = []
+    for m in meta:
+        if m.get('OBJ_ID') != 'ITEM' and m.get('OBJ_ID') not in objs:
+            objs.append(m.get('OBJ_ID'))
+    for i, _ in enumerate(objs):
+        params['objL%d' % (i + 1)] = 'ALL'
+    return _call({'key_env': 'KOSIS_KEY', 'key_param': 'apiKey', 'url': 'https://kosis.kr/openapi/Param/statisticsParameterData.do', 'params': params}, {}, 'kb_' + tbl)
+
+
+def bus_firms(C):
+    """{year, regions:{시군:{종류:{n 업체, v 대수}}}, rural:{시군:{year, n, v}}} — '-'는 0으로 보지 않고 없음."""
+    from common import match_region
+    rows = _kosis_rows('211', 'DT_211002_J004', 3)
+    ys = sorted({str(r.get('PRD_DE')) for r in rows})
+    if not ys:
+        raise RuntimeError('응답이 비었음')
+    y = ys[-1]
+    out = {}
+    for r in rows:
+        if str(r.get('PRD_DE')) != y:
+            continue
+        kind = str(r.get('C1_NM', '')).strip()
+        if kind not in BUS_KINDS:
+            continue
+        nm = str(r.get('C2_NM', '')).strip()
+        reg = '강원' if nm == '전체' else match_region(nm, C['regions'])
+        v = to_num(r.get('DT'))
+        if not reg or v is None:
+            continue
+        f = 'n' if '업체' in str(r.get('ITM_NM')) else 'v'
+        out.setdefault(reg, {}).setdefault(kind, {})[f] = v
+    if len(out) < 15:
+        raise RuntimeError('시·군이 %d곳뿐' % len(out))
+    rural = {}
+    for reg, (org, tbl) in SGG_TBL.items():
+        try:
+            rr = _kosis_rows(org, tbl, 1)
+        except Exception as e:  # noqa: BLE001
+            log('  농어촌버스 %s 실패: %s' % (reg, e))
+            continue
+        cell = {}
+        for r in rr:
+            if str(r.get('C1_NM', '')).strip() != '농어촌버스':
+                continue
+            v = to_num(r.get('DT'))
+            if v is None:
+                continue
+            cell['year'] = str(r.get('PRD_DE'))
+            cell['n' if '업체' in str(r.get('ITM_NM')) else 'v'] = v
+        if cell.get('v'):
+            rural[reg] = cell
+    return {'year': y, 'regions': out, 'rural': rural}
+
+
 # ---------------------------------------------------------------- 시내버스 정류장(국토부 정류장별 정차 노선수, 시·군별)
 def bus_stops(C):
     import os

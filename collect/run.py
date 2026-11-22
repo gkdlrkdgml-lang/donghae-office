@@ -221,6 +221,12 @@ def collect(state, S, C):
             ok(state, 'buscorp', '%d개 시·군(업체 표준데이터를 올린 곳)' % len(L['buscorp']['regions']))
         except Exception as e:  # noqa: BLE001
             fail(state, 'buscorp', e)
+    if stale('busfirm', 7) or not L.get('busfirm') or '--force-life' in sys.argv:
+        try:
+            L['busfirm'] = dict(tour.bus_firms(C), at=now().strftime('%Y-%m-%d'))
+            ok(state, 'busfirm', '%s년 %d개 시·군 · 농어촌버스 %d곳' % (L['busfirm']['year'], len(L['busfirm']['regions']), len(L['busfirm']['rural'])))
+        except Exception as e:  # noqa: BLE001
+            fail(state, 'busfirm', e)
     if L.get('bus'):
         set_ind(state, 'bus_stops', {k: v['stops'] for k, v in L['bus']['regions'].items()}, '%s 기준 시내버스 정류장(국토부)' % L['bus']['ymd'])
     T = L.get('tsafe') or {}
