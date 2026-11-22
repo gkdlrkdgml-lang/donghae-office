@@ -421,11 +421,13 @@ def annex_probe():
 def lofinlist_probe():
     import re as R, urllib.request
     from common import kr_get
-    for n in (15059413, 15059414, 15059412):
+    for n in (15059413,):
         try:
             t = urllib.request.urlopen(urllib.request.Request('https://www.data.go.kr/data/%d/openapi.do' % n, headers={'User-Agent': 'Mozilla/5.0'}), timeout=30).read().decode('utf-8', 'replace')
             nm = R.findall(r'<title>([^<]*)', t)[:1]
-            ids = sorted(set(R.findall(r'pdtaId=([A-Z0-9]+)', t)))
+            ids = sorted(set(R.findall(r'pdtaId(?:=|&#61;|%3D)([A-Z0-9]+)', t)))
+            for m in R.finditer(r'lofin', t):
+                say('[LL]   ' + t[max(0, m.start() - 80):m.start() + 160].replace('\n', ' '))
             say('[LL] %d %s %s' % (n, nm, ids))
             for pid in ids[:1]:
                 d = kr_get('https://www.lofin365.go.kr/portal/LF5110000.do', {'pdtaId': pid})
