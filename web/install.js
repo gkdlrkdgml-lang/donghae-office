@@ -7,7 +7,9 @@ window.DHInstall = (function () {
   function installed() {
     return matchMedia('(display-mode: fullscreen), (display-mode: standalone), (display-mode: minimal-ui)').matches || navigator.standalone === true;
   }
-  window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); deferred = e; });
+  var btns = [];
+  function show() { btns.forEach(function (b) { b.style.display = (deferred || isIOS) && !installed() ? '' : 'none'; }); }
+  window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); deferred = e; show(); });
   window.addEventListener('appinstalled', function () { deferred = null; var b = document.getElementById('pwaBtn'); if (b) b.remove(); close(); });
 
   function steps() {
@@ -36,8 +38,8 @@ window.DHInstall = (function () {
     document.body.appendChild(box);
   }
   function open() {
-    if (deferred) { var d = deferred; d.prompt(); d.userChoice.then(function (r) { if (r && r.outcome === 'accepted') deferred = null; }); return; }
-    guide();
+    if (deferred) { var d = deferred; d.prompt(); d.userChoice.then(function (r) { if (r && r.outcome === 'accepted') { deferred = null; show(); } }); return; }
+    if (isIOS) guide();   // 아이패드·아이폰은 브라우저가 설치 창을 열어 주지 않음(공유 → 홈 화면에 추가만 가능)
   }
   function button(parent, style) {
     if (installed() || !parent || document.getElementById('pwaBtn')) return;
@@ -46,7 +48,7 @@ window.DHInstall = (function () {
     b.title = '설치하면 주소창 없이 전체 화면으로 열립니다';
     b.style.cssText = style || '';
     b.onclick = function (e) { e.stopPropagation(); open(); };
-    parent.appendChild(b);
+    parent.appendChild(b); btns.push(b); show();
   }
-  return { open: open, installed: installed, button: button };
+  return { open: open, installed: installed, button: button, ready: function () { return !!deferred || isIOS; } };
 })();
