@@ -221,6 +221,31 @@ def lock_probe():
     sk = os.environ.get('SUPABASE_SERVICE_KEY', '')
     st, b = code(sb + '/storage/v1/object/dash/data/version.txt', h={'apikey': sk})
     say('서버 키 version.txt → %s %s' % (st, b))
+    # 임시 보기 전용 계정으로 실제 로그인 → 자료 받기 → 계정 삭제
+    import json as J, secrets
+    ah = {'apikey': sk, 'Content-Type': 'application/json'}
+    em, pw = 'zz_locktest_%d@dh-office.local' % random.randint(1000, 9999), secrets.token_urlsafe(16)
+    st, b = code(sb + '/auth/v1/admin/users', J.dumps({'email': em, 'password': pw, 'email_confirm': True, 'user_metadata': {'login_id': em.split('@')[0], 'name': '잠금시험'}}).encode(), ah)
+    uid = J.loads(b if st == 200 else b'{}').get('id') if st == 200 else None
+    if not uid:
+        r = urllib.request.urlopen(urllib.request.Request(sb + '/auth/v1/admin/users', data=J.dumps({'email': em, 'password': pw, 'email_confirm': True}).encode(), headers=ah), timeout=30)
+        uid = J.loads(r.read())['id']
+    try:
+        for role in ['pending', 'viewer']:
+            req = urllib.request.Request(sb + '/rest/v1/profiles?id=eq.' + uid, data=J.dumps({'role': role}).encode(), method='PATCH', headers=dict(ah, Prefer='return=minimal'))
+            urllib.request.urlopen(req, timeout=30)
+            r = urllib.request.urlopen(urllib.request.Request(sb + '/auth/v1/token?grant_type=password', data=J.dumps({'email': em, 'password': pw}).encode(), headers={'apikey': k, 'Content-Type': 'application/json'}), timeout=30)
+            tok = J.loads(r.read())['access_token']
+            uh = {'apikey': k, 'Authorization': 'Bearer ' + tok}
+            st, b = code(sb + '/storage/v1/object/dash/data/data.json.gz', h=uh)
+            say('%s 계정 자료 받기 → %s (%d바이트)' % (role, st, len(b)))
+            st, b = code(sb + '/storage/v1/object/dash/cache/state.json.gz', h=uh)
+            say('%s 계정 캐시 받기(막혀야 함) → %s' % (role, st))
+            st, b = code(sb + '/functions/v1/land', b'{"pnu":"5117010100108060000"}', dict(uh, **{'Content-Type': 'application/json'}))
+            say('%s 계정 건축물대장 → %s %s' % (role, st, b[:60]))
+    finally:
+        req = urllib.request.Request(sb + '/auth/v1/admin/users/' + uid, method='DELETE', headers=ah)
+        say('임시 계정 삭제 → %s' % urllib.request.urlopen(req, timeout=30).status)
 
 
 def main():
