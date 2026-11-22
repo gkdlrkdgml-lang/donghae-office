@@ -6,7 +6,7 @@
 - 1920×1080 TV용 시장실 대시보드. 사이트: https://gkdlrkdgml-lang.github.io/donghae-office/
 - `collect/` 파이썬 수집기 → GitHub Actions(`collect.yml`)가 돌며 `web/data/data.js`를 만들고 Pages로 배포.
   **push만으로는 다시 배포되지 않음** → `gh workflow run collect.yml --ref main` (돌고 있는 실행이 끝난 뒤).
-- 화면은 `web/index.html` 한 파일(바닐라 JS). 탭 순서: 한눈에 보기, 행정, 경제, 보건 및 의료, 토지 및 건축, 복지, 관광, 예산, 교통, 환경, 상하수도, 에너지·전력, 액자.
+- 화면은 `web/index.html` 한 파일(바닐라 JS). 탭 순서: 한눈에 보기, 행정, 경제, 보건 및 의료, 복지, 관광, 예산, 토지 및 건축, 교통, 환경, 상하수도, 에너지·전력, 액자.
 - 지표 정의: `config/settings.json` indicators(dir: 1 높을수록 좋음, -1 낮을수록 좋음, 0 판정 안 함). 순위는 **좋은 쪽이 1위**.
 - 수집 결과 캐시는 `L[key]['at']`, `stale(key, days)`로 다시 받을지 결정.
 
