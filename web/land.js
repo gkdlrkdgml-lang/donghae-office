@@ -648,10 +648,11 @@ window.DHLand = (function () {
     p5.style.gridRow = '4'; p5.style.gridColumn = '3';
     if (flash) {
       flash = false;
-      if (!document.getElementById('dhFlashCss')) document.head.appendChild(el('style', { id: 'dhFlashCss', text: '@keyframes dhFlash{0%,100%{box-shadow:0 0 0 0 rgba(217,83,79,0)}50%{box-shadow:0 0 0 6px rgba(217,83,79,.9),0 0 28px rgba(217,83,79,.6)}}.dhflash{animation:dhFlash .8s ease-in-out 5;outline:3px solid #D9534F;outline-offset:-3px}.dhflash-tag{position:absolute;top:-14px;right:110px;background:#D9534F;color:#fff;font-weight:900;font-size:15px;padding:4px 12px;border-radius:999px;z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.2)}' }));
+      if (!document.getElementById('dhFlashCss')) document.head.appendChild(el('style', { id: 'dhFlashCss', text: '@keyframes dhFlash{0%,100%{box-shadow:0 0 0 0 rgba(217,83,79,0)}50%{box-shadow:0 0 0 6px rgba(217,83,79,.9),0 0 28px rgba(217,83,79,.6)}}.dhflash{animation:dhFlash .8s ease-in-out 5;outline:3px solid #D9534F;outline-offset:-3px}.dhzb{animation:dhFlash .8s ease-in-out 8;background:#D9534F!important;color:#fff!important}.dhflash-tag{position:absolute;top:-14px;right:110px;background:#D9534F;color:#fff;font-weight:900;font-size:15px;padding:4px 12px;border-radius:999px;z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.2)}' }));
       p5.classList.add('dhflash'); p5.style.position = p5.style.position || 'relative';
-      var tg = el('div', { class: 'dhflash-tag', text: '👇 여기를 꼭 확인하세요' }); p5.appendChild(tg);
-      setTimeout(function () { p5.classList.remove('dhflash'); tg.remove(); }, 6000);
+      var tg = el('div', { class: 'dhflash-tag', text: '👉 「크게 보기」를 눌러 판정 근거를 꼭 확인하세요' }); p5.appendChild(tg);
+      setTimeout(function () { var zb = p5.querySelector('.zbtn'); if (zb) { zb.classList.add('dhzb'); setTimeout(function () { zb.classList.remove('dhzb'); }, 7000); } }, 0);   // 크게 보기 단추도 같이 깜빡
+      setTimeout(function () { p5.classList.remove('dhflash'); tg.remove(); }, 7000);
     }
     setTimeout(function () { Array.prototype.forEach.call(H.view.querySelectorAll('section.zoom details'), function (x) { x.open = true; }); }, 0);   // 크게 보기: 근거를 모두 펼침
     // ⑥ 건물 정보(건축물대장): 어떤 건물인지, 언제 지었는지
