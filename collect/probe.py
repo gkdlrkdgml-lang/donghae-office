@@ -424,8 +424,8 @@ def lofinlist_probe():
     d = kr_get('https://www.lofin365.go.kr/portal/LF5110000.do', {'pdtaId': 'QS3YB6Z5PPOMXD7F4H681099215', 'rdIncrYn': 'Y', 'frstParamYn': 'Y'})
     say('[LL] 상세 길이 %d hub %s' % (len(d), sorted(set(R.findall(r'hub/([A-Za-z]{4,6})', d)))))
     say('[LL] 제목 %s' % R.findall(r'<title>([^<]*)', d))
-    for m in R.finditer(r'url\s*:|\.do[\'"]|src="[^"]+\.js', d):
-        say('[LL] js ' + R.sub(r'\s+', ' ', d[max(0, m.start() - 60):m.start() + 120]))
+    k = d.find('retvUdedSrn')
+    say('[LL] 주변 ' + R.sub(r'\s+', ' ', d[max(0, k - 1800):k + 300]))
     txt = R.sub(r'<script[\s\S]*?</script>|<style[\s\S]*?</style>', ' ', d)
     txt = R.sub(r'<[^>]+>', ' ', txt); txt = R.sub(r'\s+', ' ', txt)
     for kw in ('요청주소', '요청인자', '출력', 'fyr'):
