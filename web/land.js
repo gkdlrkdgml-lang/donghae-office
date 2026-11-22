@@ -58,6 +58,26 @@ window.DHLand = (function () {
   }
   // 「(아파트를 제외한다)」처럼 용도만 빼는 괄호(위치·거리 조건이 붙은 예외는 아님)
   function pureEx(x) { return /(을|를|은|는)\s*제외한다\s*[)\]]$/.test(x) && !/로서|따라|밖|거리|경우|지역에|대지에|해당하는/.test(x); }
+  // 필지 안 격자점으로 용도지역별 면적 비율(예상치)
+  function zoneShares(f, list) {
+    if (!f || !f.geometry || !list.length) return null;
+    var Rg = rings(f.geometry); if (!Rg.length) return null;
+    var xs = [], ys = []; Rg[0].forEach(function (p) { xs.push(p[0]); ys.push(p[1]); });
+    var x0 = Math.min.apply(null, xs), x1 = Math.max.apply(null, xs), y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys), N = 70, cnt = {}, tot = 0;
+    var polys = f.geometry.type === 'MultiPolygon' ? f.geometry.coordinates : [f.geometry.coordinates];
+    function inP(pt, g) { var P = g.type === 'MultiPolygon' ? g.coordinates : g.type === 'Polygon' ? [g.coordinates] : []; return P.some(function (pg) { return inRing(pt, pg[0]) && !pg.slice(1).some(function (h) { return inRing(pt, h); }); }); }
+    var Z = list.map(function (x) { var nm = ''; Object.keys(x.p || {}).forEach(function (k) { var v = String(x.p[k] || ''); var m = v.match(/(제\d종)?[가-힣]*(주거|상업|공업|녹지)지역/); if (m && !nm) nm = m[0]; }); return { z: nm, g: x.g }; }).filter(function (x) { return x.z && x.g; });
+    if (!Z.length) return null;
+    for (var i = 0; i < N; i++) for (var j = 0; j < N; j++) {
+      var pt = [x0 + (x1 - x0) * (i + 0.5) / N, y0 + (y1 - y0) * (j + 0.5) / N];
+      if (!polys.some(function (pg) { return inRing(pt, pg[0]); })) continue;
+      tot++;
+      for (var k = 0; k < Z.length; k++) if (inP(pt, Z[k].g)) { cnt[Z[k].z] = (cnt[Z[k].z] || 0) + 1; break; }
+    }
+    var got = Object.keys(cnt).reduce(function (a, k) { return a + cnt[k]; }, 0);
+    if (!tot || got < tot * 0.9) return null;          // 경계 자료가 필지를 다 덮지 못하면 쓰지 않음
+    return { parts: Object.keys(cnt).map(function (k) { return { z: k, r: cnt[k] / got }; }).sort(function (a, b) { return b.r - a.r; }) };
+  }
   function useJudge(zoneNm, use, sub, inp) {
     var o = ordMe(), T = ((o && o.uses) || []).filter(function (u) { return u.zone === nz(zoneNm); })[0];
     if (!T) return null;
@@ -234,7 +254,7 @@ window.DHLand = (function () {
         if (r.status === 'NOT_FOUND') return { list: [] };
         if (r.status !== 'OK') return { _err: (r.error && r.error.text) || r.status || '응답 없음' };
         return { list: ((r.result || {}).featureCollection || {}).features.map(function (g) {
-          var m = distTo(f.geometry, g.geometry); return { p: g.properties || {}, inside: m.inside, dist: m.dist };
+          var m = distTo(f.geometry, g.geometry); return { p: g.properties || {}, g: g.geometry, inside: m.inside, dist: m.dist };
         }).sort(function (a, b) { return a.dist - b.dist; }) };
       }).catch(function (e) { return { _err: e.message }; });
   }
@@ -347,7 +367,18 @@ window.DHLand = (function () {
     if (!zone) add('YELLOW', '토지', '용도지역 확인 안 됨', '토지특성·토지이용계획 자료에 용도지역이 없습니다.', '용도지역을 알 수 없어 규모(건폐율·용적률)를 계산하지 못했습니다.', '「국토계획법」 제36조');
     else if (!rule) add('YELLOW', '토지', zone + ' · 조례 수치 없음', '동해시 도시계획 조례에서 「' + zone + '」의 건폐율·용적률을 찾지 못했습니다.', '규모 계산을 하지 못했습니다.', artCite('bcr'));
     else add('GREEN', '토지', zone, zone + '은(는) 동해시 도시계획 조례상 건폐율 ' + fmt(rule.bcr) + '% · 용적률 ' + fmt(rule.far) + '% 이하입니다.' + (zones[1] ? ' (일부 ' + zones[1] + ' 걸침)' : ''), '대지 ' + fmt(area) + '㎡ 기준 바닥면적 최대 약 ' + fmt(area * rule.bcr / 100) + '㎡, 연면적 최대 약 ' + fmt(area * rule.far / 100) + '㎡ (예상치)', artCite('bcr') + ' · ' + artCite('far'));
-    if (zones[1]) add('YELLOW', '토지', '용도지역 두 개에 걸침', zone + '와(과) ' + zones[1] + '에 걸쳐 있습니다.', '걸친 면적 비율에 따라 건폐율·용적률을 나눠 적용합니다(「국토계획법」 제84조).', '「국토계획법」 제84조');
+    // 두 용도지역에 걸치면: 브이월드 용도지역 경계로 필지를 촘촘히 나눠 각 지역 면적 비율 계산 → 「국토계획법」 제84조
+    var SH = zones[1] ? zoneShares(d.feat, (d.resz || {}).list || []) : null;
+    if (zones[1] && SH && SH.parts.length > 1) {
+      var effB = 0, effF = 0, okR = true, parts = SH.parts.map(function (x) { var zr = zoneRule(x.z); if (!zr) okR = false; var a = area * x.r; if (zr) { effB += a * zr.bcr / 100; effF += a * zr.far / 100; } return x.z + ' 약 ' + fmt(Math.round(a)) + '㎡(' + fmt(x.r * 100, 1) + '%' + (zr ? ', 건폐율 ' + fmt(zr.bcr) + '%·용적률 ' + fmt(zr.far) + '%' : '') + ')'; });
+      var small = Math.min.apply(null, SH.parts.map(function (x) { return area * x.r; }));
+      if (okR && area) { rule = { bcr: effB / area * 100, far: effF / area * 100, mixed: true }; }
+      add('YELLOW', '토지', '용도지역 두 개에 걸침 · 면적 나눠 계산', '지도 경계로 나눈 면적(예상치): ' + parts.join(' / ') + '.',
+        (okR ? '바닥면적 최대 약 ' + fmt(effB) + '㎡, 연면적 최대 약 ' + fmt(effF) + '㎡ (각 부분 면적 × 그 지역 비율의 합, 예상치). ' : '') +
+        (small <= 330 ? '가장 작은 부분이 330㎡ 이하라 건폐율·용적률은 가중평균, 그 밖의 건축 제한은 가장 넓은 「' + SH.parts[0].z + '」 기준입니다.' : '가장 작은 부분도 330㎡를 넘어 건폐율·용적률·용도 제한을 각 부분마다 그 용도지역 기준으로 적용합니다.'),
+        '「국토계획법」 제84조, 같은 법 시행령 제94조');
+      if (rule.mixed) R.forEach(function (x) { if (x.tag === zone && x.level === 'GREEN') x.impact = '걸친 면적을 나눠 계산하면 바닥면적 최대 약 ' + fmt(effB) + '㎡, 연면적 최대 약 ' + fmt(effF) + '㎡ (예상치, 아래 「용도지역 두 개에 걸침」 참고)'; });
+    } else if (zones[1]) add('YELLOW', '토지', '용도지역 두 개에 걸침', zone + '와(과) ' + zones[1] + '에 걸쳐 있습니다.', '걸친 면적 비율에 따라 건폐율·용적률을 나눠 적용합니다(「국토계획법」 제84조).', '「국토계획법」 제84조');
     if (useSel) {
       var nmU = useSel + (useSub ? '(' + useSub + ')' : '');
       var rn = ch.roadSideCodeNm || '', RR = /광대/.test(rn) ? [25, null] : /중로/.test(rn) ? [12, 25] : /소로/.test(rn) ? [8, 12] : /세로/.test(rn) ? [0, 8] : /맹지/.test(rn) ? [0, 0] : null;
@@ -404,6 +435,10 @@ window.DHLand = (function () {
         var r = RULES[i]; if (!r[0].test(n)) continue;
         var lvl = r[1]; if (lvl === 'YELLOW' && /접합/.test(at)) lvl = 'INFO';
         add(lvl, '규제', n + (at ? '(' + at + ')' : ''), r[4], lvl === 'RED' ? '부지 재선정 또는 해제·허가 가능성 검토가 필요합니다.' : '해당 법령 협의·허가 기간과 비용을 일정에 반영해야 합니다.', r[2]);
+        // 지구 이름과 맞는 동해시 조례 조문 원문(경관지구·고도지구 등)
+        var o2 = ordMe(), key2 = n.replace(/\(.*\)/, '').replace(/지구$/, '');
+        var arts = ((o2 && o2.related) || []).filter(function (a) { return a.title && (a.title.indexOf(n.replace(/\(.*\)/, '')) >= 0 || (key2.length >= 2 && a.title.indexOf(key2) >= 0)); });
+        if (arts.length) { R[R.length - 1].art = arts.map(function (a) { return a.text; }).join('\n\n'); R[R.length - 1].cite += ' · 동해시 도시계획 조례 ' + arts.map(function (a) { return a.title; }).join(', '); }
         return;
       }
     });
@@ -541,7 +576,7 @@ window.DHLand = (function () {
     var p2 = H.panel('토지 · 규모 · 도로', '자료 기준: 토지특성 ' + ((d.ch[0] || {}).stdrYear || '–') + '년 · 공시지가 ' + (ev.priceYear || '–') + '년', kv([
       ['용도지역', ev.zones.join(' · ') || '–'], ['지목 · 면적', (ev.jimok || '–') + ' · ' + fmt(ev.area) + '㎡'],
       ['공시지가', ev.price ? fmt(ev.price) + '원/㎡ (총 약 ' + fmt(ev.price * ev.area / 1e8, 1) + '억원)' : '–'],
-      ['건폐율 · 용적률(조례)', ev.rule ? fmt(ev.rule.bcr) + '% · ' + fmt(ev.rule.far) + '%' : '–'],
+      ['건폐율 · 용적률(조례)', ev.rule ? fmt(ev.rule.bcr, ev.rule.mixed ? 1 : 0) + '% · ' + fmt(ev.rule.far, ev.rule.mixed ? 1 : 0) + '%' + (ev.rule.mixed ? ' <small>면적 가중</small>' : '') : '–'],
       ['최대 바닥 · 연면적', ev.rule ? '약 ' + fmt(ev.area * ev.rule.bcr / 100) + '㎡ · 약 ' + fmt(ev.area * ev.rule.far / 100) + '㎡ <small>예상치</small>' : '–'],
       ['도로접면', ev.road || '–'], ['지형', ((d.ch[0] || {}).tpgrphHgCodeNm || '–') + ' · ' + ((d.ch[0] || {}).tpgrphFrmCodeNm || '–')],
       ['이용상황', (d.ch[0] || {}).ladUseSittnNm || '–'], ['소유 구분', (d.lad[0] || {}).posesnSeCodeNm || '–'],
@@ -594,6 +629,7 @@ window.DHLand = (function () {
         el('div', { style: 'font-size:15px;margin-top:4px;font-weight:700', text: '→ ' + r.impact }),
         r.cite ? el('div', { style: 'font-size:13px;margin-top:4px;color:#556274', text: '근거: ' + r.cite }) : null]));
       if (r.pin) { det.open = true; det.removeAttribute('data-fit'); det.style.maxHeight = '300px'; det.style.overflow = 'auto'; det.style.flexShrink = '0'; }   // 예정 용도: 숨기지 말고 맨 위에(길면 칸 안에서 굴림)
+      if (r.art) det.appendChild(el('div', { style: 'font-size:12px;margin-top:6px;color:#38475A;white-space:pre-wrap;max-height:140px;overflow:auto;background:#fff;padding:6px;border-radius:6px', text: '[조례 원문] ' + r.art }));
       if (r.area === '토지' && /건폐율/.test(r.detail) && artText('bcr')) det.appendChild(el('div', { style: 'font-size:12px;margin-top:6px;color:#38475A;white-space:pre-wrap;max-height:120px;overflow:auto;background:#fff;padding:6px;border-radius:6px', text: '[조례 원문] ' + artText('bcr') + '\n\n' + artText('far') }));
       return det; }));
     var p5 = H.panel('판정 근거 · 확인할 것', '빨강·노랑부터 · 눌러서 근거 조문 보기', [list].concat(d.errs.length ? [el('div', { class: 'chips', style: 'margin-top:8px;gap:6px;flex-wrap:wrap' }, d.errs.map(function (e) { return el('span', { class: 'chip bad', text: e }); }))] : []));

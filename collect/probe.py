@@ -299,6 +299,7 @@ def chk_probe():
     d = J.loads(gzip.decompress(store.get('data/data.json.gz')))
     O = (((d.get('life') or {}).get('ordin') or {}).get('regions') or {}).get('동해') or {}
     say('조례 별표 판정용 %s' % [(u['zone'], u['kind'], len(u['items'])) for u in O.get('uses') or []])
+    say('조례 관련 조문 %s' % [a.get('title') for a in O.get('related') or []])
     say('ordin 상태 %s 오류 %s' % (d['status'].get('ordin'), ((d.get('life') or {}).get('ordin') or {}).get('errors')))
     A = (d.get('life') or {}).get('agri') or {}
     say('메뉴 %s' % [m['id'] for m in d['menu']])
