@@ -426,9 +426,12 @@ def busco_probe():
     while page <= 30:
         u = ep + '?' + urllib.parse.urlencode({'serviceKey': key, 'pageNo': page, 'numOfRows': 1000, 'type': 'json'})
         try:
-            j = json.loads(urllib.request.urlopen(u, timeout=60).read().decode('utf-8'))
+            raw = urllib.request.urlopen(u, timeout=60).read().decode('utf-8')
+            j = json.loads(raw)
         except Exception as e:  # noqa: BLE001
             say('[BC] %d쪽 실패 %s' % (page, str(e)[:200])); break
+        if 'response' not in j:
+            say('[BC] 응답 %s' % raw[:500]); break
         b = j['response']['body']; it = b.get('items') or []
         if page == 1:
             say('[BC] 총 %s 키 %s' % (b.get('totalCount'), list(it[0].keys()) if it else None))
