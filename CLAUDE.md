@@ -28,7 +28,7 @@ KOSIS(여러 표), 국세통계포털 TASIS(월별 가동·신규 사업자), �
 
 ## PWA(2026-11-22)
 - `web/manifest.webmanifest`(display fullscreen, 아이콘 img/icon-192·512·mask-512), sw.js(같은 출처만 캐시, CACHE v3). Chrome·Edge에서 설치하면 주소창 없이 전체 화면 → 1920×1080 무대(#stage, 화면에 맞춰 확대·축소)가 꽉 참.
-  설치 가능하면 위쪽 줄에 「⤓ 앱으로 설치」 단추(beforeinstallprompt).
+  `web/install.js`(DHInstall): 화면 왼쪽 아래 「⤓ 바탕화면에 설치」 단추(#pwaBtn, 앱으로 열었으면 숨김) + 로그인 창 아래 링크. 누르면 Chrome·Edge는 설치 창(beforeinstallprompt), 안 되면 기기별 안내(아이패드 Safari 공유→홈 화면에 추가, 안드로이드 ⋮→앱 설치, 삼성 인터넷, PC Chrome·Edge).
 
 ## 전체 로그인 잠금(2026-11-22, 무료 방식)
 - 시장실 화면(`index.html`)은 `web/auth.js`가 먼저 로그인 → 승인 계정(role viewer 보기 전용·admin·super)만 열림. 세션은 `dh_admin_auth`(admin.html과 공유), 클라이언트는 `window.DH_SB` 하나.

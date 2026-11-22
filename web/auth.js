@@ -51,8 +51,10 @@ window.DHAuth = (function () {
         '<label>아이디<input name="id" autocomplete="username" required></label>' +
         '<label>비밀번호<input name="pw" type="password" autocomplete="current-password" required></label>' +
         '<button type="submit">로그인</button><div class="msg"></div>' +
-        '<div class="foot">처음이시면 <a href="admin.html">관리자 화면</a>에서 가입 신청 후 승인을 받으세요. 한 번 로그인하면 이 기기에서는 계속 유지됩니다.</div></form>';
+        '<div class="foot">처음이시면 <a href="admin.html">관리자 화면</a>에서 가입 신청 후 승인을 받으세요. 한 번 로그인하면 이 기기에서는 계속 유지됩니다.<br><a href="#" id="dhInstLink">⤓ 이 기기 바탕화면(홈 화면)에 앱으로 설치</a></div></form>';
       document.body.appendChild(box);
+      var il = box.querySelector('#dhInstLink');
+      if (il) { if (window.DHInstall && !DHInstall.installed()) il.onclick = function (e) { e.preventDefault(); DHInstall.open(); }; else il.remove(); }
     }
     var m = box.querySelector('.msg');
     m.className = 'msg ' + (kind || '');
