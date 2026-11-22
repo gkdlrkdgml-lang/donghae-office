@@ -2713,7 +2713,7 @@ function startApp() {
       { l: '위판 물량', sub: '위판중량 합계', ic: 'drop', col: '#0F8A8A', bg: '#DDF3F2', v: fmt((C.kg || 0) / 1000, 1), u: '톤',
         chips: [chip(pct(C.kg, PC && PC.kg), '전년 같은 달 ')] },
       { l: '강원 수협 중', sub: '위판 금액 순위', ic: 'trend', col: '#7A4FC4', bg: '#EFE9FB', v: rk ? rk + '위' : '–', u: '/ ' + codes.length,
-        chips: [['강원 7개 수협 합계 ' + fmt(codes.reduce(function (t, c) { return t + (CO[c].amt || 0); }, 0) / 1e8, 1) + '억원', 'navy']] },
+        chips: [['강원 ' + codes.length + '개 수협 합계 ' + fmt(codes.reduce(function (t, c) { return t + (CO[c].amt || 0); }, 0) / 1e8, 1) + '억원', 'navy']] },
       { l: '가장 많이 판 어종', sub: '금액 기준', ic: 'pin', col: '#C0602B', bg: '#FDEBDD', v: top || '–', u: '',
         chips: [top ? [fmt(C.sp[top][0] / 1e6, 0) + '백만원 · ' + fmt(C.sp[top][1] / 1000, 1) + '톤', ''] : null] },
       { l: '위판한 날', sub: ymL, ic: 'sun', col: '#2E8B57', bg: '#E2F3E9', v: fmt(days.length, 0), u: '일',
