@@ -454,7 +454,7 @@ function startApp() {
         el('div', { class: 'ptrack' }, [
           el('div', { class: 'g25', style: 'bottom:75%' }), el('div', { class: 'g25', style: 'bottom:25%' }),
           el('div', { class: 'fill', style: 'height:' + h + '%;background:' + judgeColor(m.judge) }),
-          el('div', { class: 'lbl' }, [(m.rank ? m.rank + '위' : '–'), el('small', { text: '/ ' + i.n + ' · ' + fmt(m.value, i.digits) + i.unit })])
+          el('div', { class: 'lbl' }, [(m.rank ? m.rank + '위' : '–'), el('small', { style: 'white-space:nowrap' }, ['/ ' + i.n, el('br'), fmt(m.value, i.digits) + i.unit])])
         ]),
         el('div', { class: 'pname', text: i.name }),
         el('div', { style: 'text-align:center' }, [el('span', { style: 'display:inline-block;font-size:' + (list.length > 9 ? 11.5 : 13) + 'px;font-weight:800;padding:2px ' + (list.length > 9 ? 5 : 8) + 'px;border-radius:999px;white-space:nowrap;color:' + dt[1] + ';background:' + dt[2], text: dt[0] })]),
