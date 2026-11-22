@@ -1204,16 +1204,34 @@ function startApp() {
     var B = (D.life || {}).bus || {}, R = B.regions || {}, SN = R[regName()] ? regName() : D.me, isMe = SN === D.me;
     var I0 = ind('bus_stops'), I = indFor(I0, SN), m = R[SN] || {}, me = R[D.me] || {}, top = (me.top || [])[0];
     var ymd = B.ymd || '';
-    lifeTitle(fullName(SN) + ' 시내버스 정류장', (ymd ? ymd.slice(0, 4) + '.' + ymd.slice(4, 6) + '.' + ymd.slice(6) + ' 기준 ' : '') + '국토교통부 정류장별 정차 노선수' + selHint());
+    // 운수회사(전국버스업체표준데이터 — 시·군이 올린 곳만)
+    var BC = ((D.life || {}).buscorp || {}).regions || {}, co = BC[SN] || [];
+    var cityCo = co.filter(function (c) { return /시내|마을|농어촌/.test(c.se); }), charter = co.filter(function (c) { return !/시내|마을|농어촌/.test(c.se); });
+    var sumB = function (a) { return a.reduce(function (t, c) { return t + (c.buses || 0); }, 0); };
+    var coYmd = co.map(function (c) { return c.ymd; }).sort().pop() || '';
+    var busCard = cityCo.length ? { l: '시내·마을버스', sub: coYmd ? coYmd.replace(/-/g, '.') + ' 기준' : '', ic: 'car', col: '#7A4FC4', bg: '#EFE9FB', v: fmt(sumB(cityCo), 0), u: '대',
+      chips: [[cityCo.length + '개 운수회사', 'violet'], charter.length ? ['전세버스 ' + fmt(sumB(charter), 0) + '대', 'navy'] : null] }
+      : { l: '시내·마을버스', ic: 'car', col: '#7A4FC4', bg: '#EFE9FB', v: '–', u: '', small: true, chips: [['이 시·군은 업체 자료를 올리지 않음', '']] };
+    function coPanel() {
+      var tb = el('tbody');
+      cityCo.concat(charter).forEach(function (c) {
+        tb.appendChild(el('tr', {}, [el('td', { html: '<b>' + c.nm + '</b>' }), el('td', { text: c.se }), el('td', { class: 'r', text: c.routes != null ? fmt(c.routes, 0) : '–' }),
+          el('td', { class: 'r', html: '<b style="color:#7A4FC4">' + (c.buses != null ? fmt(c.buses, 0) : '–') + '</b>대' })]));
+      });
+      panel('운수회사 · ' + fullName(SN), (coYmd ? coYmd.replace(/-/g, '.') + ' 기준 · ' : '') + '전국버스업체표준데이터(시·군 등록)', el('table', { class: 'dt big' }, [
+        el('thead', {}, [el('tr', {}, ['회사', '구분', '노선', '버스'].map(function (h, j) { return el('th', { class: j >= 2 ? 'r' : '', text: h }); }))]), tb]));
+    }
+    lifeTitle(fullName(SN) + ' 시내버스', '정류장 ' + (ymd ? ymd.slice(0, 4) + '.' + ymd.slice(4, 6) + '.' + ymd.slice(6) + ' 기준 ' : '') + '국토교통부 · 운수회사 버스업체 표준데이터' + selHint());
     cardsRow([
       { l: '버스정류장', ic: 'pin', v: fmt(m.stops, 0), u: '곳', chips: [rankChip(I), null] },
       { l: '정류장당 노선', sub: '평균', ic: 'cycle', col: '#1F6FD1', bg: '#E4EEFB', v: fmt(m.avg_routes, 1), u: '개', chips: [meChip(me.avg_routes, '개', 1), ['최다 ' + fmt(m.max_routes, 0) + '개', 'navy']] },
       { l: '노선이 가장 많은 곳', sub: isMe && top ? top[1] : '', ic: 'trend', col: '#C0602B', bg: '#FDEBDD', v: isMe && top ? top[0] : '–', u: '', small: true, chips: [isMe && top ? [top[2] + '개 노선 정차', 'violet'] : null] },
       { l: '정류장 많은 동', ic: 'house', col: '#2E8B57', bg: '#E2F3E9', v: (function () { var e = me.emd || {}, k = Object.keys(e).sort(function (a, b) { return e[b][0] - e[a][0]; })[0]; return k || '–'; })(), u: '', chips: [(function () { var e = me.emd || {}, k = Object.keys(e).sort(function (a, b) { return e[b][0] - e[a][0]; })[0]; return k ? [e[k][0] + '곳', 'navy'] : null; })()] },
-      { l: '실시간 운행', ic: 'car', col: '#7A4FC4', bg: '#EFE9FB', v: '라이브', u: '', small: true, chips: [['「라이브 버스」 탭에서 확인', '']] }
+      busCard
     ]);
     Array.prototype.forEach.call(view.querySelectorAll('.pr1 .pv'), function (pv) { if (pv.textContent.length > 7) pv.style.fontSize = '28px'; });
-    panel('버스정류장 수', '강원 ' + Object.keys(R).length + '개 시·군 · 곳 · 누르면 그 지역', I ? rankList(I, regPick, regSel) : el('div', { class: 'empty', text: '자료 없음' }));
+    if (co.length) coPanel();
+    else panel('버스정류장 수', '강원 ' + Object.keys(R).length + '개 시·군 · 곳 · 누르면 그 지역', I ? rankList(I, regPick, regSel) : el('div', { class: 'empty', text: '자료 없음' }));
     if (isMe && me.emd) {
       var E = me.emd;
       panel('동별 정류장 · ' + D.me + '시', '곳 · 정류장 수(막대) · 법정동 기준', colChart(Object.keys(E).map(function (k) { return [k.replace(/동$/, ''), E[k][0]]; }), null, null, 0, '', false, { plain: true, avgLabel: '동 평균' }));

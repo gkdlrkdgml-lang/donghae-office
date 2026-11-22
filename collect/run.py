@@ -215,6 +215,12 @@ def collect(state, S, C):
             ok(state, 'bus', '%s %d개 시·군' % (L['bus']['ymd'], len(L['bus']['regions'])))
         except Exception as e:  # noqa: BLE001
             fail(state, 'bus', e)
+    if stale('buscorp', 7) or not L.get('buscorp') or '--force-life' in sys.argv:
+        try:
+            L['buscorp'] = {'at': now().strftime('%Y-%m-%d'), 'regions': tour.bus_corp(C)}
+            ok(state, 'buscorp', '%d개 시·군(업체 표준데이터를 올린 곳)' % len(L['buscorp']['regions']))
+        except Exception as e:  # noqa: BLE001
+            fail(state, 'buscorp', e)
     if L.get('bus'):
         set_ind(state, 'bus_stops', {k: v['stops'] for k, v in L['bus']['regions'].items()}, '%s 기준 시내버스 정류장(국토부)' % L['bus']['ymd'])
     T = L.get('tsafe') or {}

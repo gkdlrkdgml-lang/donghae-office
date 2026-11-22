@@ -407,6 +407,43 @@ def taxi(C):
     return out
 
 
+# ---------------------------------------------------------------- 버스 운수업체(전국버스업체표준데이터, 시·군이 올린 곳만)
+def bus_corp(C):
+    import os
+    from urllib.parse import unquote
+    import json as _json
+    from common import http_get, match_region
+    key = unquote(os.environ.get(KEY, '').strip())
+    rows, page = [], 1
+    while page <= 40:
+        j = _json.loads(http_get('https://api.data.go.kr/openapi/tn_pubr_public_bus_corp_api', {'serviceKey': key, 'pageNo': str(page), 'numOfRows': '1000', 'type': 'json'}, tries=2))
+        b = j.get('body') or (j.get('response') or {}).get('body') or {}
+        it = (b.get('items') or {}).get('item') or []
+        if isinstance(it, dict):
+            it = [it]
+        rows += it
+        if len(it) < 1000:
+            break
+        page += 1
+    def n(v):
+        try:
+            return int(str(v).replace(',', ''))
+        except (TypeError, ValueError):
+            return None
+    out = {}
+    for r in rows:
+        if '강원' not in str(r.get('ctpvNm')):
+            continue
+        name = match_region(r.get('sggNm'), C['regions'])
+        if not name:
+            continue
+        out.setdefault(name, []).append({'nm': (r.get('bzentyNm') or '').strip(), 'se': r.get('operSeNm') or '', 'routes': n(r.get('rteCnt')),
+                                         'buses': n(r.get('busHldCntom')), 'staff': n(r.get('tnoemp')), 'ymd': r.get('dataCrtrYmd') or '', 'addr': r.get('lctnRoadNmAddr') or ''})
+    if not out:
+        raise RuntimeError('강원 시·군 자료 없음')
+    return out
+
+
 # ---------------------------------------------------------------- 시내버스 정류장(국토부 정류장별 정차 노선수, 시·군별)
 def bus_stops(C):
     import os

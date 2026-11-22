@@ -94,6 +94,10 @@ KOSIS(여러 표), 국세통계포털 TASIS(월별 가동·신규 사업자), �
 - 회계별 세입예산: 지방재정365 hub **ARBGT**(fyr 필수, pfa_amt1 세입총계·2 일반·3 공기업특별·4 기타특별·5 기금, 원 → 백만원) 자동(내년~작년), manual/budget_accounts_*.json은 못 받은 해 대비용.
 - 다른 지방재정365 API 찾는 법: data.go.kr 「지방재정365_○○」 페이지 「바로가기」 → pdtaId → 중계로 POST `/lf/pfinDtaOpen/dtst/dtstSvi/retvDtstDtsApi.do`(pdtaId) → 요청주소 hub 코드·인자·출력 항목이 나옴(probe `lofinlist` 참고).
 
+## 시내버스 운수회사(2026-11-23)
+- 전국버스업체표준데이터 `api.data.go.kr/openapi/tn_pubr_public_bus_corp_api`(활용신청 완료, DATA_GO_KR_KEY, 응답이 response 없이 {header, body:{items:{item}}}) → `tour.bus_corp` → L['buscorp'](주 1회). 시·군이 직접 올린 곳만(2026-11 강원 5곳: 동해·춘천·강릉·양양·철원). 동해: 강원여객 동해영업소 19대·동해상사고속 동해영업소 18대(시내+마을), 전세 3곳 69대, 2025-12-04 기준.
+- 화면: 교통 › 시내버스 카드 「시내·마을버스 ○대」 + 「운수회사」 표(자료 없는 시·군은 정류장 순위). 사용자 결정: 공영제·민영제·준공영제는 공개 자료가 없어 **표시하지 않음**.
+
 ## 남은 일
 - **전력 탭(「에너지·전력」) — 2026-11-21 만듦**: `collect/power.py`(한전 `KEPCO_KEY`, metroCd 51).
   계약종별·가구평균은 시·군 월별 25개월 보관(지난 달은 다시 안 받음), 산업분류는 최신 달만. 지표 pw_total·pw_house·pw_house_bill·pw_yoy·pw_ind_share(모두 dir 0).
