@@ -420,32 +420,25 @@ def annex_probe():
 
 def busco_probe():
     import urllib.request, urllib.parse
+    from collections import Counter
     key = urllib.parse.unquote(os.environ.get('DATA_GO_KR_KEY', ''))
     ep = 'https://api.data.go.kr/openapi/tn_pubr_public_bus_corp_api'
     rows, page = [], 1
-    while page <= 30:
+    while page <= 40:
         u = ep + '?' + urllib.parse.urlencode({'serviceKey': key, 'pageNo': page, 'numOfRows': 1000, 'type': 'json'})
-        try:
-            raw = urllib.request.urlopen(u, timeout=60).read().decode('utf-8')
-            j = json.loads(raw)
-        except Exception as e:  # noqa: BLE001
-            say('[BC] %d쪽 실패 %s' % (page, str(e)[:200])); break
-        if 'response' not in j:
-            say('[BC] 응답 %s' % raw[:500]); break
-        b = j['response']['body']; it = b.get('items') or []
-        if page == 1:
-            say('[BC] 총 %s 키 %s' % (b.get('totalCount'), list(it[0].keys()) if it else None))
+        j = json.loads(urllib.request.urlopen(u, timeout=60).read().decode('utf-8'))
+        b = j.get('body') or (j.get('response') or {}).get('body') or {}
+        it = (b.get('items') or {}).get('item') or []
+        if isinstance(it, dict): it = [it]
+        if page == 1: say('[BC] 총 %s' % b.get('totalCount'))
         rows += it
-        if len(it) < 1000:
-            break
+        if len(it) < 1000: break
         page += 1
-    gw = [r for r in rows if '강원' in str(r.get('ctprvnNm'))]
-    say('[BC] 강원 %d건' % len(gw))
-    from collections import Counter
-    say('[BC] 운영구분 %s' % Counter(r.get('operSeNm') or r.get('opratSeNm') or str({k: v for k, v in r.items() if 'Se' in k}) for r in rows).most_common(12))
-    say('[BC] 강원 시군 %s' % Counter(r.get('signguNm') for r in gw).most_common(20))
+    say('[BC] 받은 %d건 운영구분 %s' % (len(rows), Counter(r.get('operSeNm') for r in rows).most_common(15)))
+    gw = [r for r in rows if '강원' in str(r.get('ctpvNm'))]
+    say('[BC] 강원 %d건 시군 %s' % (len(gw), Counter(r.get('sggNm') for r in gw).most_common(20)))
     for r in gw:
-        say('[BC]   ' + json.dumps(r, ensure_ascii=False)[:400])
+        say('[BC]   %s | %s | %s | 노선 %s | %s대 | 직원 %s | %s | %s' % (r.get('sggNm'), r.get('bzentyNm'), r.get('operSeNm'), r.get('rteCnt'), r.get('busHldCntom'), r.get('tnoemp'), r.get('dataCrtrYmd'), r.get('insttNm')))
 
 
 def rebuild_probe():
