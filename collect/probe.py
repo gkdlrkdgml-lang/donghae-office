@@ -258,11 +258,12 @@ def agri_probe():
         except Exception as e:  # noqa: BLE001
             return 'ERR %s %s' % (e, getattr(e, 'read', lambda: b'')()[:200])
     kk = os.environ.get('KOSIS_KEY', '')
-    for q in ['농림어업총조사 시군', '시군별 농가', '시군별 어가', '시군구별 경지면적', '어업생산 시군', '농가 시군구 2025', '어가 시군구 2025', '해수면어가']:
-        t = get('https://kosis.kr/openapi/statisticsSearch.do', {'method': 'getList', 'apiKey': kk, 'searchNm': q, 'format': 'json', 'jsonVD': 'Y', 'resultCount': '20'})
+    for q in ['시군구별 농가 및 농가인구', '시군구별 해수면 어가', '행정구역별 농가', '농가 및 농가인구 추이', '경지면적', '어업생산량', '수산물 위판', '어선 척수', '농업경영체', '시군구별 임가']:
+        t = get('https://kosis.kr/openapi/statisticsSearch.do', {'method': 'getList', 'apiKey': kk, 'searchNm': q, 'format': 'json', 'jsonVD': 'Y', 'resultCount': '40'})
         say('== KOSIS 검색 %s' % q)
         try:
-            for x in J.loads(t)[:20]:
+            for x in J.loads(t)[:40]:
+                if not (x.get('ORG_ID') in ('101', '211', '114', '146', '123') ): continue
                 say('  %s %s | %s | %s~%s' % (x.get('ORG_ID'), x.get('TBL_ID'), x.get('TBL_NM'), x.get('STRT_PRD_DE'), x.get('END_PRD_DE')))
         except Exception:  # noqa: BLE001
             say('  ' + t[:300])
@@ -450,7 +451,7 @@ def main():
             say('[물메타] %s 실패 %s' % (tb, e))
     for q in ():
         try:
-            t = http_get('https://kosis.kr/openapi/statisticsSearch.do', {'method': 'getList', 'apiKey': _kk, 'searchNm': q, 'format': 'json', 'jsonVD': 'Y', 'resultCount': '20'})
+            t = http_get('https://kosis.kr/openapi/statisticsSearch.do', {'method': 'getList', 'apiKey': _kk, 'searchNm': q, 'format': 'json', 'jsonVD': 'Y', 'resultCount': '40'})
             j = json.loads(t)
             say('[KOSIS검색] %s → %s' % (q, ' | '.join('%s/%s %s(%s~%s %s)' % (x.get('ORG_ID'), x.get('TBL_ID'), x.get('TBL_NM'), x.get('STRT_PRD_DE'), x.get('END_PRD_DE'), x.get('PRD_SE', '')) for x in j if str(x.get('ORG_ID')) in ('117', '322', '331', '350', '101', '110', '106', '126', '116', '460'))[:2500] if isinstance(j, list) else str(j)[:300]))
         except Exception as e:  # noqa: BLE001
