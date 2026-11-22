@@ -426,7 +426,7 @@ def lofin_probe():
             rows = sources._call(S['sources'][k], {}, k)
             ys = sorted(set(str(r.get('fyr')) for r in rows))
             dh = [r for r in rows if '동해' in str(r)]
-            say('[lofin] %s 직접/중계 성공 %d줄 연도 %s 동해 예 %s' % (k, len(rows), ys, str(dh[:1])[:300]))
+            say('[lofin] %s 직접/중계 성공 %d줄 연도 %s 동해 예 %s 첫줄 %s' % (k, len(rows), ys, str(dh[:1])[:300], str(rows[:1])[:400]))
         except Exception as e:  # noqa: BLE001
             say('[lofin] %s 실패 %s' % (k, str(e)[:300]))
 
