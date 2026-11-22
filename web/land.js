@@ -8,7 +8,7 @@
 window.DHLand = (function () {
   var H = null;            // index.html이 넘겨주는 도구(el, panel, view, render, D ...)
   var sb = null, session = null, profile = null, authChecked = false;
-  var qDraft = null, qAns = {}, tab = 'site', cur = null, busy = false, cmpZone = null, cmpKind = 'far', useSel = '', useSub = '', inArea = null, inFloor = null, inRoad = null;
+  var flash = false, qDraft = null, qAns = {}, tab = 'site', cur = null, busy = false, cmpZone = null, cmpKind = 'far', useSel = '', useSub = '', inArea = null, inFloor = null, inRoad = null;
   var LV = { GREEN: { c: '#2E8B57', bg: '#E2F3E9', t: '추진 가능' }, YELLOW: { c: '#D99A00', bg: '#FFF4D6', t: '조건부 가능 · 검토 필요' }, RED: { c: '#D9534F', bg: '#FDE7E4', t: '추진 곤란 · 중대 제약' }, INFO: { c: '#1F6FD1', bg: '#E4EEFB', t: '참고' } };
   // 예정 용도 → 「건축법 시행령」 별표 1의 호 번호
   var USE_HO = { '단독주택': '1', '공동주택': '2', '제1종근린생활시설': '3', '제2종근린생활시설': '4', '문화및집회시설': '5', '종교시설': '6', '판매시설': '7', '운수시설': '8', '의료시설': '9', '교육연구시설': '10', '노유자시설': '11', '수련시설': '12', '운동시설': '13', '업무시설': '14', '숙박시설': '15', '위락시설': '16', '공장': '17', '창고시설': '18', '위험물저장및처리시설': '19', '자동차관련시설': '20', '주차장': '20', '동물및식물관련시설': '21', '자원순환관련시설': '22', '방송통신시설': '24', '발전시설': '25', '묘지관련시설': '26', '관광휴게시설': '27', '장례시설': '28', '야영장시설': '29' };
@@ -115,6 +115,7 @@ window.DHLand = (function () {
       // 「주거지역으로부터 5미터 밖」: 브이월드 용도지역 경계로 거리 계산(필지 경계 기준이라 건물은 이보다 멀거나 같음)
       if (c && /주거지역으로\s*부터\s*5\s*미터\s*밖|주택\s*밀집지역으로\s*부터\s*5\s*미터\s*밖/.test(full) && inp.resDist != null) {
         var mil = /주택\s*밀집/.test(full), okd = inp.resDist >= 5 && !mil;
+        if (inp.resDist === 0 && inp.resIn != null && inp.resIn <= 100) checks.push({ ok: false, txt: '필지 안의 주거지역은 ' + (inp.resIn ? '약 ' + fmt(Math.round(inp.resIn)) + '㎡(' + fmt(inp.resInR * 100, 1) + '%)' : '경계선에 걸친 아주 얇은 조각') + '뿐입니다 — 지적도와 용도지역도 경계가 조금 어긋나 생긴 조각일 수 있으니, 실제 건물이 주거지역에서 5m 밖에 앉으면 「해당 안 함」을 고르세요', how: '' });
         checks.push({ ok: mil ? (inp.resDist >= 5 ? true : false) : okd, txt: '가장 가까운 주거지역 경계까지 약 ' + fmt(Math.round(inp.resDist)) + 'm' + (inp.resDist >= 300 ? ' 이상' : ''),
           how: mil ? ' (조문 기준은 「주택 밀집지역」이라 아래에서 직접 고르세요)' : okd ? ' (5m 밖 → 금지 대상에서 빠짐)' : ' (5m 안 · 공원·녹지·지형지물로 차단되면 빠짐)' });
         if (okd && T.kind === 'cannot') { exempt = true; return; }
@@ -306,6 +307,7 @@ window.DHLand = (function () {
         d.ev = evaluate(d);
         cur = d;
         saveHist(d);
+        flash = true;   // 검토가 끝나면 「판정 근거」 칸을 깜빡여 눈에 띄게
       });
     }).catch(function (e) { cur = { error: e.message, q: q }; })
       .then(function () { busy = false; H.render(); });
@@ -383,7 +385,9 @@ window.DHLand = (function () {
       var nmU = useSel + (useSub ? '(' + useSub + ')' : '');
       var rn = ch.roadSideCodeNm || '', RR = /광대/.test(rn) ? [25, null] : /중로/.test(rn) ? [12, 25] : /소로/.test(rn) ? [8, 12] : /세로/.test(rn) ? [0, 8] : /맹지/.test(rn) ? [0, 0] : null;
       var RZ = ((d.resz || {}).list || []).filter(function (x) { return /주거지역/.test(JSON.stringify(x.p)); });
-      var inp = { area: inArea, floor: inFloor, road: inRoad, roadRange: RR, roadNm: rn, ans: qAns, resDist: !d.resz || d.resz._err ? null : RZ.length ? RZ[0].dist : !(d.resz.list || []).length ? 300 : (d.resz.list || []).some(function (x) { return /지역/.test(JSON.stringify(x.p)); }) ? 300 : null };
+      var SH2 = SH && SH.parts.length ? SH : zoneShares(d.feat, (d.resz || {}).list || []), resP = SH2 && SH2.parts ? SH2.parts.filter(function (x) { return /주거지역/.test(x.z); }) : [];
+      var resInR = resP.reduce(function (a, x) { return a + x.r; }, 0);
+      var inp = { resIn: resP.length ? area * resInR : SH2 && SH2.parts && SH2.parts.length ? 0 : null, resInR: resInR, area: inArea, floor: inFloor, road: inRoad, roadRange: RR, roadNm: rn, ans: qAns, resDist: !d.resz || d.resz._err ? null : RZ.length ? RZ[0].dist : !(d.resz.list || []).length ? 300 : (d.resz.list || []).some(function (x) { return /지역/.test(JSON.stringify(x.p)); }) ? 300 : null };
       var uz = [zone].concat(d.use.some(function (u) { return /자연취락지구/.test(u.prposAreaDstrcCodeNm || ''); }) ? ['자연취락지구'] : []);
       // 별표보다 먼저 적용되거나 함께 적용되는 구역·지구
       var names = d.use.map(function (u) { return u.prposAreaDstrcCodeNm || ''; });
@@ -406,6 +410,8 @@ window.DHLand = (function () {
           '「' + z + '」에서 「' + nmU + '」은(는) 별표 기준 ' + J.msg + '.' + (J.ck.length ? ' 입력값 확인: ' + J.ck.join(', ') + '.' : '') + (J.T.note ? ' [별표 머리말] ' + J.T.note : '') + (pre.length ? ' ' + pre.join(' ') : ''),
           J.txt.length ? '해당 조항: ' + J.txt.join(' / ') : '「' + z + '」 ' + (J.T.kind === 'can' ? '허용' : '금지') + ' 목록(' + J.T.items.length + '개 항목)에 「' + nmU + '」(' + ho + ')이 없습니다.',
           (ordMe().name || '동해시 도시계획 조례') + ' ' + J.T.title + ' · 「' + ho.replace('건축법 시행령', '건축법 시행령」') );
+        var hint = J.ck.filter(function (x) { return /필지 안의 주거지역/.test(x); })[0];
+        if (hint) J.qs.forEach(function (q) { q.hint = '💡 ' + hint.replace(/^✖ /, ''); });
         R[R.length - 1].qs = J.qs; R[R.length - 1].pin = true;
         if (J.txt.some(function (t) { return /국토교통부령/.test(t); })) {
           var ra = ((ordMe() || {}).related || []).filter(function (a) { return /휴게음식점 등을 건축할 수 없는 지역|숙박시설.*건축할 수 없는 지역/.test(a.title || ''); });
@@ -622,6 +628,7 @@ window.DHLand = (function () {
       return el('div', { style: 'margin-top:6px;background:#fff;border:1px dashed #9AA8BA;border-radius:8px;padding:6px 10px' }, [
         el('div', { style: 'display:flex;gap:8px;align-items:center;flex-wrap:wrap' }, [
           el('b', { style: 'font-size:15px;color:#1B3A6B', text: '👉 「' + q.text.split('.')[0] + '」 항목의 ' + (q.kind === 'can' ? '조건을 갖추었나요?' : '금지 조건에 해당하나요?') }), b(Y, true), b(N, false)]),
+        q.hint ? el('div', { style: 'font-size:14px;color:#B23B37;font-weight:800;margin-top:5px', text: q.hint }) : null,
         el('div', { style: 'font-size:13px;color:#38475A;margin-top:4px', text: q.text.length > 140 ? q.text.slice(0, 140) + '…' : q.text })]);
     }
     // ⑤ 판정 근거
@@ -639,6 +646,13 @@ window.DHLand = (function () {
       return det; }));
     var p5 = H.panel('판정 근거 · 확인할 것', '빨강·노랑부터 · 눌러서 근거 조문 보기', [list].concat(d.errs.length ? [el('div', { class: 'chips', style: 'margin-top:8px;gap:6px;flex-wrap:wrap' }, d.errs.map(function (e) { return el('span', { class: 'chip bad', text: e }); }))] : []));
     p5.style.gridRow = '4'; p5.style.gridColumn = '3';
+    if (flash) {
+      flash = false;
+      if (!document.getElementById('dhFlashCss')) document.head.appendChild(el('style', { id: 'dhFlashCss', text: '@keyframes dhFlash{0%,100%{box-shadow:0 0 0 0 rgba(217,83,79,0)}50%{box-shadow:0 0 0 6px rgba(217,83,79,.9),0 0 28px rgba(217,83,79,.6)}}.dhflash{animation:dhFlash .8s ease-in-out 5;outline:3px solid #D9534F;outline-offset:-3px}.dhflash-tag{position:absolute;top:-14px;right:110px;background:#D9534F;color:#fff;font-weight:900;font-size:15px;padding:4px 12px;border-radius:999px;z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.2)}' }));
+      p5.classList.add('dhflash'); p5.style.position = p5.style.position || 'relative';
+      var tg = el('div', { class: 'dhflash-tag', text: '👇 여기를 꼭 확인하세요' }); p5.appendChild(tg);
+      setTimeout(function () { p5.classList.remove('dhflash'); tg.remove(); }, 6000);
+    }
     setTimeout(function () { Array.prototype.forEach.call(H.view.querySelectorAll('section.zoom details'), function (x) { x.open = true; }); }, 0);   // 크게 보기: 근거를 모두 펼침
     // ⑥ 건물 정보(건축물대장): 어떤 건물인지, 언제 지었는지
     var d8 = function (v) { v = String(v || '').trim(); return v.length >= 8 ? v.slice(0, 4) + '.' + v.slice(4, 6) + '.' + v.slice(6, 8) : '–'; };
