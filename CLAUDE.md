@@ -64,6 +64,7 @@ KOSIS(여러 표), 국세통계포털 TASIS(월별 가동·신규 사업자), �
   레이어 이름 출처: UrbanWatcherKr/korean-land-mcp, clazic/vworld(.2ddata_cache). **경제자유구역 레이어는 브이월드에 없음** → 토지이용계획 목록의 「경제자유구역」으로 판정만. 과거 항공사진은 공개 API 없음 → 국토정보플랫폼·카카오맵 링크.
   상수원보호구역은 `near('LT_C_UM710', 필지, 3km)`로 경계까지 거리 계산(안=빨강, 1km 이내=노랑, 그 밖=참고, 없음=초록). 토지이용계획 규칙(RULES)에 공장설립제한·수질보전특별대책·접도·홍수관리·자연공원·백두대간·경자구역 등 추가.
 - 검토 이력: 서버 저장 안 함(표 `site_reviews`는 만들어 두었으나 미사용). SQL은 `gh workflow run db_sql.yml -f file=…`로 실행(SUPABASE_ACCESS_TOKEN).
+- 예정 용도 판정(2026-11-22): 동해시 조례 별표 1~22(시행령+조례 통합 「건축할 수 있는/없는 건축물」, 한글 파일)를 류주임 **kordoc**(npx, `collect/hwp.py`, 워크플로에 setup-node)으로 읽어 `ordin.regions.동해.uses`에 저장 → land.js `useJudge`가 건축법 시행령 별표 1 호 번호로 판정(있는 목록: 없음=빨강, 조건=노랑 / 없는 목록: 없음=초록, 조건=노랑), 해당 조항 원문 표시. 자연취락지구면 별표 22도 판정.
 - 조례 비교: `collect/landlaw.py`가 18개 시·군 도시계획(군계획) 조례에서 용도지역별 건폐율·용적률 추출(주 1회, LAW_OC). 일부 시·군은 조문 형식이 달라 몇 개 용도지역 값이 빠짐(원주·홍천·화천·인제 상업지역 용적률 등) → 빠진 곳은 비교에서 제외(추정 안 함).
 - Edge Function 배포: `supabase/functions/**` 고치고 push하면 deploy_functions.yml이 자동 배포.
 - 참고 코드: chrisryugj/archhub-mcp, korean-law-mcp (MIT). 다음 할 일: 국토·건축 현황 통계(노후·내진 미적용 추정·인허가, 18개 시·군 비교).

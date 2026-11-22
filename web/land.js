@@ -10,7 +10,23 @@ window.DHLand = (function () {
   var sb = null, session = null, profile = null, authChecked = false;
   var tab = 'site', cur = null, busy = false, cmpZone = null, cmpKind = 'far', useSel = '';
   var LV = { GREEN: { c: '#2E8B57', bg: '#E2F3E9', t: '추진 가능' }, YELLOW: { c: '#D99A00', bg: '#FFF4D6', t: '조건부 가능 · 검토 필요' }, RED: { c: '#D9534F', bg: '#FDE7E4', t: '추진 곤란 · 중대 제약' }, INFO: { c: '#1F6FD1', bg: '#E4EEFB', t: '참고' } };
-  var USES = ['', '단독주택', '공동주택', '제1종근린생활시설', '제2종근린생활시설', '문화및집회시설', '판매시설', '의료시설', '교육연구시설', '노유자시설', '수련시설', '운동시설', '업무시설', '숙박시설', '공장', '창고시설', '위험물저장및처리시설', '자동차관련시설', '공공용시설', '관광휴게시설', '주차장'];
+  // 예정 용도 → 「건축법 시행령」 별표 1의 호 번호
+  var USE_HO = { '단독주택': '1', '공동주택': '2', '제1종근린생활시설': '3', '제2종근린생활시설': '4', '문화및집회시설': '5', '종교시설': '6', '판매시설': '7', '운수시설': '8', '의료시설': '9', '교육연구시설': '10', '노유자시설': '11', '수련시설': '12', '운동시설': '13', '업무시설': '14', '숙박시설': '15', '위락시설': '16', '공장': '17', '창고시설': '18', '위험물저장및처리시설': '19', '자동차관련시설': '20', '주차장': '20', '동물및식물관련시설': '21', '자원순환관련시설': '22', '방송통신시설': '24', '발전시설': '25', '묘지관련시설': '26', '관광휴게시설': '27', '장례시설': '28', '야영장시설': '29' };
+  var USES = [''].concat(Object.keys(USE_HO));
+  // 조례 별표(시행령+조례 통합 목록)로 예정 용도 판정
+  function useJudge(zoneNm, use) {
+    var o = ordMe(), T = ((o && o.uses) || []).filter(function (u) { return u.zone === String(zoneNm || '').replace(/\s+/g, ''); })[0];
+    if (!T) return null;
+    var ho = USE_HO[use], kw = use === '주차장' ? '주차장' : use === '공장' ? '공장' : null;
+    var M = T.items.filter(function (it) { return it.ho.indexOf(ho) >= 0 || (!it.ho.length && kw && it.t.indexOf(kw) >= 0); });
+    var ALL = T.items.filter(function (it) { return !it.ho.length && /모든 건축물/.test(it.t); });
+    function cond(it) { if (use === '주차장' && it.t.indexOf('주차장') >= 0) return false; return it.subs.length > 0 || /\s중\s|중 다음|제외|한한다|한정|미만|이하|이상|로서|다만|경우|별표\s*\d+\s*[가-힣]목/.test(it.t.replace(/^「건축법 시행령」\s*별표\s*1?\s*제\d+호(의\d+)?의\s*\S+/, '')); }
+    var anyCond = M.some(cond), lvl, msg;
+    if (T.kind === 'can') { lvl = !M.length ? 'RED' : anyCond ? 'YELLOW' : 'GREEN'; msg = !M.length ? '건축할 수 없습니다(허용 목록에 없음)' : anyCond ? '조건을 갖추면 건축할 수 있습니다' : '건축할 수 있습니다'; }
+    else { lvl = !M.length ? 'GREEN' : anyCond ? 'YELLOW' : 'RED'; msg = !M.length ? '건축할 수 있습니다(금지 목록에 없음)' : anyCond ? '일부(아래 조건에 해당하면) 건축할 수 없습니다' : '건축할 수 없습니다'; }
+    var txt = M.concat(ALL).map(function (it) { return it.k + '. ' + it.t + (it.subs.length ? ' ' + it.subs.join(' ') : ''); });
+    return { lvl: lvl, msg: msg, T: T, txt: txt };
+  }
 
   // ------------------------------------------------------------ 로그인(관리자 화면과 같은 세션 공유)
   function initAuth() {
@@ -230,7 +246,14 @@ window.DHLand = (function () {
     else if (!rule) add('YELLOW', '토지', zone + ' · 조례 수치 없음', '동해시 도시계획 조례에서 「' + zone + '」의 건폐율·용적률을 찾지 못했습니다.', '규모 계산을 하지 못했습니다.', artCite('bcr'));
     else add('GREEN', '토지', zone, zone + '은(는) 동해시 도시계획 조례상 건폐율 ' + fmt(rule.bcr) + '% · 용적률 ' + fmt(rule.far) + '% 이하입니다.' + (zones[1] ? ' (일부 ' + zones[1] + ' 걸침)' : ''), '대지 ' + fmt(area) + '㎡ 기준 바닥면적 최대 약 ' + fmt(area * rule.bcr / 100) + '㎡, 연면적 최대 약 ' + fmt(area * rule.far / 100) + '㎡ (예상치)', artCite('bcr') + ' · ' + artCite('far'));
     if (zones[1]) add('YELLOW', '토지', '용도지역 두 개에 걸침', zone + '와(과) ' + zones[1] + '에 걸쳐 있습니다.', '걸친 면적 비율에 따라 건폐율·용적률을 나눠 적용합니다(「국토계획법」 제84조).', '「국토계획법」 제84조');
-    if (useSel) add('INFO', '토지', '예정 용도: ' + useSel, '「' + zone + '」에서 「' + useSel + '」을(를) 지을 수 있는지는 동해시 도시계획 조례 별표(용도지역별 건축 가능 건축물)에 있습니다.', '아래 「별표 원문」에서 해당 용도지역 표를 확인하세요. (별표는 한글 파일이라 자동 판정하지 않음)', annexFor(zone) ? annexFor(zone).title : '동해시 도시계획 조례 별표');
+    if (useSel) {
+      var uz = [zone].concat(d.use.some(function (u) { return /자연취락지구/.test(u.prposAreaDstrcCodeNm || ''); }) ? ['자연취락지구'] : []);
+      uz.forEach(function (z) {
+        var J = useJudge(z, useSel);
+        if (!J) { add('YELLOW', '토지', '예정 용도: ' + useSel, '「' + (z || '용도지역 미확인') + '」의 동해시 도시계획 조례 별표를 찾지 못해 판정하지 못했습니다.', '토지이음에서 행위제한을 확인하세요.', '동해시 도시계획 조례 제31조'); return; }
+        add(J.lvl, '토지', '예정 용도: ' + useSel + ' · ' + J.msg.replace(/\(.*\)/, ''), '「' + z + '」에서 「' + useSel + '」은(는) ' + J.msg + '.' + (J.T.note ? ' [별표 머리말] ' + J.T.note : ''), J.txt.length ? '해당 조항: ' + J.txt.join(' / ') : (J.T.kind === 'can' ? '「' + z + '」 허용 목록(' + J.T.items.length + '개 항목)에 「' + useSel + '」(건축법 시행령 별표 1 제' + USE_HO[useSel] + '호)이 없습니다.' : '「' + z + '」 금지 목록(' + J.T.items.length + '개 항목)에 「' + useSel + '」(건축법 시행령 별표 1 제' + USE_HO[useSel] + '호)이 없습니다.'), (ordMe().name || '동해시 도시계획 조례') + ' ' + J.T.title + ' · 「건축법 시행령」 별표 1 제' + USE_HO[useSel] + '호');
+      });
+    }
     // (2) 지목
     if (/^(전|답|과수원)$/.test(jimok)) add('YELLOW', '토지', '농지(' + jimok + ')', '지목이 「' + jimok + '」입니다.', '농지전용 허가와 농지보전부담금(공시지가의 30%, ㎡당 5만원 한도)이 듭니다.', '「농지법」 제34조·제38조');
     else if (jimok === '임야') add('YELLOW', '토지', '임야', '지목이 「임야」입니다.', '산지전용 허가와 대체산림자원조성비가 듭니다.', '「산지관리법」 제14조·제19조');

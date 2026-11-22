@@ -81,6 +81,50 @@ def parse(svc):
     return res
 
 
+HO = re.compile(r'별표\s*(?:1\s*)?제(\d+)호(의\d+)?')
+ITEM_RE = re.compile(r'^([가-힣])\s*[.,]\s*(.+)$')
+
+
+def parse_uses(md, title):
+    """kordoc 마크다운 → {zone, kind(can/cannot), note, items:[{t, subs, ho}]}"""
+    m = re.search(r'\]\s*(.+?)\s*안에서\s*건축할\s*수\s*(있는|없는)', title or '')
+    if not m:
+        return None
+    out = {'zone': re.sub(r'\s+', '', m.group(1)), 'kind': 'can' if m.group(2) == '있는' else 'cannot',
+           'title': re.sub(r'\s*<.*$', '', title).strip(), 'note': '', 'items': []}
+    for ln in md.split('\n'):
+        ln = re.sub(r'\*\*', '', ln).strip()
+        if not ln or ln.startswith('#'):
+            continue
+        if ln.startswith('※'):
+            out['note'] = ln.lstrip('※ ').strip()
+            continue
+        mi = ITEM_RE.match(ln)
+        if mi and len(ln) > 6:
+            t = mi.group(2).strip()
+            out['items'].append({'k': mi.group(1), 't': t, 'subs': [],
+                                 'ho': sorted(set(a + (b or '') for a, b in HO.findall(t)))})
+        elif re.match(r'^\(\d+\)', ln) and out['items']:
+            out['items'][-1]['subs'].append(ln)
+    return out
+
+
+def fetch_uses(annex):
+    import urllib.request
+    import hwp
+    res = []
+    for a in annex:
+        if '건축할 수' not in (a.get('title') or '') or not a.get('url'):
+            continue
+        d = urllib.request.urlopen(urllib.request.Request(a['url'], headers={'User-Agent': 'Mozilla/5.0'}), timeout=60).read()
+        u = parse_uses(hwp.hwp_text(d), a['title'])
+        if u and u['items']:
+            u['url'] = a['url']
+            res.append(u)
+        time.sleep(0.3)
+    return res
+
+
 def collect(C, prev=None):
     prev = prev or {}
     regs, errs = {}, []
@@ -92,10 +136,15 @@ def collect(C, prev=None):
                 continue
             mst = it.get('자치법규일련번호')
             old = (prev.get('regions') or {}).get(r['name'])
-            if old and old.get('mst') == mst and old.get('bcr'):
+            if old and old.get('mst') == mst and old.get('bcr') and (r['name'] != C['me'] or old.get('uses')):
                 regs[r['name']] = old           # 개정 없으면 그대로
                 continue
             regs[r['name']] = parse(_get(SERVICE, {'target': 'ordin', 'MST': mst}))
+            if r['name'] == C['me']:
+                try:   # 별표(용도지역별 건축 가능·불가 건축물) 한글 파일 → kordoc
+                    regs[r['name']]['uses'] = fetch_uses(regs[r['name']].get('annex') or [])
+                except Exception as e:  # noqa: BLE001
+                    errs.append('별표 읽기 실패 %s' % str(e)[:150])
             time.sleep(0.5)
         except Exception as e:  # noqa: BLE001
             errs.append('%s %s' % (r['name'], str(e)[:120]))
