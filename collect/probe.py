@@ -425,7 +425,9 @@ def lofinlist_probe():
         try:
             t = kr_get('https://www.lofin365.go.kr/resources/js/' + js, {})
             say('[LL] %s 길이 %d' % (js, len(t)))
-            for m in R.finditer(r'pdtaId|LF511|opnApi|OpenApi|openApi|hub', t):
+            urls = sorted(set(R.findall(r'/lf/[\w/]+\.do', t)))
+            say('[LL]   do 주소 %d개: %s' % (len(urls), ' '.join(u for u in urls if R.search(r'(?i)pdta|opn|open|dta|hub|api|srn', u))[:1500]))
+            for m in R.finditer(r'(?i)pdta|LF511', t):
                 say('[LL]   ' + R.sub(r'\s+', ' ', t[max(0, m.start() - 150):m.start() + 250]))
         except Exception as e:  # noqa: BLE001
             say('[LL] %s 실패 %s' % (js, str(e)[:150]))
