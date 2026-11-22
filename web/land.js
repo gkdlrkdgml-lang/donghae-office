@@ -239,18 +239,86 @@ window.DHLand = (function () {
     var el = H.el, key = (H.D.map || {}).vworld, old = document.getElementById('dh3d'); if (old) old.remove();
     var box = el('div', { style: 'position:absolute;inset:0;border-radius:12px;overflow:hidden;background:#DDE5EF' });
     var note = el('div', { style: 'font-size:14px;color:#38475A', text: '주변 건물을 불러오는 중…' });
-    var rot = null;
+    var rot = null, planBar = el('div', { style: 'display:none;flex-wrap:wrap;gap:8px 14px;align-items:center;font-size:15px;background:#F3F6FA;border-radius:10px;padding:8px 12px' });
+    var fileIn = el('input', { type: 'file', accept: '.dxf', style: 'display:none' });
+    fileIn.addEventListener('change', function () { var f = fileIn.files[0]; if (!f) return; var rd = new FileReader(); rd.onload = function () { loadPlan(String(rd.result), f.name); }; rd.readAsText(f); fileIn.value = ''; });
     function close() { if (rot) cancelAnimationFrame(rot); ov.remove(); }
     var ov = el('div', { id: 'dh3d', style: 'position:fixed;left:3vw;right:3vw;top:4vh;bottom:4vh;z-index:950;font-family:Pretendard,sans-serif;background:#fff;border-radius:16px;box-shadow:0 20px 60px rgba(15,30,60,.35);display:flex;flex-direction:column;padding:14px 18px;gap:8px' }, [
       el('div', { style: 'display:flex;align-items:center;gap:12px' }, [
         el('b', { style: 'font-size:22px;color:#1B3A6B', text: '🏢 3D 보기 · ' + ((d.feat.properties || {}).addr || d.q) }),
         el('div', { style: 'flex:1' }),
         el('button', { type: 'button', class: 'chip', style: 'cursor:pointer;border:0;font-weight:800', text: '↻ 천천히 돌리기', onclick: function () { if (rot) { cancelAnimationFrame(rot); rot = null; return; } (function spin() { if (ov._m) ov._m.setBearing(ov._m.getBearing() + 0.15); rot = requestAnimationFrame(spin); })(); } }),
+        el('button', { type: 'button', class: 'chip', style: 'cursor:pointer;border:0;font-weight:900;background:#D9534F;color:#fff', text: '📐 CAD 도면 올리기(DXF)', onclick: function () { fileIn.click(); } }),
         el('button', { type: 'button', class: 'chip', style: 'cursor:pointer;border:0;font-weight:800;background:#1B3A6B;color:#fff', text: '✕ 닫기', onclick: close })]),
+      planBar, fileIn,
       el('div', { style: 'flex:1;min-height:0;position:relative' }, [box]), note]);
     ov.addEventListener('keydown', function (e) { e.stopPropagation(); });
     document.body.appendChild(ov);   // 확대·축소된 무대(#stage) 밖에 붙여야 3D 지도 마우스·손가락 위치가 맞음
     var c = center(d.feat.geometry), km = 0.25, dy = km / 111, dx = km / (111 * Math.cos(c[1] * Math.PI / 180));
+    // ---- CAD 도면(DXF) → 외곽선을 필지 위에 세움(도면 파일은 이 브라우저 안에서만 읽고 어디에도 올리지 않음)
+    var PL = null, kx = 111320 * Math.cos(c[1] * Math.PI / 180), ky = 110540;
+    function loadDxfLib() {
+      if (window.DxfParser) return Promise.resolve();
+      return new Promise(function (ok, no) { var sc = document.createElement('script'); sc.src = 'vendor/dxf/dxf-parser.js'; sc.onload = function () { ok(); }; sc.onerror = function () { no(new Error('도면 읽기 파일을 못 불러옴')); }; document.head.appendChild(sc); });
+    }
+    function areaOf(pts) { var a = 0; for (var i = 0, j = pts.length - 1; i < pts.length; j = i++) a += (pts[j][0] + pts[i][0]) * (pts[j][1] - pts[i][1]); return Math.abs(a / 2); }
+    function loadPlan(txt, name) {
+      loadDxfLib().then(function () {
+        var P = window.DxfParser && (window.DxfParser.default || window.DxfParser), r = new P().parseSync(txt);
+        var u = (r.header || {}).$INSUNITS, sc0 = u === 4 ? 0.001 : u === 5 ? 0.01 : u === 6 ? 1 : u === 1 ? 0.0254 : u === 2 ? 0.3048 : null;
+        var loops = (r.entities || []).filter(function (e) { return /POLYLINE/.test(e.type) && e.vertices && e.vertices.length >= 3 && (e.shape || e.closed || (e.vertices[0].x === e.vertices[e.vertices.length - 1].x && e.vertices[0].y === e.vertices[e.vertices.length - 1].y)); })
+          .map(function (e) { return { layer: e.layer || '0', pts: e.vertices.map(function (v) { return [v.x, v.y]; }) }; });
+        if (!loops.length) { alert('도면에서 닫힌 외곽선(폴리라인)을 찾지 못했습니다. CAD에서 건물 외곽을 닫힌 폴리라인으로 그려 DXF로 저장해 주세요.'); return; }
+        if (sc0 == null) { var xs = [].concat.apply([], loops.map(function (l) { return l.pts.map(function (p) { return p[0]; }); })); sc0 = Math.max.apply(null, xs) - Math.min.apply(null, xs) > 2000 ? 0.001 : 1; }
+        loops.forEach(function (l) { l.pts = l.pts.map(function (p) { return [p[0] * sc0, p[1] * sc0]; }); l.a = areaOf(l.pts); });
+        loops.sort(function (a, b) { return b.a - a.a; });
+        PL = { name: name, loops: loops.slice(0, 12), pick: 0, floors: 3, fh: 3.3, rot: 0, ox: 0, oy: 0, unit: u === 4 || sc0 === 0.001 ? 'mm' : u === 5 ? 'cm' : 'm' };
+        drawPlanBar(); drawPlan();
+      }).catch(function (e) { alert('도면을 읽지 못했습니다: ' + e.message); });
+    }
+    function planPts() {
+      var L = PL.loops[PL.pick], cx = 0, cy = 0; L.pts.forEach(function (p) { cx += p[0]; cy += p[1]; }); cx /= L.pts.length; cy /= L.pts.length;
+      var t = PL.rot * Math.PI / 180, ct = Math.cos(t), st = Math.sin(t);
+      var ring = L.pts.map(function (p) { var x = p[0] - cx, y = p[1] - cy, X = x * ct - y * st + PL.ox, Y = x * st + y * ct + PL.oy; return [c[0] + X / kx, c[1] + Y / ky]; });
+      ring.push(ring[0]); return ring;
+    }
+    function drawPlan() {
+      var m = ov._m; if (!m || !PL || !m.isStyleLoaded()) return;
+      var ring = planPts(), h = PL.floors * PL.fh, g = { type: 'Feature', geometry: { type: 'Polygon', coordinates: [ring] }, properties: { h: h } };
+      if (m.getSource('plan')) m.getSource('plan').setData(g);
+      else { m.addSource('plan', { type: 'geojson', data: g }); m.addLayer({ id: 'plan', type: 'fill-extrusion', source: 'plan', paint: { 'fill-extrusion-height': ['get', 'h'], 'fill-extrusion-color': '#2F6DB5', 'fill-extrusion-opacity': 0.92 } }); }
+      if (m.getLayer('bld')) m.setFilter('bld', ['!=', ['get', 'me'], 1]);   // 지금 건물은 숨기고 도면 건물을 보여 줌
+      drawPlanStats();
+    }
+    var statBox = el('div', { style: 'display:flex;gap:8px;flex-wrap:wrap;width:100%' });
+    function chipS(t, ok) { return el('span', { class: 'chip', style: 'font-weight:800;' + (ok === true ? 'background:#E6F4EA;color:#1E7B34' : ok === false ? 'background:#FBE9E8;color:#B23B37' : 'background:#fff;color:#1B3A6B'), text: t }); }
+    function drawPlanStats() {
+      var L = PL.loops[PL.pick], site = (d.ev || {}).area || 0, R0 = (d.ev || {}).rule, A = L.a, T = A * PL.floors, H0 = PL.floors * PL.fh;
+      var bc = site ? A / site * 100 : null, fr = site ? T / site * 100 : null;
+      var ring = planPts(), pr = rings(d.feat.geometry)[0] || [], inside = ring.every(function (p) { return inRing(p, pr); });
+      var maxF = R0 && site && A ? Math.floor(R0.far / 100 * site / A) : null;
+      statBox.innerHTML = '';
+      [chipS('건축면적 ' + fmt(A, 1) + '㎡'), chipS('연면적 ' + fmt(T) + '㎡ (층마다 같다고 본 예상치)'), chipS('높이 약 ' + fmt(H0, 1) + 'm'),
+        bc != null ? chipS('건폐율 ' + fmt(bc, 1) + '%' + (R0 ? ' / 한도 ' + fmt(R0.bcr, R0.mixed ? 1 : 0) + '%' : ''), R0 ? bc <= R0.bcr : null) : null,
+        fr != null ? chipS('용적률 ' + fmt(fr, 1) + '%' + (R0 ? ' / 한도 ' + fmt(R0.far, R0.mixed ? 1 : 0) + '%' : ''), R0 ? fr <= R0.far : null) : null,
+        maxF != null ? chipS('용적률 한도로만 보면 최대 약 ' + maxF + '층(높이·고도지구·일조 제한은 따로)') : null,
+        chipS(inside ? '대지 경계 안' : '대지 경계를 벗어남 — 위치·방향을 맞춰 주세요', inside)].forEach(function (x) { if (x) statBox.appendChild(x); });
+    }
+    function drawPlanBar() {
+      planBar.style.display = 'flex'; planBar.innerHTML = '';
+      function num(lbl, v, step, set, w) { var i = el('input', { type: 'number', value: v, step: step, style: 'font:inherit;width:' + (w || 70) + 'px;padding:4px;border:1px solid #C9D2DE;border-radius:6px' }); i.addEventListener('input', function () { if (i.value !== '') { set(+i.value); drawPlan(); } }); return el('label', { style: 'display:flex;gap:4px;align-items:center;font-weight:700' }, [lbl, i]); }
+      function rng(lbl, v, mn, mx, set) { var i = el('input', { type: 'range', min: mn, max: mx, value: v, style: 'width:150px' }), o = el('b', { text: v }); i.addEventListener('input', function () { set(+i.value); o.textContent = i.value; drawPlan(); }); return el('label', { style: 'display:flex;gap:4px;align-items:center;font-weight:700' }, [lbl, i, o]); }
+      var sel = el('select', { style: 'font:inherit;padding:4px;border:1px solid #C9D2DE;border-radius:6px;max-width:300px' }, PL.loops.map(function (l, i) { return el('option', { value: i, text: (i + 1) + '. 레이어 ' + l.layer + ' · ' + fmt(l.a, 1) + '㎡' }); }));
+      sel.addEventListener('change', function () { PL.pick = +sel.value; drawPlan(); });
+      planBar.appendChild(el('b', { style: 'color:#1B3A6B', text: '📐 ' + PL.name + ' (' + PL.unit + ')' }));
+      planBar.appendChild(el('label', { style: 'display:flex;gap:4px;align-items:center;font-weight:700' }, ['외곽선', sel]));
+      planBar.appendChild(num('층수', PL.floors, 1, function (v) { PL.floors = Math.max(1, v); }));
+      planBar.appendChild(num('층고 m', PL.fh, 0.1, function (v) { PL.fh = Math.max(2, v); }));
+      planBar.appendChild(rng('회전°', PL.rot, -180, 180, function (v) { PL.rot = v; }));
+      planBar.appendChild(rng('동서 m', PL.ox, -150, 150, function (v) { PL.ox = v; }));
+      planBar.appendChild(rng('남북 m', PL.oy, -150, 150, function (v) { PL.oy = v; }));
+      planBar.appendChild(statBox);
+    }
     var bldP = vw('https://api.vworld.kr/req/data', { service: 'data', request: 'GetFeature', data: 'LT_C_SPBD', size: 1000, geometry: 'true', attribute: 'true', crs: 'EPSG:4326', geomFilter: 'BOX(' + (c[0] - dx) + ',' + (c[1] - dy) + ',' + (c[0] + dx) + ',' + (c[1] + dy) + ')' })
       .then(function (j) { var r = (j || {}).response || {}; return r.status === 'OK' ? ((r.result || {}).featureCollection || {}).features || [] : []; }).catch(function () { return []; });
     Promise.all([loadML(), bldP]).then(function (res) {
@@ -280,6 +348,7 @@ window.DHLand = (function () {
         var pop = new window.maplibregl.Popup({ closeButton: false });
         m.on('mousemove', 'bld', function (e) { var q = e.features[0].properties; pop.setLngLat(e.lngLat).setHTML('<b>' + (q.nm || '건물') + '</b><br>' + (q.f !== '' ? '지상 ' + q.f + '층 · ' : '') + '높이 약 ' + Math.round(q.h) + 'm').addTo(m); });
         m.on('mouseleave', 'bld', function () { pop.remove(); });
+        if (PL) drawPlan();
       });
       note.textContent = '주변 250m 건물 ' + feats.length + '동' + (feats.length ? ' (층수 있는 건물 ' + withF + '동)' : '') + ' · 높이는 도로명주소 건물의 지상층수 × 3.3m로 세운 예상치' +
         (myH ? ' · 붉은 건물(검토 필지)은 건축물대장 높이 ' + fmt(myH, 1) + 'm' : mine ? ' · 붉은 건물 = 검토 필지' : '') + (feats.length && !withF ? ' · ⚠ 층수 자료가 없어 모두 1층 높이로 표시' : '') + ' · 마우스 오른쪽 끌기(태블릿은 두 손가락)로 돌리기·기울이기';
