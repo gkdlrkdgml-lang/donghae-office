@@ -152,7 +152,8 @@
   function sync() {
     if (!document.body) return;
     var hide = location.hash === '#frame' || location.hash === '#flow' || !!document.getElementById('flowBadge');
-    document.body.classList.toggle('dh-noaide', hide);
+    var onMain = !location.hash || location.hash === '#main';   // 한눈에 보기에는 칸 안에 비서실장이 있음
+    document.body.classList.toggle('dh-noaide', hide || onMain);
     if (hide) close();
     mount();
   }
