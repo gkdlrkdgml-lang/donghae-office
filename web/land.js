@@ -661,14 +661,14 @@ window.DHLand = (function () {
     p2.style.gridRow = '4';
     // ③ 지도(필지 경계 + 브이월드 레이어 켜고 끄기)
     var mb = el('div', { style: 'position:absolute;inset:0' });
-    var mwrap = el('div', { style: 'flex:1;min-height:0;border-radius:10px;overflow:hidden;background:#EEF3F8;position:relative' }, [mb]);
+    var mwrap = el('div', { style: 'flex:1;min-height:0;border-radius:10px;overflow:hidden;background:#EEF3F8;position:relative' }, [mb,
+      el('button', { type: 'button', style: 'position:absolute;right:10px;top:10px;z-index:500;font:inherit;font-size:17px;font-weight:900;cursor:pointer;border:0;border-radius:10px;padding:8px 14px;background:#D9534F;color:#fff;box-shadow:0 3px 10px rgba(0,0,0,.25)', text: '🏢 3D로 보기', onclick: function (e) { e.stopPropagation(); open3D(d); } })]);
     var ll = center(d.feat.geometry);
     var p3 = H.panel('위치 · 필지 경계', (p.jibun || '') + ' · 브이월드 지도', el('div', { style: 'display:flex;flex-direction:column;gap:6px;flex:1;min-height:0' }, [
       layerBar(), mwrap,
       el('div', { class: 'chips', style: 'gap:6px;font-size:13px;flex-wrap:wrap' }, [
         el('a', { class: 'chip', href: 'https://map.ngii.go.kr/ms/map/NlipMap.do', target: '_blank', rel: 'noopener', text: '항공사진 연혁 (국토정보플랫폼) ↗' }),
-        el('a', { class: 'chip', href: 'https://map.kakao.com/link/map/' + encodeURIComponent(p.jibun || '부지') + ',' + ll[1] + ',' + ll[0], target: '_blank', rel: 'noopener', text: '카카오맵 과거 스카이뷰 ↗' }),
-        el('button', { type: 'button', class: 'chip', style: 'cursor:pointer;border:0;background:#1B3A6B;color:#fff;font-weight:800', text: '🏢 3D로 보기', onclick: function (e) { e.stopPropagation(); open3D(d); } })])]));
+        el('a', { class: 'chip', href: 'https://map.kakao.com/link/map/' + encodeURIComponent(p.jibun || '부지') + ',' + ll[1] + ',' + ll[0], target: '_blank', rel: 'noopener', text: '카카오맵 과거 스카이뷰 ↗' })])]));
     p3.style.gridRow = '3'; p3.style.gridColumn = '2';
     setTimeout(function () {
       if (!window.L || !window.L.map) return;
