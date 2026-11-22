@@ -419,25 +419,16 @@ def annex_probe():
 
 
 def lofinlist_probe():
-    import re as R, urllib.request
+    import re as R
     from common import kr_get
-    for n in (15059413,):
-        try:
-            t = urllib.request.urlopen(urllib.request.Request('https://www.data.go.kr/data/%d/openapi.do' % n, headers={'User-Agent': 'Mozilla/5.0'}), timeout=30).read().decode('utf-8', 'replace')
-            nm = R.findall(r'<title>([^<]*)', t)[:1]
-            ids = sorted(set(R.findall(r'pdtaId(?:=|&#61;|%3D)([A-Z0-9]+)', t)))
-            for m in R.finditer(r'lofin', t):
-                say('[LL]   ' + t[max(0, m.start() - 80):m.start() + 160].replace('\n', ' '))
-            say('[LL] %d %s %s' % (n, nm, ids))
-            for pid in ids[:1]:
-                d = kr_get('https://www.lofin365.go.kr/portal/LF5110000.do', {'pdtaId': pid})
-                say('[LL]   상세 길이 %d hub %s' % (len(d), sorted(set(R.findall(r'hub/([A-Z]{4,6})', d)))))
-                txt = R.sub(r'<script[\s\S]*?</script>|<style[\s\S]*?</style>', ' ', d)
-                txt = R.sub(r'<[^>]+>', ' ', txt); txt = R.sub(r'\s+', ' ', txt)
-                k = txt.find('요청')
-                say('[LL]   본문 ' + txt[max(0, k - 200):k + 1500])
-        except Exception as e:  # noqa: BLE001
-            say('[LL] %d 실패 %s' % (n, str(e)[:200]))
+    d = kr_get('https://www.lofin365.go.kr/portal/LF5110000.do', {'pdtaId': 'QS3YB6Z5PPOMXD7F4H681099215', 'rdIncrYn': 'Y', 'frstParamYn': 'Y'})
+    say('[LL] 상세 길이 %d hub %s' % (len(d), sorted(set(R.findall(r'hub/([A-Za-z]{4,6})', d)))))
+    txt = R.sub(r'<script[\s\S]*?</script>|<style[\s\S]*?</style>', ' ', d)
+    txt = R.sub(r'<[^>]+>', ' ', txt); txt = R.sub(r'\s+', ' ', txt)
+    for kw in ('요청주소', '요청인자', '출력', 'fyr'):
+        k = txt.find(kw)
+        if k >= 0:
+            say('[LL] %s: %s' % (kw, txt[k:k + 1500]))
 
 
 def lofin_probe():
