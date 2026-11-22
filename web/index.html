@@ -50,7 +50,9 @@
   .title span { font-size: 14px; color: var(--sub); }
   section { background: var(--panel); border: 1px solid var(--line); box-shadow: 0 1px 2px rgba(20,30,50,.05); border-radius: 12px; padding: 16px 20px; min-height: 0; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
   section h2 { margin: 0; font-size: 20px; color: var(--navy); }
-  section.zoom .landlist { overflow: auto; }
+  section.zoom .landlist { overflow: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-y; }
+  /* 크게 보기: 칸 안의 작은 굴림 상자를 풀어 바깥 한 곳에서만 굴리게(태블릿에서 손가락이 안쪽 상자에 걸리지 않게) */
+  section.zoom .landlist details, section.zoom .landlist details div { max-height: none !important; overflow: visible !important; }
   .fitmore { position: absolute; left: 20px; right: 20px; bottom: 6px; text-align: center; font-size: 13px; font-weight: 700; color: var(--blue); cursor: pointer; background: linear-gradient(rgba(255,255,255,0), #fff 40%); padding-top: 6px; }
   .sh { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
   .sh small { font-size: 13px; color: var(--sub); }
