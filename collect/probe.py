@@ -306,7 +306,35 @@ def chk_probe():
             say('%s 동해 %s / %d' % (i['id'], i.get('me'), i.get('n')))
 
 
+def wipan_probe():
+    import urllib.request, urllib.parse, json as J
+    for ns in ('15102792/v1', '15102791/v1'):
+        try:
+            t = urllib.request.urlopen('https://infuser.odcloud.kr/oas/docs?namespace=' + ns, timeout=60).read().decode()
+            d = J.loads(t)
+            for path, v in d.get('paths', {}).items():
+                g = v.get('get', {})
+                say('== %s %s | %s | params %s' % (ns, path, g.get('summary'), [p_.get('name') for p_ in g.get('parameters', [])]))
+        except Exception as e:  # noqa: BLE001
+            say('== %s 오류 %s' % (ns, e))
+    key = urllib.parse.unquote(os.environ.get('DATA_GO_KR_KEY', ''))
+    try:
+        t = urllib.request.urlopen('https://infuser.odcloud.kr/oas/docs?namespace=15102792/v1', timeout=60).read().decode()
+        paths = list(J.loads(t).get('paths', {}))
+        for pth in paths[-2:]:
+            u = 'https://api.odcloud.kr/api' + pth + '?' + urllib.parse.urlencode({'page': 1, 'perPage': 3, 'serviceKey': key, 'cond[위판장명::LIKE]': '묵호'})
+            try:
+                r = urllib.request.urlopen(u, timeout=60).read().decode()
+                say('호출 %s → %s' % (pth, r[:600]))
+            except Exception as e:  # noqa: BLE001
+                say('호출 %s → %s %s' % (pth, e, getattr(e, 'read', lambda: b'')()[:200]))
+    except Exception as e:  # noqa: BLE001
+        say('호출 실패 %s' % e)
+
+
 def main():
+    if os.environ.get('PROBE_ONLY') == 'wipan':
+        wipan_probe(); return
     if os.environ.get('PROBE_ONLY') == 'chk':
         chk_probe(); return
     if os.environ.get('PROBE_ONLY') == 'agri2':
