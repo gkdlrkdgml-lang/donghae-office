@@ -421,17 +421,14 @@ def annex_probe():
 def lofinlist_probe():
     import re as R
     from common import kr_get
-    d = kr_get('https://www.lofin365.go.kr/portal/LF5110000.do', {'pdtaId': 'QS3YB6Z5PPOMXD7F4H681099215', 'rdIncrYn': 'Y', 'frstParamYn': 'Y'})
-    say('[LL] 상세 길이 %d hub %s' % (len(d), sorted(set(R.findall(r'hub/([A-Za-z]{4,6})', d)))))
-    say('[LL] 제목 %s' % R.findall(r'<title>([^<]*)', d))
-    k = d.find('retvUdedSrn')
-    say('[LL] 주변 ' + R.sub(r'\s+', ' ', d[max(0, k - 1800):k + 300]))
-    txt = R.sub(r'<script[\s\S]*?</script>|<style[\s\S]*?</style>', ' ', d)
-    txt = R.sub(r'<[^>]+>', ' ', txt); txt = R.sub(r'\s+', ' ', txt)
-    for kw in ('요청주소', '요청인자', '출력', 'fyr'):
-        k = txt.find(kw)
-        if k >= 0:
-            say('[LL] %s: %s' % (kw, txt[k:k + 1500]))
+    for js in ('lofin365Init.js', 'common.js', 'lofin365Classes_N_E_W.js', 'utils.js'):
+        try:
+            t = kr_get('https://www.lofin365.go.kr/resources/js/' + js, {})
+            say('[LL] %s 길이 %d' % (js, len(t)))
+            for m in R.finditer(r'pdtaId|LF511|opnApi|OpenApi|openApi|hub', t):
+                say('[LL]   ' + R.sub(r'\s+', ' ', t[max(0, m.start() - 150):m.start() + 250]))
+        except Exception as e:  # noqa: BLE001
+            say('[LL] %s 실패 %s' % (js, str(e)[:150]))
 
 
 def lofin_probe():
