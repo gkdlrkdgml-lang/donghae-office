@@ -580,17 +580,19 @@ window.DHLand = (function () {
           text: (on ? '✔ ' : '') + lbl, onclick: function (e) { e.preventDefault(); e.stopPropagation(); if (on) delete qAns[q.id]; else qAns[q.id] = v; cur.ev = evaluate(cur); H.render(); } });
       }
       return el('div', { style: 'margin-top:6px;background:#fff;border:1px dashed #9AA8BA;border-radius:8px;padding:6px 10px' }, [
-        el('div', { style: 'font-size:14px;color:#1B3A6B;font-weight:700', text: (q.kind === 'can' ? '이 조건을 갖추었나요? ' : '이 금지 조건에 해당하나요? ') + q.text }),
-        el('div', { style: 'display:flex;gap:8px;margin-top:5px' }, [b(Y, true), b(N, false)])]);
+        el('div', { style: 'display:flex;gap:8px;align-items:center;flex-wrap:wrap' }, [
+          el('b', { style: 'font-size:15px;color:#1B3A6B', text: '👉 「' + q.text.split('.')[0] + '」 항목의 ' + (q.kind === 'can' ? '조건을 갖추었나요?' : '금지 조건에 해당하나요?') }), b(Y, true), b(N, false)]),
+        el('div', { style: 'font-size:13px;color:#38475A;margin-top:4px', text: q.text.length > 140 ? q.text.slice(0, 140) + '…' : q.text })]);
     }
     // ⑤ 판정 근거
     var order = { RED: 0, YELLOW: 1, INFO: 2, GREEN: 3 };
     var list = el('div', { class: 'landlist', style: 'display:flex;flex-direction:column;gap:8px;min-height:0' }, ev.reasons.slice().sort(function (a, b) { return (b.pin ? 1 : 0) - (a.pin ? 1 : 0) || order[a.level] - order[b.level]; }).map(function (r) {
       var L = LV[r.level], det = el('details', { 'data-fit': '1', style: 'border-left:5px solid ' + L.c + ';background:' + L.bg + ';border-radius:8px;padding:8px 12px' }, [
         el('summary', { style: 'cursor:pointer;font-size:16px;font-weight:800;color:#1B3A6B', html: '<span style="color:' + L.c + '">●</span> [' + r.area + '] ' + r.tag }),
+      ].concat((r.qs || []).map(qBox)).concat([
         el('div', { style: 'font-size:15px;margin-top:6px', text: r.detail }),
         el('div', { style: 'font-size:15px;margin-top:4px;font-weight:700', text: '→ ' + r.impact }),
-        r.cite ? el('div', { style: 'font-size:13px;margin-top:4px;color:#556274', text: '근거: ' + r.cite }) : null].concat((r.qs || []).map(qBox)));
+        r.cite ? el('div', { style: 'font-size:13px;margin-top:4px;color:#556274', text: '근거: ' + r.cite }) : null]));
       if (r.pin) { det.open = true; det.removeAttribute('data-fit'); det.style.maxHeight = '300px'; det.style.overflow = 'auto'; det.style.flexShrink = '0'; }   // 예정 용도: 숨기지 말고 맨 위에(길면 칸 안에서 굴림)
       if (r.area === '토지' && /건폐율/.test(r.detail) && artText('bcr')) det.appendChild(el('div', { style: 'font-size:12px;margin-top:6px;color:#38475A;white-space:pre-wrap;max-height:120px;overflow:auto;background:#fff;padding:6px;border-radius:6px', text: '[조례 원문] ' + artText('bcr') + '\n\n' + artText('far') }));
       return det; }));
