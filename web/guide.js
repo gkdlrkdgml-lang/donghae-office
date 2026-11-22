@@ -1,0 +1,144 @@
+/* AI 비서실장 — 화면 길잡이(2026-11-22)
+ * AI 없이 낱말로 찾아 「어디를 보세요」 + 바로 가기. 숫자는 말하지 않고 화면으로 안내만 함.
+ */
+(function () {
+  var G = [
+    { m: 'main', t: '한눈에 보기', k: ['한눈', '요약', '전체', '순위', '종합', '현황판', '처음'], say: '동해시가 18개 시·군 중 어디쯤인지 한 화면에 모아 둔 곳입니다.' },
+    { m: 'admin', s: '인구 현황', t: '행정 › 인구 현황', k: ['인구', '세대', '주민', '고령', '노령', '출생', '사망', '전입', '전출', '남녀', '생산연령'], say: '동해시 인구·세대·고령 비율과 지난달 대비 증감을 볼 수 있습니다.' },
+    { m: 'admin', s: '인구 비교', t: '행정 › 인구 비교', k: ['인구 비교', '시군 비교', '18개', '다른 시', '강릉', '삼척', '속초', '원주', '춘천'], say: '18개 시·군 인구를 나란히 비교한 화면입니다.' },
+    { m: 'admin', s: '행정동', t: '행정 › 행정동 3D 지도', k: ['동별', '행정동', '동네', '천곡', '북삼', '묵호', '발한', '송정', '부곡', '3d'], say: '행정동별 인구를 3D 지도로 보여 줍니다.' },
+    { m: 'economy', s: '사업자', t: '경제 › 사업자 · 고용', k: ['경제', '사업자', '고용', '일자리', '취업', '실업', '고용률'], say: '사업자 수와 고용률 흐름을 볼 수 있습니다.' },
+    { m: 'economy', s: '상가', t: '경제 › 상가 신규·폐업', k: ['상가', '폐업', '창업', '가게', '점포', '자영업'], say: '상가 신규·폐업을 18개 시·군과 비교합니다.' },
+    { m: 'economy', s: '음식점', t: '경제 › 음식점·숙박 개업·폐업', k: ['음식점', '식당', '숙박', '모텔', '호텔', '펜션', '개업'], say: '음식점·숙박업 개업과 폐업을 월별로 봅니다.' },
+    { m: 'welfare', t: '보건 및 의료', k: ['병원', '의원', '의사', '의료', '약국', '보건', '응급', '진료'], say: '의료기관 수, 인구 1천 명당 의사 수 등을 볼 수 있습니다.' },
+    { m: 'social', t: '복지', k: ['복지', '수급', '기초생활', '장애', '노인', '어르신', '아동', '보육'], say: '수급자·장애인 등 복지 통계를 모아 둔 곳입니다.' },
+    { m: 'tour', s: '방문', t: '관광 › 방문 현황', k: ['관광', '관광객', '방문객', '입장객', '여행'], say: '주요 관광지 입장객과 방문 흐름을 볼 수 있습니다.' },
+    { m: 'tour', s: '혼잡', t: '관광 › 관광지 혼잡 예측', k: ['혼잡', '붐비', '사람 많', '예측'], say: '관광지별 혼잡 예상치를 보여 줍니다.' },
+    { m: 'tour', s: '행사', t: '관광 › 행사·축제', k: ['축제', '행사', '이벤트', '공연'], say: '행사·축제 일정과 정보를 볼 수 있습니다.' },
+    { m: 'finance', t: '예산', k: ['예산', '재정', '세입', '세출', '지방세', '살림', '돈'], say: '동해시 예산 규모와 쓰임새, 18개 시·군 비교가 있습니다.' },
+    { m: 'land', s: '부지 검토', t: '토지 및 건축 › 부지 검토', k: ['토지', '부지', '땅', '지번', '건축', '건물', '용도지역', '건폐율', '용적률', '맹지', '상수원', '건축물대장'], say: '지번을 넣으면 신호등 판정과 근거 조문, 지도 레이어를 보여 줍니다.' },
+    { m: 'land', s: '조례 비교', t: '토지 및 건축 › 조례 비교', k: ['조례', '조례 비교', '도시계획 조례'], say: '18개 시·군 도시계획 조례의 건폐율·용적률을 비교합니다.' },
+    { m: 'traffic', s: '자동차', t: '교통 › 자동차 등록', k: ['교통', '자동차', '차량', '등록 대수'], say: '자동차 등록 현황을 볼 수 있습니다.' },
+    { m: 'traffic', s: '버스', t: '교통 › 시내버스', k: ['버스', '시내버스', '정류장', '노선'], say: '시내버스 현황과 실시간 버스 위치를 볼 수 있습니다.' },
+    { m: 'traffic', s: '택시', t: '교통 › 택시', k: ['택시'], say: '택시 현황을 볼 수 있습니다.' },
+    { m: 'traffic', s: '전기차', t: '교통 › 전기차 충전', k: ['전기차', '충전소', '충전기'], say: '전기차 충전 시설 현황입니다.' },
+    { m: 'traffic', s: '주차', t: '교통 › 공영주차장', k: ['주차', '주차장'], say: '공영주차장 현황입니다.' },
+    { m: 'traffic', s: '교통안전', t: '교통 › 교통안전·도로', k: ['교통사고', '사고', '교통안전', '도로'], say: '교통사고·교통안전 지표를 볼 수 있습니다.' },
+    { m: 'env', s: '날씨', t: '환경 › 지금 날씨·대기', k: ['날씨', '기온', '비', '눈', '바람', '미세먼지', '초미세', '공기', '대기'], say: '지금 날씨와 미세먼지를 볼 수 있습니다.' },
+    { m: 'env', s: '올해 기상', t: '환경 › 올해 기상', k: ['기상', '강수량', '폭염', '한파'], say: '올해 기상 기록을 정리해 두었습니다.' },
+    { m: 'env', s: '수질', t: '환경 › 하천 수질', k: ['수질', '하천', '전천', '오염'], say: '하천 수질 측정값을 볼 수 있습니다.' },
+    { m: 'water', t: '상하수도', k: ['상수도', '하수도', '수돗물', '급수', '누수', '상하수'], say: '상·하수도 보급률 등 통계를 볼 수 있습니다.' },
+    { m: 'power', t: '에너지·전력', k: ['전기', '전력', '에너지', '전기요금', '전력 사용'], say: '전력 사용량과 가구 평균 전기요금을 볼 수 있습니다.' },
+    { m: 'flow', t: '흘러가기', k: ['흘러가기', '자동', '슬라이드', '돌려', '자동으로'], say: '보고 싶은 화면을 골라 자동으로 넘겨 보는 곳입니다.' },
+    { m: 'frame', t: '액자', k: ['액자', '사진'], say: '동해시 사진을 액자처럼 보여 주는 화면입니다.' },
+    { href: 'admin.html', t: '관리자 화면', k: ['관리자', '입력', '가입', '비밀번호', '계정', '로그인', '승인'], say: '자료 입력과 계정 관리는 관리자 화면에서 합니다.' }
+  ];
+  var QUICK = ['인구는 어디서 봐요?', '예산', '부지 검토', '관광객', '미세먼지', '병원'];
+
+  function norm(t) { return String(t || '').toLowerCase().replace(/\s+/g, ' ').trim(); }
+  function find(q) {
+    var n = norm(q), sc = [];
+    if (!n) return [];
+    G.forEach(function (g, i) {
+      var s = 0;
+      g.k.forEach(function (k) { if (n.indexOf(k) >= 0) s += 10 + k.length; });
+      if (g.t && n.indexOf(norm(g.t).split(' ›')[0]) >= 0) s += 3;
+      if (s) sc.push({ g: g, s: s, i: i });
+    });
+    sc.sort(function (a, b) { return b.s - a.s || a.i - b.i; });
+    return sc.map(function (x) { return x.g; });
+  }
+  function allowed(g) {   // 지금 화면에 실제로 있는 메뉴만(자료 없어 숨긴 메뉴 제외)
+    if (g.href) return true;
+    return !!document.querySelector('#nav [data-id="' + g.m + '"], #nav [data-k="' + g.m + '"]') || menuIds().indexOf(g.m) >= 0;
+  }
+  function menuIds() { try { return ((window.DONGHAE_DATA || {}).menu || []).map(function (m) { return m.id; }); } catch (e) { return []; } }
+
+  function goTo(g) {
+    if (g.href) { location.href = g.href; return; }
+    if (location.hash === '#' + g.m) window.dispatchEvent(new HashChangeEvent('hashchange'));
+    else location.hash = g.m;
+    if (!g.s) return;
+    var tries = 0;
+    (function pick() {
+      var bs = Array.prototype.slice.call(document.querySelectorAll('#view .title .subtabs button, #view .title [data-subtab]'));
+      var b = bs.filter(function (x) { return (x.textContent || '').indexOf(g.s) >= 0; })[0];
+      if (b) { if (!/\bon\b/.test(b.className)) b.click(); return; }
+      if (++tries < 15) setTimeout(pick, 120);
+    })();
+  }
+
+  // ---------- 화면 ----------
+  var css = document.createElement('style');
+  css.textContent =
+    '#dhAide{position:fixed;right:22px;bottom:34px;z-index:900;font-family:"Pretendard","Malgun Gothic",system-ui,sans-serif}' +
+    '#dhAide .fab{width:84px;height:84px;border-radius:50%;border:3px solid #fff;background:#E4EEFB url(img/aide_face.webp) center 45%/100% no-repeat;box-shadow:0 8px 24px rgba(27,58,107,.35);cursor:pointer;animation:dhBob 3.2s ease-in-out infinite}' +
+    '#dhAide .tag{position:absolute;right:92px;bottom:26px;white-space:nowrap;background:#1B3A6B;color:#fff;font-size:15px;font-weight:800;padding:6px 12px;border-radius:999px;box-shadow:0 4px 12px rgba(0,0,0,.15);pointer-events:none}' +
+    '#dhAide .box{position:absolute;right:0;bottom:0;width:620px;height:560px;background:#fff;border-radius:22px;box-shadow:0 18px 60px rgba(27,58,107,.35);display:none;overflow:hidden}' +
+    '#dhAide.open .box{display:flex}#dhAide.open .fab,#dhAide.open .tag{display:none}' +
+    '#dhAide .pic{width:210px;flex:none;background:linear-gradient(180deg,#E4EEFB,#F4F7FC);display:flex;align-items:flex-end;justify-content:center;padding-bottom:12px}' +
+    '#dhAide .pic img{width:190px;animation:dhBob 3.2s ease-in-out infinite}' +
+    '#dhAide .main{flex:1;display:flex;flex-direction:column;min-width:0}' +
+    '#dhAide .hd{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 8px;border-bottom:1px solid #E3E9F2}' +
+    '#dhAide .hd b{font-size:20px;color:#1B3A6B}#dhAide .hd small{display:block;font-size:12px;color:#6B7686;font-weight:600}' +
+    '#dhAide .x{border:0;background:#EEF3F8;color:#38475A;width:34px;height:34px;border-radius:50%;font-size:18px;cursor:pointer}' +
+    '#dhAide .log{flex:1;overflow:auto;padding:12px 14px;display:flex;flex-direction:column;gap:9px}' +
+    '#dhAide .me{align-self:flex-end;background:#1B3A6B;color:#fff;padding:8px 12px;border-radius:14px 14px 4px 14px;font-size:15px;max-width:85%}' +
+    '#dhAide .bot{align-self:flex-start;background:#F1F5FB;color:#22324A;padding:10px 12px;border-radius:14px 14px 14px 4px;font-size:15px;line-height:1.5;max-width:92%}' +
+    '#dhAide .bot b{color:#1B3A6B}#dhAide .go{display:inline-block;margin-top:7px;border:0;background:#2F6DB5;color:#fff;font:inherit;font-size:14px;font-weight:800;padding:6px 12px;border-radius:999px;cursor:pointer}' +
+    '#dhAide .alt{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}#dhAide .alt button,#dhAide .qk button{border:1px solid #C9D8EE;background:#fff;color:#1B3A6B;font:inherit;font-size:13px;font-weight:700;padding:5px 10px;border-radius:999px;cursor:pointer}' +
+    '#dhAide .qk{display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 8px}' +
+    '#dhAide form{display:flex;gap:8px;padding:10px 14px 14px;border-top:1px solid #E3E9F2}' +
+    '#dhAide input{flex:1;min-width:0;font:inherit;font-size:16px;padding:10px 12px;border:2px solid #C9D2DE;border-radius:12px}' +
+    '#dhAide form button{border:0;background:#1B3A6B;color:#fff;font:inherit;font-size:16px;font-weight:800;padding:0 16px;border-radius:12px;cursor:pointer}' +
+    '@keyframes dhBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}' +
+    'body.dh-frame #dhAide{display:none}';
+  document.head.appendChild(css);
+
+  var root = document.createElement('div');
+  root.id = 'dhAide';
+  root.innerHTML =
+    '<div class="tag">AI 비서실장</div><button class="fab" type="button" aria-label="AI 비서실장 열기"></button>' +
+    '<div class="box"><div class="pic"><img src="img/aide.webp" alt="AI 비서실장"></div><div class="main">' +
+    '<div class="hd"><div><b>AI 비서실장</b><small>궁금한 내용을 말씀하시면 볼 화면을 알려 드립니다</small></div><button class="x" type="button" aria-label="닫기">✕</button></div>' +
+    '<div class="log"></div><div class="qk"></div>' +
+    '<form><input placeholder="예: 인구는 어디서 봐요?" autocomplete="off"><button type="submit">묻기</button></form></div></div>';
+  function mount() { if (!document.body.contains(root)) document.body.appendChild(root); }
+  if (document.body) mount(); else document.addEventListener('DOMContentLoaded', mount);
+
+  var log = root.querySelector('.log'), inp = root.querySelector('input');
+  function esc(t) { return String(t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function bubble(cls, html) { var d = document.createElement('div'); d.className = cls; d.innerHTML = html; log.appendChild(d); log.scrollTop = log.scrollHeight; return d; }
+  function answer(q) {
+    bubble('me', esc(q));
+    var hits = find(q).filter(allowed);
+    if (!hits.length) {
+      var d = bubble('bot', '죄송합니다, 어느 화면인지 찾지 못했습니다. 아래 메뉴에서 골라 보세요.<div class="alt"></div>');
+      var alt = d.querySelector('.alt');
+      G.filter(function (g) { return !g.s && allowed(g); }).forEach(function (g) { var b = document.createElement('button'); b.type = 'button'; b.textContent = g.t; b.onclick = function () { goTo(g); }; alt.appendChild(b); });
+      return;
+    }
+    var g = hits[0], d2 = bubble('bot', '<b>「' + esc(g.t) + '」</b>을(를) 보세요. ' + esc(g.say) + '<br><button class="go" type="button">바로 가기 →</button>' + (hits.length > 1 ? '<div class="alt"></div>' : ''));
+    d2.querySelector('.go').onclick = function () { goTo(g); };
+    if (hits.length > 1) {
+      var a = d2.querySelector('.alt');
+      hits.slice(1, 4).forEach(function (h) { var b = document.createElement('button'); b.type = 'button'; b.textContent = h.t; b.onclick = function () { goTo(h); }; a.appendChild(b); });
+    }
+  }
+  var qk = root.querySelector('.qk');
+  QUICK.forEach(function (q) { var b = document.createElement('button'); b.type = 'button'; b.textContent = q; b.onclick = function () { answer(q); }; qk.appendChild(b); });
+  function open() {
+    root.classList.add('open');
+    if (!log.children.length) bubble('bot', '안녕하세요, <b>AI 비서실장</b>입니다. 무엇이 궁금하세요? 보실 화면을 찾아 바로 열어 드릴게요.');
+    setTimeout(function () { try { inp.focus(); } catch (e) {} }, 50);
+  }
+  function close() { root.classList.remove('open'); }
+  root.querySelector('.fab').onclick = open;
+  root.querySelector('.x').onclick = close;
+  root.querySelector('form').onsubmit = function (e) { e.preventDefault(); var q = inp.value.trim(); if (!q) return; inp.value = ''; answer(q); };
+  root.addEventListener('keydown', function (e) { e.stopPropagation(); if (e.key === 'Escape') close(); });
+  // 액자 화면에서는 숨김
+  function sync() { document.body && document.body.classList.toggle('dh-frame', location.hash === '#frame'); }
+  window.addEventListener('hashchange', sync); setTimeout(sync, 0);
+  window.DHAide = { open: open, close: close, ask: answer };
+})();

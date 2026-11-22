@@ -60,6 +60,11 @@ KOSIS(여러 표), 국세통계포털 TASIS(월별 가동·신규 사업자), �
 - Edge Function 배포: `supabase/functions/**` 고치고 push하면 deploy_functions.yml이 자동 배포.
 - 참고 코드: chrisryugj/archhub-mcp, korean-law-mcp (MIT). 다음 할 일: 국토·건축 현황 통계(노후·내진 미적용 추정·인허가, 18개 시·군 비교).
 
+## AI 비서실장(화면 길잡이, 2026-11-22) — `web/guide.js`
+- 사용자 요청: AI 없이 「어디를 보세요」 정도만. 오른쪽 아래 얼굴 버튼 → 대화창(낱말 찾기 표 G → 메뉴·아래 탭 바로 가기). 숫자는 말하지 않음. 액자 화면에서는 숨김. 로그인 뒤 startApp 다음에 불러옴.
+- 캐릭터: 시장님 캐릭터(.blend, 블렌더 MCP로 사용자가 만듦)를 바탕으로 둥근 갈색 안경·정장·목걸이 공무원증, 주름 뺌(머리는 시장님 머리 그대로 — 새 머리는 사용자가 어색하다 함).
+  그림 `web/img/aide.webp`(전신, 투명), `aide_face.webp`(버튼). 원본 .blend는 사용자에게 보냄(저장소에는 없음).
+
 ## 남은 일
 - **전력 탭(「에너지·전력」) — 2026-11-21 만듦**: `collect/power.py`(한전 `KEPCO_KEY`, metroCd 51).
   계약종별·가구평균은 시·군 월별 25개월 보관(지난 달은 다시 안 받음), 산업분류는 최신 달만. 지표 pw_total·pw_house·pw_house_bill·pw_yoy·pw_ind_share(모두 dir 0).

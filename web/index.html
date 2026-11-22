@@ -2607,6 +2607,7 @@ function startApp() {
   DHAuth.gate().then(function () { return DHAuth.loadData(); }).then(function (d) {
     window.DONGHAE_DATA = d;
     startApp();
+    var g = document.createElement('script'); g.src = 'guide.js'; document.body.appendChild(g);   // AI 비서실장(화면 길잡이)
   }).catch(DHAuth.fatal);
 })();
 </script>
