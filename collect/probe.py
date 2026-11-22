@@ -282,7 +282,16 @@ def agri_probe():
 
 
 def agri2_probe():
-    import agri
+    import agri, sources, json as J
+    meta = sources.kosis_meta({'key_env': 'KOSIS_KEY', 'meta_url': 'https://kosis.kr/openapi/statisticsData.do', 'params': {'orgId': '101', 'tblId': 'DT_1AG25102'}})
+    A = [m for m in meta if m.get('OBJ_ID') == 'A']
+    gw = [m for m in A if str(m.get('ITM_NM')).startswith('강원')]
+    say('강원 %s' % [(m.get('ITM_ID'), m.get('ITM_NM'), m.get('UP_ITM_ID')) for m in gw])
+    say('동해 %s' % [(m.get('ITM_ID'), m.get('ITM_NM'), m.get('UP_ITM_ID')) for m in A if '동해' in str(m.get('ITM_NM'))])
+    say('A 앞 %s' % [(m.get('ITM_ID'), m.get('ITM_NM'), m.get('UP_ITM_ID')) for m in A[:5]])
+    t = sources.http_get('https://kosis.kr/openapi/statisticsData.do', {'method': 'getMeta', 'type': 'PRD', 'orgId': '101', 'tblId': 'DT_1AG25102', 'format': 'json', 'jsonVD': 'Y', 'apiKey': os.environ.get('KOSIS_KEY', '')})
+    say('PRD %s' % t[:300])
+    o = None
     o = agri.collect(codes())
     say('오류: %s' % o['errors'])
     for k, t in o['tables'].items():
