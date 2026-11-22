@@ -376,6 +376,42 @@ def ncpms2_probe():
         say('  예찰 %s' % J.dumps(x, ensure_ascii=False)[:600])
 
 
+def annex_probe():
+    import landlaw, urllib.request
+    os.makedirs(os.path.join(ROOT, 'probe_out'), exist_ok=True)
+    it = landlaw.find_ordinance('동해시')
+    say('[annex] 조례 %s' % json.dumps(it, ensure_ascii=False)[:400])
+    j = landlaw._get(landlaw.SERVICE, {'target': 'ordin', 'MST': it.get('자치법규일련번호')})
+    L = j.get('LawService') or {}
+    bs = landlaw._as_list((L.get('별표') or {}).get('별표단위'))
+    say('[annex] 별표 %d개, 첫 키 %s' % (len(bs), list(bs[0].keys()) if bs else None))
+    open(os.path.join(ROOT, 'probe_out', 'annex.json'), 'w', encoding='utf-8').write(json.dumps(bs, ensure_ascii=False, indent=1))
+    for i, b in enumerate(bs[:30]):
+        say('[annex] %s | %s' % (b.get('별표제목'), {k: (str(v)[:80]) for k, v in b.items() if k != '별표제목'}))
+        u = (b.get('별표첨부파일명') or '').replace('http://', 'https://')
+        if u:
+            try:
+                r = urllib.request.urlopen(urllib.request.Request(u, headers={'User-Agent': 'Mozilla/5.0'}), timeout=60)
+                d = r.read(); cd = r.headers.get('Content-Disposition', '')
+                open(os.path.join(ROOT, 'probe_out', 'annex_%02d.bin' % i), 'wb').write(d)
+                say('   파일 %d바이트 %s %s 앞 %r' % (len(d), r.headers.get('Content-Type'), cd[:120], d[:8]))
+            except Exception as e:  # noqa: BLE001
+                say('   파일 실패 %s' % str(e)[:200])
+    # 국토계획법 시행령 별표
+    try:
+        s = landlaw._get(landlaw.SEARCH, {'target': 'law', 'query': '국토의 계획 및 이용에 관한 법률 시행령', 'display': '5'})
+        law = [x for x in landlaw._as_list((s.get('LawSearch') or {}).get('law')) if x.get('법령명한글') == '국토의 계획 및 이용에 관한 법률 시행령'][0]
+        say('[annex] 시행령 %s' % json.dumps(law, ensure_ascii=False)[:300])
+        lj = landlaw._get(landlaw.SERVICE, {'target': 'law', 'MST': law.get('법령일련번호')})
+        open(os.path.join(ROOT, 'probe_out', 'decree.json'), 'w', encoding='utf-8').write(json.dumps(lj, ensure_ascii=False))
+        lb = landlaw._as_list(((lj.get('법령') or {}).get('별표') or {}).get('별표단위'))
+        say('[annex] 시행령 별표 %d개 첫 키 %s' % (len(lb), list(lb[0].keys()) if lb else None))
+        for b in lb[:25]:
+            say('   %s %s 내용길이 %d' % (b.get('별표번호'), b.get('별표제목'), len(str(b.get('별표내용') or ''))))
+    except Exception as e:  # noqa: BLE001
+        say('[annex] 시행령 실패 %s' % str(e)[:300])
+
+
 def main():
     if os.environ.get('PROBE_ONLY') == 'ncpms2':
         ncpms2_probe(); return
@@ -392,6 +428,8 @@ def main():
     if os.environ.get('PROBE_ONLY') == 'lock':
         lock_probe(); return
     load_env()
+    if os.environ.get('PROBE_ONLY') == 'annex':
+        annex_probe(); return
     if os.environ.get('PROBE_ONLY') == 'ordin':
         ordin_probe()
         return
