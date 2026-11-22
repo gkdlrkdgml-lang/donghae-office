@@ -55,7 +55,7 @@ def one(C, org, tbl, bmode, years, names):
     od = {}
     for m in meta:
         od.setdefault(m.get('OBJ_ID'), []).append(m)
-    params = {'method': 'getList', 'format': 'json', 'jsonVD': 'Y', 'orgId': org, 'tblId': tbl, 'prdSe': 'Y', 'newEstPrdCnt': str(years)}
+    params = {'method': 'getList', 'format': 'json', 'jsonVD': 'Y', 'orgId': org, 'tblId': tbl, 'prdSe': 'F' if tbl.startswith(('DT_1AG25', 'DT_1FS25')) else 'Y', 'newEstPrdCnt': str(years)}   # 총조사는 5년 주기(F)
     it = od.get('ITEM') or []
     if names:
         ids = [x.get('ITM_ID') for x in it if str(x.get('ITM_NM', '')).strip() in names]
