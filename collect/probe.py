@@ -422,6 +422,8 @@ def lofinlist_probe():
     import urllib.request, re as R, zipfile, io
     h = {'User-Agent': 'Mozilla/5.0'}
     t = urllib.request.urlopen(urllib.request.Request('https://www.data.go.kr/data/15160375/fileData.do', headers=h), timeout=40).read().decode('utf-8', 'replace')
+    for m in R.finditer(r'(atchFileId|fileDownload|fileDetailSn|publicDataPk|download)', t):
+        say('[LL] 주변 ' + t[max(0, m.start() - 120):m.start() + 160].replace('\n', ' '))
     ids = sorted(set(R.findall(r"(FILE_\d{6,})", t)))
     say('[LL] 파일 id %s' % ids[:5])
     sn = R.findall(r"fileDetailSn[^0-9]{0,10}(\d+)", t)[:3]
