@@ -421,27 +421,21 @@ def annex_probe():
 def lofinlist_probe():
     import re as R, urllib.request
     from common import kr_get
-    hits = []
-    for n in range(15138680, 15138880):
+    for n in (15059413, 15059414, 15059412):
         try:
-            t = urllib.request.urlopen(urllib.request.Request('https://www.data.go.kr/catalog/%d/openapi.json' % n, headers={'User-Agent': 'Mozilla/5.0'}), timeout=20).read().decode('utf-8', 'replace')
-            j = json.loads(t)
-            nm = j.get('name', '')
-            if '지방재정365' in nm and ('세입' in nm or '세출예산' in nm):
-                u = R.findall(r'pdtaId=([A-Z0-9]+)', t)
-                hits.append((n, nm, u[:1]))
-                say('[LL] %d %s %s' % (n, nm, u[:1]))
-        except Exception:  # noqa: BLE001
-            pass
-    for n, nm, u in hits:
-        if u and nm.endswith('세입예산'):
-            try:
-                t = kr_get('https://www.lofin365.go.kr/portal/LF5110000.do', {'pdtaId': u[0]})
-                say('[LL] 상세 길이 %d hub %s' % (len(t), sorted(set(R.findall(r'lf/hub/([A-Z]+)', t)))))
-                for m in R.finditer(r'요청|인자|fyr|출력', t):
-                    say('[LL]   ' + R.sub(r'<[^>]+>|\s+', ' ', t[m.start():m.start() + 300])[:200]); break
-            except Exception as e:  # noqa: BLE001
-                say('[LL] 상세 실패 %s' % str(e)[:200])
+            t = urllib.request.urlopen(urllib.request.Request('https://www.data.go.kr/data/%d/openapi.do' % n, headers={'User-Agent': 'Mozilla/5.0'}), timeout=30).read().decode('utf-8', 'replace')
+            nm = R.findall(r'<title>([^<]*)', t)[:1]
+            ids = sorted(set(R.findall(r'pdtaId=([A-Z0-9]+)', t)))
+            say('[LL] %d %s %s' % (n, nm, ids))
+            for pid in ids[:1]:
+                d = kr_get('https://www.lofin365.go.kr/portal/LF5110000.do', {'pdtaId': pid})
+                say('[LL]   상세 길이 %d hub %s' % (len(d), sorted(set(R.findall(r'hub/([A-Z]{4,6})', d)))))
+                txt = R.sub(r'<script[\s\S]*?</script>|<style[\s\S]*?</style>', ' ', d)
+                txt = R.sub(r'<[^>]+>', ' ', txt); txt = R.sub(r'\s+', ' ', txt)
+                k = txt.find('요청')
+                say('[LL]   본문 ' + txt[max(0, k - 200):k + 1500])
+        except Exception as e:  # noqa: BLE001
+            say('[LL] %d 실패 %s' % (n, str(e)[:200]))
 
 
 def lofin_probe():
