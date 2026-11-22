@@ -78,7 +78,7 @@
     '#dhAideBtn .say:after{content:"";position:absolute;right:-8px;bottom:14px;border:8px solid transparent;border-left-color:#fff;border-right:0}' +
     '#dhAideBtn .say b{display:block;font-size:13px;color:#2F6DB5;letter-spacing:.5px}' +
     '#dhAideBtn .say span{font-size:15px;font-weight:700;color:#1B3A6B}' +
-    '#dhAideBtn:hover .say{border-color:#2F6DB5}body.dh-noaide #dhAideBtn{display:none}body:not(.dh-noaide) .help{right:100px!important}' +
+    '#dhAideBtn .say{opacity:0;pointer-events:none}#dhAideBtn.talk .say,#dhAideBtn:hover .say{opacity:1}#dhAideBtn:hover .say{border-color:#2F6DB5}body.dh-noaide #dhAideBtn{display:none}body:not(.dh-noaide) .help{right:100px!important}' +
     '#dhAide{position:fixed;inset:0;z-index:900;display:none;align-items:center;justify-content:center;background:rgba(20,35,60,.35);font-family:"Pretendard","Malgun Gothic",system-ui,sans-serif}' +
     '#dhAide.open{display:flex}' +
     '#dhAide .box{width:760px;max-width:94vw;height:620px;max-height:88vh;background:#fff;border-radius:22px;box-shadow:0 18px 60px rgba(27,58,107,.35);display:flex;overflow:hidden}' +
@@ -156,6 +156,8 @@
     if (hide) close();
     mount();
   }
+  // 말풍선은 처음 6초만 보였다가 사라짐(마우스를 올리면 다시 보임)
+  btn.classList.add('talk'); setTimeout(function () { btn.classList.remove('talk'); }, 6000);
   window.addEventListener('hashchange', sync); setInterval(sync, 700); setTimeout(sync, 0);
   window.DHAide = { open: open, close: close, ask: answer };
 })();
