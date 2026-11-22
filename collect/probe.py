@@ -257,16 +257,20 @@ def agri_probe():
             return r.read().decode('utf-8', 'replace')
         except Exception as e:  # noqa: BLE001
             return 'ERR %s %s' % (e, getattr(e, 'read', lambda: b'')()[:200])
-    kk = os.environ.get('KOSIS_KEY', '')
-    for q in ['시군구별 농가 및 농가인구', '시군구별 해수면 어가', '행정구역별 농가', '농가 및 농가인구 추이', '경지면적', '어업생산량', '수산물 위판', '어선 척수', '농업경영체', '시군구별 임가']:
-        t = get('https://kosis.kr/openapi/statisticsSearch.do', {'method': 'getList', 'apiKey': kk, 'searchNm': q, 'format': 'json', 'jsonVD': 'Y', 'resultCount': '40'})
-        say('== KOSIS 검색 %s' % q)
+    import sources
+    for org, tbl in [('101','DT_1EA1011'),('101','DT_1EB002'),('101','DT_1AG25102'),('101','DT_1AG25101'),('101','DT_1AG25110'),('101','DT_1AG25501'),('101','DT_1AG25411'),('101','DT_1FS25103'),('101','DT_1FS25113'),('101','DT_1FS25115'),('101','DT_1FS25120'),('101','DT_1YL20121'),('101','DT_1A02002'),('101','DT_1FS000'),('101','DT_1NG0001'),('101','DT_1EA1014'),('101','DT_1EA1040')]:
         try:
-            for x in J.loads(t)[:40]:
-                if not (x.get('ORG_ID') in ('101', '211', '114', '146', '123') ): continue
-                say('  %s %s | %s | %s~%s' % (x.get('ORG_ID'), x.get('TBL_ID'), x.get('TBL_NM'), x.get('STRT_PRD_DE'), x.get('END_PRD_DE')))
-        except Exception:  # noqa: BLE001
-            say('  ' + t[:300])
+            meta = sources.kosis_meta({'key_env': 'KOSIS_KEY', 'meta_url': 'https://kosis.kr/openapi/statisticsData.do', 'params': {'orgId': org, 'tblId': tbl}})
+            od = {}
+            for m in meta: od.setdefault(m.get('OBJ_ID'), []).append(m)
+            say('== %s %s' % (tbl, ' / '.join('%s(%s:%d%s)' % (k, (v[0].get('OBJ_NM') or ''), len(v), ' 동해O' if any('동해' in str(x.get('ITM_NM')) for x in v) else '') for k, v in od.items())))
+            it = od.get('ITEM') or []
+            say('   항목: ' + ', '.join(str(x.get('ITM_NM')) + ('[' + str(x.get('UNIT_NM')) + ']' if x.get('UNIT_NM') else '') for x in it[:14]))
+            for k, v in od.items():
+                if k != 'ITEM' and not any('동해' in str(x.get('ITM_NM')) for x in v):
+                    say('   %s: %s' % (k, ', '.join(str(x.get('ITM_NM')) for x in v[:10])))
+        except Exception as e:  # noqa: BLE001
+            say('== %s 오류 %s' % (tbl, e))
     import urllib.parse as UP
     key = UP.unquote(os.environ.get('DATA_GO_KR_KEY', ''))
     for nm, url, prm in [
