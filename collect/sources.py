@@ -526,18 +526,25 @@ def finance_years(S, C, key='finance'):
     mdir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'manual')
     files = sorted(fn for fn in (os.listdir(mdir) if os.path.isdir(mdir) else [])
                    if fn.startswith('lofin_%s' % code) and fn.endswith('.json'))
-    rows = None
-    try:
-        rows = _call(src, {}, key)
-    except Exception as e:  # noqa: BLE001
-        if not files:
-            raise
-        log('%s API 접속 불가(%s) → 저장 파일 %s 사용' % (key, e, ', '.join(files)))
-    if not rows and files:
-        rows = []
-        for fn in files:
-            with open(os.path.join(mdir, fn), encoding='utf-8') as fp:
-                rows += find_items(json.load(fp))
+    # 회계연도(fyr)가 필수 → 해마다 따로 받음(지방재정365는 해외 접속이 막혀 서울 중계로). 못 받은 해는 저장 파일로 채움
+    y0 = now().year
+    years = [y0 + 1, y0, y0 - 1, y0 - 2] if key == 'finance' else [y0, y0 - 1, y0 - 2]
+    rows, got, errs = [], set(), []
+    for y in years:
+        try:
+            rr = [r for r in _call(src, {'fyr': str(y)}, '%s_%s' % (key, y)) if r.get('fyr')]
+            if rr:
+                rows += rr
+                got.add(str(y))
+        except Exception as e:  # noqa: BLE001
+            errs.append('%s %s' % (y, str(e)[:80]))
+    if errs and not got:
+        log('%s API 실패(%s) → 저장 파일 사용' % (key, '; '.join(errs[:2])))
+    for fn in files:
+        with open(os.path.join(mdir, fn), encoding='utf-8') as fp:
+            rows += [r for r in find_items(json.load(fp)) if str(r.get('fyr') or '')[:4] not in got]
+    if not rows:
+        raise RuntimeError('; '.join(errs) or '자료 없음')
     f = src['fields']
     by = {}
     for r in rows or []:

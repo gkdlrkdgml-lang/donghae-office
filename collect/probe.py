@@ -423,7 +423,7 @@ def lofin_probe():
     S, C = settings(), codes()
     for k in ('finance', 'finance_final'):
         try:
-            rows = sources._call(S['sources'][k], {'fyr': '2026' if k == 'finance' else '2025'}, k)
+            by = sources.finance_years(S, C, k); say('[lofin] %s 연도별 동해 %s' % (k, {y: by[y].get('동해') for y in sorted(by)})); continue
             ys = sorted(set(str(r.get('fyr')) for r in rows))
             dh = [r for r in rows if '동해' in str(r)]
             say('[lofin] %s 직접/중계 성공 %d줄 연도 %s 동해 예 %s 첫줄 %s' % (k, len(rows), ys, str(dh[:1])[:300], str(rows[:1])[:400]))
