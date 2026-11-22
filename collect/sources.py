@@ -565,6 +565,31 @@ def finance_years(S, C, key='finance'):
     return by
 
 
+def budget_accounts(S, C):
+    """지방재정365 세입예산(ARBGT, 통합회계 당초): {연도: {시군: {total, general, enterprise, other, fund}}} — 단위 백만원."""
+    src = S['sources']['budget_accounts']
+    y0 = now().year
+    out = {}
+    for y in (y0 + 1, y0, y0 - 1):
+        try:
+            rows = [r for r in _call(src, {'fyr': str(y)}, 'budget_accounts_%s' % y) if r.get('fyr')]
+        except Exception as e:  # noqa: BLE001
+            log('세입예산 %s 실패 %s' % (y, str(e)[:100]))
+            continue
+        d = {}
+        for r in rows:
+            if '강원' not in str(r.get('wa_laf_hg_nm', '')):
+                continue
+            name = match_region(r.get('laf_hg_nm'), C['regions'])
+            if not name:
+                continue
+            m = lambda k: round((to_num(r.get(k)) or 0) / 1e6)
+            d[name] = {'total': m('pfa_amt1'), 'general': m('pfa_amt2'), 'enterprise': m('pfa_amt3'), 'other': m('pfa_amt4'), 'fund': m('pfa_amt5')}
+        if len(d) >= 15:
+            out[str(y)] = d
+    return out
+
+
 def finance(S, C):
     """순위용: 가장 최근 연도의 당초 재정자립도. API가 안 되면 manual/fin_indep.csv."""
     manual, basis = read_manual('fin_indep')

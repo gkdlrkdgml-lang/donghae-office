@@ -419,13 +419,10 @@ def annex_probe():
 
 
 def lofinlist_probe():
-    import re as R
-    from common import kr_get
-    t = kr_get('https://www.lofin365.go.kr/lf/pfinDtaOpen/dtst/dtstSvi/retvDtstDtsApi.do', {'pdtaId': 'QS3YB6Z5PPOMXD7F4H681099215', 'curPage': '1'}, post=True)
-    say('[LL] 길이 %d hub %s' % (len(t), sorted(set(R.findall(r'hub/([A-Za-z]{4,6})', t)))))
-    txt = R.sub(r'<script[\s\S]*?</script>|<style[\s\S]*?</style>', ' ', t)
-    txt = R.sub(r'<[^>]+>', ' ', txt); txt = R.sub(r'\s+', ' ', txt)
-    say('[LL] 본문 ' + txt[:3000])
+    import sources
+    S, C = settings(), codes()
+    a = sources.budget_accounts(S, C)
+    say('[LL] 연도 %s 동해 %s 시군수 %s' % (sorted(a), {y: a[y].get('동해') for y in a}, {y: len(a[y]) for y in a}))
 
 
 def lofin_probe():

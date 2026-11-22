@@ -950,6 +950,19 @@
       "_설명": "지방재정365 재정자립도(최종) — 순위에는 쓰지 않고, 같은 해 당초와 비교만 합니다(연말 추경 반영 후). 요청 주소는 활용신청 후 채움 · 지방재정365가 해외(GitHub) 접속을 막아, 국내 PC에서 받은 파일 manual/lofin_<코드>.json을 씁니다. rate2 = 세입과목 개편 후 재정자립도(공식 값)",
       "key_param": "Key",
       "kr_relay": true
+    },
+    "budget_accounts": {
+      "url": "https://www.lofin365.go.kr/lf/hub/ARBGT",
+      "key_env": "LOFIN_KEY",
+      "key_env_alt": "LOFIN_KEY_FINAL",
+      "params": {
+        "Type": "json",
+        "pIndex": "1",
+        "pSize": "1000"
+      },
+      "key_param": "Key",
+      "paging": null,
+      "kr_relay": true
     }
   },
   "map": {

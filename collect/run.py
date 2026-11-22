@@ -551,6 +551,12 @@ def collect(state, S, C):
             with open(os.path.join(mdir, fn), encoding='utf-8') as fp:
                 j = json.load(fp)
             acc[str(j['year'])] = j['regions']
+    try:   # 지방재정365 세입예산(ARBGT) — 서울 중계로 자동, 못 받은 해만 위 파일
+        api = sources.budget_accounts(S, C)
+        acc.update(api)
+        ok(state, 'budget_accounts', '세입예산(통합회계) %s년' % ', '.join(sorted(api)) if api else '파일 사용')
+    except Exception as e:  # noqa: BLE001
+        fail(state, 'budget_accounts', e)
     if acc:
         state.setdefault('finance', {})['accounts'] = acc
     if sources.AMOUNTS:
