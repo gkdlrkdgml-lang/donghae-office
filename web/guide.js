@@ -55,6 +55,7 @@
   function menuIds() { try { return ((window.DONGHAE_DATA || {}).menu || []).map(function (m) { return m.id; }); } catch (e) { return []; } }
 
   function goTo(g) {
+    root.classList.remove('open');
     if (g.href) { location.href = g.href; return; }
     if (location.hash === '#' + g.m) window.dispatchEvent(new HashChangeEvent('hashchange'));
     else location.hash = g.m;
@@ -71,41 +72,45 @@
   // ---------- 화면 ----------
   var css = document.createElement('style');
   css.textContent =
-    '#dhAide{position:fixed;right:22px;bottom:34px;z-index:900;font-family:"Pretendard","Malgun Gothic",system-ui,sans-serif}' +
-    '#dhAide .fab{width:84px;height:84px;border-radius:50%;border:3px solid #fff;background:#E4EEFB url(img/aide_face.webp) center 45%/100% no-repeat;box-shadow:0 8px 24px rgba(27,58,107,.35);cursor:pointer;animation:dhBob 3.2s ease-in-out infinite}' +
-    '#dhAide .tag{position:absolute;right:92px;bottom:26px;white-space:nowrap;background:#1B3A6B;color:#fff;font-size:15px;font-weight:800;padding:6px 12px;border-radius:999px;box-shadow:0 4px 12px rgba(0,0,0,.15);pointer-events:none}' +
-    '#dhAide .box{position:absolute;right:0;bottom:0;width:620px;height:560px;background:#fff;border-radius:22px;box-shadow:0 18px 60px rgba(27,58,107,.35);display:none;overflow:hidden}' +
-    '#dhAide.open .box{display:flex}#dhAide.open .fab,#dhAide.open .tag{display:none}' +
-    '#dhAide .pic{width:210px;flex:none;background:linear-gradient(180deg,#E4EEFB,#F4F7FC);display:flex;align-items:flex-end;justify-content:center;padding-bottom:12px}' +
-    '#dhAide .pic img{width:190px;animation:dhBob 3.2s ease-in-out infinite}' +
+    '#dhAideBtn{flex:none;width:42px;height:42px;margin-right:10px;padding:0;border:2px solid #C9D8EE;border-radius:50%;background:#E4EEFB url(img/aide_face.webp) center 45%/100% no-repeat;cursor:pointer;vertical-align:middle}' +
+    '#dhAideBtn:hover{border-color:#2F6DB5}body.dh-noaide #dhAideBtn{display:none}' +
+    '#dhAide{position:fixed;inset:0;z-index:900;display:none;align-items:center;justify-content:center;background:rgba(20,35,60,.35);font-family:"Pretendard","Malgun Gothic",system-ui,sans-serif}' +
+    '#dhAide.open{display:flex}' +
+    '#dhAide .box{width:760px;max-width:94vw;height:620px;max-height:88vh;background:#fff;border-radius:22px;box-shadow:0 18px 60px rgba(27,58,107,.35);display:flex;overflow:hidden}' +
+    '#dhAide .pic{width:230px;flex:none;background:linear-gradient(180deg,#E4EEFB,#F4F7FC);display:flex;align-items:flex-end;justify-content:center;padding-bottom:14px}' +
+    '#dhAide .pic img{width:205px;animation:dhBob 3.2s ease-in-out infinite}' +
     '#dhAide .main{flex:1;display:flex;flex-direction:column;min-width:0}' +
-    '#dhAide .hd{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 8px;border-bottom:1px solid #E3E9F2}' +
-    '#dhAide .hd b{font-size:20px;color:#1B3A6B}#dhAide .hd small{display:block;font-size:12px;color:#6B7686;font-weight:600}' +
-    '#dhAide .x{border:0;background:#EEF3F8;color:#38475A;width:34px;height:34px;border-radius:50%;font-size:18px;cursor:pointer}' +
-    '#dhAide .log{flex:1;overflow:auto;padding:12px 14px;display:flex;flex-direction:column;gap:9px}' +
-    '#dhAide .me{align-self:flex-end;background:#1B3A6B;color:#fff;padding:8px 12px;border-radius:14px 14px 4px 14px;font-size:15px;max-width:85%}' +
-    '#dhAide .bot{align-self:flex-start;background:#F1F5FB;color:#22324A;padding:10px 12px;border-radius:14px 14px 14px 4px;font-size:15px;line-height:1.5;max-width:92%}' +
-    '#dhAide .bot b{color:#1B3A6B}#dhAide .go{display:inline-block;margin-top:7px;border:0;background:#2F6DB5;color:#fff;font:inherit;font-size:14px;font-weight:800;padding:6px 12px;border-radius:999px;cursor:pointer}' +
-    '#dhAide .alt{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}#dhAide .alt button,#dhAide .qk button{border:1px solid #C9D8EE;background:#fff;color:#1B3A6B;font:inherit;font-size:13px;font-weight:700;padding:5px 10px;border-radius:999px;cursor:pointer}' +
-    '#dhAide .qk{display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 8px}' +
-    '#dhAide form{display:flex;gap:8px;padding:10px 14px 14px;border-top:1px solid #E3E9F2}' +
-    '#dhAide input{flex:1;min-width:0;font:inherit;font-size:16px;padding:10px 12px;border:2px solid #C9D2DE;border-radius:12px}' +
-    '#dhAide form button{border:0;background:#1B3A6B;color:#fff;font:inherit;font-size:16px;font-weight:800;padding:0 16px;border-radius:12px;cursor:pointer}' +
-    '@keyframes dhBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}' +
-    'body.dh-frame #dhAide{display:none}';
+    '#dhAide .hd{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 10px;border-bottom:1px solid #E3E9F2}' +
+    '#dhAide .hd b{font-size:22px;color:#1B3A6B}#dhAide .hd small{display:block;font-size:13px;color:#6B7686;font-weight:600}' +
+    '#dhAide .x{border:0;background:#EEF3F8;color:#38475A;width:36px;height:36px;border-radius:50%;font-size:18px;cursor:pointer}' +
+    '#dhAide .log{flex:1;overflow:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px}' +
+    '#dhAide .me{align-self:flex-end;background:#1B3A6B;color:#fff;padding:8px 13px;border-radius:14px 14px 4px 14px;font-size:16px;max-width:85%}' +
+    '#dhAide .bot{align-self:flex-start;background:#F1F5FB;color:#22324A;padding:10px 13px;border-radius:14px 14px 14px 4px;font-size:16px;line-height:1.5;max-width:92%}' +
+    '#dhAide .bot b{color:#1B3A6B}#dhAide .go{display:inline-block;margin-top:7px;border:0;background:#2F6DB5;color:#fff;font:inherit;font-size:15px;font-weight:800;padding:6px 14px;border-radius:999px;cursor:pointer}' +
+    '#dhAide .alt{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}#dhAide .alt button,#dhAide .qk button{border:1px solid #C9D8EE;background:#fff;color:#1B3A6B;font:inherit;font-size:14px;font-weight:700;padding:5px 11px;border-radius:999px;cursor:pointer}' +
+    '#dhAide .qk{display:flex;flex-wrap:wrap;gap:6px;padding:8px 16px;border-top:1px solid #EEF2F7}' +
+    '#dhAide form{display:flex;gap:8px;padding:8px 16px 16px}' +
+    '#dhAide input{flex:1;min-width:0;font:inherit;font-size:17px;padding:10px 12px;border:2px solid #C9D2DE;border-radius:12px}' +
+    '#dhAide form button{border:0;background:#1B3A6B;color:#fff;font:inherit;font-size:17px;font-weight:800;padding:0 18px;border-radius:12px;cursor:pointer}' +
+    '@keyframes dhBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}';
   document.head.appendChild(css);
 
+  // 위쪽 줄(시계 옆)의 작은 단추 → 누르면 가운데에 대화창
+  var btn = document.createElement('button');
+  btn.id = 'dhAideBtn'; btn.type = 'button'; btn.title = 'AI 비서실장'; btn.setAttribute('aria-label', 'AI 비서실장');
   var root = document.createElement('div');
   root.id = 'dhAide';
   root.innerHTML =
-    '<div class="tag">AI 비서실장</div><button class="fab" type="button" aria-label="AI 비서실장 열기"></button>' +
     '<div class="box"><div class="pic"><img src="img/aide.webp" alt="AI 비서실장"></div><div class="main">' +
     '<div class="hd"><div><b>AI 비서실장</b><small>궁금한 내용을 말씀하시면 볼 화면을 알려 드립니다</small></div><button class="x" type="button" aria-label="닫기">✕</button></div>' +
     '<div class="log"></div><div class="qk"></div>' +
     '<form><input placeholder="예: 인구는 어디서 봐요?" autocomplete="off"><button type="submit">묻기</button></form></div></div>';
-  function mount() { if (!document.body.contains(root)) document.body.appendChild(root); }
+  function mount() {
+    var hr = document.querySelector('header .hright');
+    if (hr && !hr.contains(btn)) hr.insertBefore(btn, hr.firstChild);
+    if (!document.body.contains(root)) document.body.appendChild(root);
+  }
   if (document.body) mount(); else document.addEventListener('DOMContentLoaded', mount);
-
   var log = root.querySelector('.log'), inp = root.querySelector('input');
   function esc(t) { return String(t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   function bubble(cls, html) { var d = document.createElement('div'); d.className = cls; d.innerHTML = html; log.appendChild(d); log.scrollTop = log.scrollHeight; return d; }
@@ -133,12 +138,19 @@
     setTimeout(function () { try { inp.focus(); } catch (e) {} }, 50);
   }
   function close() { root.classList.remove('open'); }
-  root.querySelector('.fab').onclick = open;
+  btn.onclick = open;
+  root.addEventListener('click', function (e) { if (e.target === root) close(); });
   root.querySelector('.x').onclick = close;
   root.querySelector('form').onsubmit = function (e) { e.preventDefault(); var q = inp.value.trim(); if (!q) return; inp.value = ''; answer(q); };
   root.addEventListener('keydown', function (e) { e.stopPropagation(); if (e.key === 'Escape') close(); });
-  // 액자 화면에서는 숨김
-  function sync() { document.body && document.body.classList.toggle('dh-frame', location.hash === '#frame'); }
-  window.addEventListener('hashchange', sync); setTimeout(sync, 0);
+  // 흘러가기(돌고 있을 때·설정 화면)와 액자 화면에서는 숨김
+  function sync() {
+    if (!document.body) return;
+    var hide = location.hash === '#frame' || location.hash === '#flow' || !!document.getElementById('flowBadge');
+    document.body.classList.toggle('dh-noaide', hide);
+    if (hide) close();
+    mount();
+  }
+  window.addEventListener('hashchange', sync); setInterval(sync, 700); setTimeout(sync, 0);
   window.DHAide = { open: open, close: close, ask: answer };
 })();
