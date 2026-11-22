@@ -8,24 +8,111 @@
 window.DHLand = (function () {
   var H = null;            // index.html이 넘겨주는 도구(el, panel, view, render, D ...)
   var sb = null, session = null, profile = null, authChecked = false;
-  var tab = 'site', cur = null, busy = false, cmpZone = null, cmpKind = 'far', useSel = '';
+  var tab = 'site', cur = null, busy = false, cmpZone = null, cmpKind = 'far', useSel = '', useSub = '', inArea = null, inFloor = null, inRoad = null;
   var LV = { GREEN: { c: '#2E8B57', bg: '#E2F3E9', t: '추진 가능' }, YELLOW: { c: '#D99A00', bg: '#FFF4D6', t: '조건부 가능 · 검토 필요' }, RED: { c: '#D9534F', bg: '#FDE7E4', t: '추진 곤란 · 중대 제약' }, INFO: { c: '#1F6FD1', bg: '#E4EEFB', t: '참고' } };
   // 예정 용도 → 「건축법 시행령」 별표 1의 호 번호
   var USE_HO = { '단독주택': '1', '공동주택': '2', '제1종근린생활시설': '3', '제2종근린생활시설': '4', '문화및집회시설': '5', '종교시설': '6', '판매시설': '7', '운수시설': '8', '의료시설': '9', '교육연구시설': '10', '노유자시설': '11', '수련시설': '12', '운동시설': '13', '업무시설': '14', '숙박시설': '15', '위락시설': '16', '공장': '17', '창고시설': '18', '위험물저장및처리시설': '19', '자동차관련시설': '20', '주차장': '20', '동물및식물관련시설': '21', '자원순환관련시설': '22', '방송통신시설': '24', '발전시설': '25', '묘지관련시설': '26', '관광휴게시설': '27', '장례시설': '28', '야영장시설': '29' };
   var USES = [''].concat(Object.keys(USE_HO));
-  // 조례 별표(시행령+조례 통합 목록)로 예정 용도 판정
-  function useJudge(zoneNm, use) {
-    var o = ordMe(), T = ((o && o.uses) || []).filter(function (u) { return u.zone === String(zoneNm || '').replace(/\s+/g, ''); })[0];
+  // 세부 용도: 「건축법 시행령」 별표 1의 목(가·나·다…)과 찾을 낱말
+  var SUBS = {
+    '단독주택': [['단독주택', '가'], ['다중주택', '나'], ['다가구주택', '다'], ['공관', '라']],
+    '공동주택': [['아파트', '가'], ['연립주택', '나'], ['다세대주택', '다'], ['기숙사', '라']],
+    '제1종근린생활시설': [['소매점', '가'], ['휴게음식점·제과점', '나', ['휴게음식점', '제과점']], ['이용원·미용원·목욕장·세탁소', '다', ['이용원', '미용원', '목욕장', '세탁소']], ['의원·치과의원·한의원', '라', ['의원']], ['탁구장·체육도장', '마', ['탁구장', '체육도장']], ['지역자치센터·파출소 등 공공업무', '바'], ['마을회관·공중화장실 등', '사'], ['변전소·정수장 등', '아'], ['금융업소·사무소(30㎡ 미만)', '자', ['금융업소', '사무소']], ['전기자동차 충전소', '차', ['전기자동차']]],
+    '제2종근린생활시설': [['공연장', '가'], ['종교집회장', '나'], ['자동차영업소', '다'], ['서점', '라'], ['총포판매소', '마'], ['사진관·표구점', '바', ['사진관', '표구점']], ['청소년게임·PC방 등', '사', ['게임', '복합유통게임']], ['휴게음식점·제과점', '아', ['휴게음식점', '제과점']], ['일반음식점', '자'], ['장의사·동물병원·동물미용실', '차', ['장의사', '동물병원', '동물미용']], ['학원·교습소·직업훈련소', '카', ['학원', '교습소', '직업훈련소']], ['독서실·기원', '타', ['독서실', '기원']], ['테니스장·체력단련장 등', '파', ['테니스장', '체력단련장', '골프연습장', '당구장']], ['금융업소·사무소·부동산중개사무소', '하', ['금융업소', '사무소', '부동산중개']], ['다중생활시설(고시원)', '거', ['다중생활시설', '고시원']], ['제조업소·수리점', '너', ['제조업소', '수리점']], ['단란주점', '더'], ['안마시술소·노래연습장', '러', ['안마시술소', '노래연습장']]],
+    '문화및집회시설': [['공연장', '가'], ['집회장', '나'], ['관람장', '다'], ['전시장(박물관·미술관 등)', '라', ['전시장', '박물관', '미술관']], ['동·식물원', '마', ['동ㆍ식물원', '동·식물원', '식물원', '동물원']]],
+    '판매시설': [['도매시장', '가'], ['소매시장', '나'], ['상점', '다']],
+    '의료시설': [['병원', '가', ['병원']], ['격리병원', '나']],
+    '교육연구시설': [['학교', '가', ['학교', '초등학교', '중학교', '고등학교']], ['교육원', '나'], ['직업훈련소', '다'], ['학원', '라'], ['연구소', '마'], ['도서관', '바']],
+    '수련시설': [['청소년수련관 등', '가', ['생활권 수련시설', '청소년수련']], ['유스호스텔', '다']],
+    '운동시설': [['체육관', '나'], ['운동장', '다'], ['골프연습장', '가']],
+    '업무시설': [['공공업무시설', '가'], ['오피스텔', '나'], ['금융업소·사무소', '나', ['금융업소', '사무소']]],
+    '숙박시설': [['일반숙박시설', '가'], ['생활숙박시설', '가'], ['관광숙박시설', '나'], ['다중생활시설', '다']],
+    '위험물저장및처리시설': [['주유소', '가'], ['액화석유가스 충전소', '나', ['액화석유가스']], ['고압가스 충전소', '라', ['고압가스']], ['수소연료공급시설', '', ['수소']]],
+    '자동차관련시설': [['주차장', '가'], ['세차장', '나'], ['폐차장', '다'], ['검사장', '라'], ['매매장', '마'], ['정비공장', '바'], ['운전학원·정비학원', '사', ['운전학원', '정비학원']], ['차고·주기장', '아', ['차고', '주기장']], ['전기자동차 충전소', '자', ['충전소']]],
+    '동물및식물관련시설': [['축사', '가'], ['가축시설', '나'], ['도축장', '다'], ['도계장', '라'], ['작물 재배사', '마', ['재배사']], ['종묘배양시설', '바'], ['화초·분재 온실', '사', ['온실']]]
+  };
+  var MOK = '가나다라마바사아자차카타파하거너더러머버서어저처커터퍼허';
+  function nz(t) { return String(t || '').replace(/\s+/g, ''); }
+  // 「같은 호 가목부터 라목까지」「나목 및 다목」「라목」 → 목 글자들
+  function moks(t) {
+    var r = [], re = /([가-힣])목\s*(?:부터|에서)\s*([가-힣])목/g, m;
+    while ((m = re.exec(t))) { var i = MOK.indexOf(m[1]), j = MOK.indexOf(m[2]); if (i >= 0 && j >= i) r = r.concat(MOK.slice(i, j + 1).split('')); }
+    (t.replace(re, '').match(/([가-힣])목/g) || []).forEach(function (x) { r.push(x[0]); });
+    return r;
+  }
+  // 숫자 조건(바닥면적·도로 너비·층수)
+  function numChecks(t, inp) {
+    var out = [], m, re;
+    re = /바닥면적의\s*합계가\s*([\d,.]+)\s*(만|천)?\s*제곱미터\s*(미만|이하|이상|초과)/g;
+    while ((m = re.exec(t))) { var v = parseFloat(m[1].replace(/,/g, '')) * (m[2] === '만' ? 10000 : m[2] === '천' ? 1000 : 1); out.push({ k: 'area', v: v, op: m[3], txt: '바닥면적 ' + fmt(v) + '㎡ ' + m[3] }); }
+    re = /너비\s*([\d.]+)\s*미터\s*이상의\s*도로/g;
+    while ((m = re.exec(t))) out.push({ k: 'road', v: +m[1], op: '이상', txt: '도로 너비 ' + m[1] + 'm 이상' });
+    re = /(\d+)\s*층\s*(이하|초과|미만)/g;
+    while ((m = re.exec(t))) out.push({ k: 'floor', v: +m[1], op: m[2], txt: m[1] + '층 ' + m[2] });
+    return out.map(function (c) {
+      var x = inp[c.k], ok = null, how = '';
+      if (c.k === 'road' && x == null && inp.roadRange) { var R = inp.roadRange; ok = R[0] >= c.v ? true : R[1] != null && R[1] <= c.v ? false : null; how = ' (도로접면 「' + inp.roadNm + '」 기준)'; }
+      else if (x != null) { ok = c.op === '미만' ? x < c.v : c.op === '이하' ? x <= c.v : c.op === '이상' ? x >= c.v : x > c.v; how = ' (입력 ' + fmt(x) + ')'; }
+      c.ok = ok; c.how = how; return c;
+    });
+  }
+  function useJudge(zoneNm, use, sub, inp) {
+    var o = ordMe(), T = ((o && o.uses) || []).filter(function (u) { return u.zone === nz(zoneNm); })[0];
     if (!T) return null;
-    var ho = USE_HO[use], kw = use === '주차장' ? '주차장' : use === '공장' ? '공장' : null;
-    var M = T.items.filter(function (it) { return it.ho.indexOf(ho) >= 0 || (!it.ho.length && kw && it.t.indexOf(kw) >= 0); });
-    var ALL = T.items.filter(function (it) { return !it.ho.length && /모든 건축물/.test(it.t); });
-    function cond(it) { if (use === '주차장' && it.t.indexOf('주차장') >= 0) return false; return it.subs.length > 0 || /\s중\s|중 다음|제외|한한다|한정|미만|이하|이상|로서|다만|경우|별표\s*\d+\s*[가-힣]목/.test(it.t.replace(/^「건축법 시행령」\s*별표\s*1?\s*제\d+호(의\d+)?의\s*\S+/, '')); }
-    var anyCond = M.some(cond), lvl, msg;
-    if (T.kind === 'can') { lvl = !M.length ? 'RED' : anyCond ? 'YELLOW' : 'GREEN'; msg = !M.length ? '건축할 수 없습니다(허용 목록에 없음)' : anyCond ? '조건을 갖추면 건축할 수 있습니다' : '건축할 수 있습니다'; }
-    else { lvl = !M.length ? 'GREEN' : anyCond ? 'YELLOW' : 'RED'; msg = !M.length ? '건축할 수 있습니다(금지 목록에 없음)' : anyCond ? '일부(아래 조건에 해당하면) 건축할 수 없습니다' : '건축할 수 없습니다'; }
-    var txt = M.concat(ALL).map(function (it) { return it.k + '. ' + it.t + (it.subs.length ? ' ' + it.subs.join(' ') : ''); });
-    return { lvl: lvl, msg: msg, T: T, txt: txt };
+    var ho = USE_HO[use], S = sub && (SUBS[use] || []).filter(function (x) { return x[0] === sub; })[0];
+    var kws = S ? (S[2] || [S[0]]) : use === '주차장' ? ['주차장'] : null;
+    var hit = [], checks = [];
+    T.items.forEach(function (it) {
+      var full = it.t + ' ' + it.subs.join(' ');
+      var mine = it.ho.indexOf(ho) >= 0 || (!it.ho.length && (use === '공장' && /공장/.test(it.t)));
+      var all = !it.ho.length && /모든\s*건축물/.test(it.t);
+      if (!mine && !all) return;
+      var body = full.replace(/^「건축법 시행령」\s*별표\s*1?\s*제\d+호(의\d+)?의\s*/, '');
+      if (mine && kws) {
+        // 괄호 안 「…제외」에 세부 용도가 있으면 이 항목에서 빠짐
+        var ex = (body.match(/[(\[][^()\[\]]*제외[^()\[\]]*[)\]]/g) || []).join(' ');
+        if (kws.some(function (k) { return nz(ex).indexOf(nz(k)) >= 0; })) return;
+        var lim = /\s중\s|\s중$|에\s*해당하는\s*것|같은\s*호\s*[가-힣]목/.test(body.replace(/[(\[][^()\[\]]*[)\]]/g, ''));
+        if (lim) {
+          var inName = kws.some(function (k) { return nz(body.replace(/[(\[][^()\[\]]*제외[^()\[\]]*[)\]]/g, '')).indexOf(nz(k)) >= 0; });
+          var inMok = S && S[1] && moks(body).indexOf(S[1]) >= 0;
+          if (!inName && !inMok) return;
+        }
+      }
+      var nc = all ? numChecks(it.t.replace(/을\s*초과하는/, ' 초과'), inp).map(function (x) { x.txt = '금지 조건 ' + x.txt; return x; }) : numChecks(body, inp);
+      var rest = body.replace(/바닥면적의\s*합계가\s*[\d,.]+\s*(만|천)?\s*제곱미터\s*(미만|이하|이상|초과)인?\s*(것|경우)?/g, '').replace(/너비\s*[\d.]+\s*미터\s*이상의\s*도로에?\s*접한\s*대지에\s*건축하는\s*것에\s*한한다/g, '');
+      rest = rest.replace(/[가-힣]+의\s*경우\s*(?=\))/g, '');
+      if (kws) {
+        rest = rest.replace(/[(\[][^()\[\]]*제외[^()\[\]]*[)\]]/g, '');
+        var seg = rest.split(/것과\s*/).filter(function (x) { return kws.some(function (k) { return nz(x).indexOf(nz(k)) >= 0; }); });
+        if (seg.length) rest = seg[seg.length - 1];
+      }
+      var c = it.subs.length > 0 || /\s중\s|제외|한한다|한정|미만|이하|이상|다만|경우|기준에\s*해당|지역에\s*설치|별표\s*\d+\s*[가-힣]목/.test(rest);
+      if (kws && !it.subs.length && /\s중\s/.test(rest) && !/제외|한한다|한정|미만|이하|이상|다만|경우|기준에\s*해당|지역에\s*설치|별표\s*\d+\s*[가-힣]목/.test(rest.split(/\s중\s/)[1] || '')) c = false;
+      if (!all && nc.some(function (x) { return x.ok == null; })) c = true;
+      if (all) { if (nc.length && nc.every(function (x) { return x.ok === false; })) return; c = !nc.length || nc.some(function (x) { return x.ok == null; }); }
+      checks = checks.concat(nc);
+      hit.push({ it: it, all: all, nc: nc, c: c });
+    });
+    // 머리말(층수 제한 등)
+    var noteChecks = T.kind === 'can' ? numChecks(T.note || '', inp) : [];
+    var mineHits = hit.filter(function (h) { return !h.all; }), allHits = hit.filter(function (h) { return h.all; });
+    var failNum = mineHits.some(function (h) { return h.nc.some(function (x) { return x.ok === false; }); }) || noteChecks.some(function (x) { return x.ok === false; });
+    var lvl, msg;
+    if (T.kind === 'can') {
+      if (!mineHits.length) { lvl = 'RED'; msg = '건축할 수 없습니다(허용 목록에 없음)'; }
+      else if (failNum) { lvl = 'RED'; msg = '입력한 규모·도로 조건으로는 건축할 수 없습니다'; }
+      else if (mineHits.some(function (h) { return h.c; })) { lvl = 'YELLOW'; msg = '조건을 갖추면 건축할 수 있습니다'; }
+      else { lvl = 'GREEN'; msg = '건축할 수 있습니다'; }
+    } else {
+      if (mineHits.some(function (h) { return !h.c; })) { lvl = 'RED'; msg = '건축할 수 없습니다'; }
+      else if (allHits.some(function (h) { return !h.c; })) { lvl = 'RED'; msg = '입력한 층수로는 건축할 수 없습니다'; }
+      else if (!hit.length) { lvl = 'GREEN'; msg = '건축할 수 있습니다(금지 목록에 없음)'; }
+      else { lvl = 'YELLOW'; msg = '아래 조건에 해당하면 건축할 수 없습니다'; }
+    }
+    var txt = hit.map(function (h) { return h.it.k + '. ' + h.it.t + (h.it.subs.length ? ' ' + h.it.subs.join(' ') : ''); });
+    var seen = {}, ck = checks.concat(noteChecks).filter(function (c) { return c.ok != null; }).map(function (c) { return (c.ok ? '✔ ' : '✖ ') + c.txt + c.how; }).filter(function (x) { return seen[x] ? false : (seen[x] = 1); });
+    return { lvl: lvl, msg: msg, T: T, txt: txt, ck: ck };
   }
 
   // ------------------------------------------------------------ 로그인(관리자 화면과 같은 세션 공유)
@@ -247,11 +334,31 @@ window.DHLand = (function () {
     else add('GREEN', '토지', zone, zone + '은(는) 동해시 도시계획 조례상 건폐율 ' + fmt(rule.bcr) + '% · 용적률 ' + fmt(rule.far) + '% 이하입니다.' + (zones[1] ? ' (일부 ' + zones[1] + ' 걸침)' : ''), '대지 ' + fmt(area) + '㎡ 기준 바닥면적 최대 약 ' + fmt(area * rule.bcr / 100) + '㎡, 연면적 최대 약 ' + fmt(area * rule.far / 100) + '㎡ (예상치)', artCite('bcr') + ' · ' + artCite('far'));
     if (zones[1]) add('YELLOW', '토지', '용도지역 두 개에 걸침', zone + '와(과) ' + zones[1] + '에 걸쳐 있습니다.', '걸친 면적 비율에 따라 건폐율·용적률을 나눠 적용합니다(「국토계획법」 제84조).', '「국토계획법」 제84조');
     if (useSel) {
+      var nmU = useSel + (useSub ? '(' + useSub + ')' : '');
+      var rn = ch.roadSideCodeNm || '', RR = /광대/.test(rn) ? [25, null] : /중로/.test(rn) ? [12, 25] : /소로/.test(rn) ? [8, 12] : /세로/.test(rn) ? [0, 8] : /맹지/.test(rn) ? [0, 0] : null;
+      var inp = { area: inArea, floor: inFloor, road: inRoad, roadRange: RR, roadNm: rn };
       var uz = [zone].concat(d.use.some(function (u) { return /자연취락지구/.test(u.prposAreaDstrcCodeNm || ''); }) ? ['자연취락지구'] : []);
+      // 별표보다 먼저 적용되거나 함께 적용되는 구역·지구
+      var names = d.use.map(function (u) { return u.prposAreaDstrcCodeNm || ''; });
+      var PRE = [[/지구단위계획/, '지구단위계획구역', '지구단위계획에서 정한 허용·불허 용도와 규모가 별표보다 먼저 적용됩니다', '「국토계획법」 제54조'],
+        [/개발제한구역/, '개발제한구역', '별표 대신 「개발제한구역법」 제12조·시행령 별표 1에서 허용하는 건축물만 지을 수 있습니다', '「개발제한구역의 지정 및 관리에 관한 특별조치법」 제12조'],
+        [/특정용도제한지구/, '특정용도제한지구', '지구에서 막는 용도는 별표에 있어도 지을 수 없습니다', '「국토계획법」 제76조'],
+        [/개발진흥지구/, '개발진흥지구', '개발진흥지구 계획에서 정한 용도가 적용됩니다', '「국토계획법」 제76조'],
+        [/경관지구/, '경관지구', '높이·층수·건폐율 등이 조례로 더 제한됩니다', '「국토계획법」 제76조'],
+        [/고도지구/, '고도지구', '도시관리계획으로 정한 높이까지만 지을 수 있습니다', '「국토계획법」 제76조'],
+        [/(방재지구|보호지구|복합용도지구)/, '용도지구', '지구에서 정한 건축 제한이 함께 적용됩니다', '「국토계획법」 제76조']]
+        .filter(function (r) { return names.some(function (n) { return r[0].test(n); }); });
       uz.forEach(function (z) {
-        var J = useJudge(z, useSel);
-        if (!J) { add('YELLOW', '토지', '예정 용도: ' + useSel, '「' + (z || '용도지역 미확인') + '」의 동해시 도시계획 조례 별표를 찾지 못해 판정하지 못했습니다.', '토지이음에서 행위제한을 확인하세요.', '동해시 도시계획 조례 제31조'); return; }
-        add(J.lvl, '토지', '예정 용도: ' + useSel + ' · ' + J.msg.replace(/\(.*\)/, ''), '「' + z + '」에서 「' + useSel + '」은(는) ' + J.msg + '.' + (J.T.note ? ' [별표 머리말] ' + J.T.note : ''), J.txt.length ? '해당 조항: ' + J.txt.join(' / ') : (J.T.kind === 'can' ? '「' + z + '」 허용 목록(' + J.T.items.length + '개 항목)에 「' + useSel + '」(건축법 시행령 별표 1 제' + USE_HO[useSel] + '호)이 없습니다.' : '「' + z + '」 금지 목록(' + J.T.items.length + '개 항목)에 「' + useSel + '」(건축법 시행령 별표 1 제' + USE_HO[useSel] + '호)이 없습니다.'), (ordMe().name || '동해시 도시계획 조례') + ' ' + J.T.title + ' · 「건축법 시행령」 별표 1 제' + USE_HO[useSel] + '호');
+        var J = useJudge(z, useSel, useSub, inp);
+        if (!J) { add('YELLOW', '토지', '예정 용도: ' + nmU, '「' + (z || '용도지역 미확인') + '」의 동해시 도시계획 조례 별표를 찾지 못해 판정하지 못했습니다.', '토지이음에서 행위제한을 확인하세요.', '동해시 도시계획 조례 제31조'); return; }
+        var lv = J.lvl, pre = PRE.map(function (r) { return '[' + r[1] + '] ' + r[2] + '(' + r[3] + ').'; });
+        if (lv === 'GREEN' && PRE.some(function (r) { return /지구단위|개발제한|특정용도|개발진흥/.test(r[1]); })) lv = 'YELLOW';
+        if (PRE.some(function (r) { return r[1] === '개발제한구역'; })) lv = lv === 'RED' ? 'RED' : 'YELLOW';
+        var ho = '건축법 시행령 별표 1 제' + USE_HO[useSel] + '호';
+        add(lv, '토지', '예정 용도: ' + nmU + ' · ' + J.msg.replace(/\(.*\)/, ''),
+          '「' + z + '」에서 「' + nmU + '」은(는) 별표 기준 ' + J.msg + '.' + (J.ck.length ? ' 입력값 확인: ' + J.ck.join(', ') + '.' : '') + (J.T.note ? ' [별표 머리말] ' + J.T.note : '') + (pre.length ? ' ' + pre.join(' ') : ''),
+          J.txt.length ? '해당 조항: ' + J.txt.join(' / ') : '「' + z + '」 ' + (J.T.kind === 'can' ? '허용' : '금지') + ' 목록(' + J.T.items.length + '개 항목)에 「' + nmU + '」(' + ho + ')이 없습니다.',
+          (ordMe().name || '동해시 도시계획 조례') + ' ' + J.T.title + ' · 「' + ho.replace('건축법 시행령', '건축법 시행령」') );
       });
     }
     // (2) 지목
@@ -360,13 +467,25 @@ window.DHLand = (function () {
   function searchBar(el) {
     var inp = el('input', { type: 'text', placeholder: '지번(예: 천곡동 806) · 도로명 주소 · PNU 19자리', value: (cur && cur.q) || '', style: 'flex:1;font:inherit;font-size:19px;padding:10px 14px;border:2px solid #C9D2DE;border-radius:10px;min-width:0' });
     inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') lookup(inp.value); e.stopPropagation(); });
-    var sel = el('select', { style: 'font:inherit;font-size:16px;padding:9px;border:2px solid #C9D2DE;border-radius:10px' }, USES.map(function (u) { var o = el('option', { value: u, text: u || '예정 용도(선택)' }); if (u === useSel) o.selected = true; return o; }));
-    sel.addEventListener('change', function () { useSel = sel.value; if (cur && cur.ev) { cur.ev = evaluate(cur); H.render(); } });
+    var SST = 'font:inherit;font-size:16px;padding:9px;border:2px solid #C9D2DE;border-radius:10px';
+    function re() { if (cur && cur.ev) { cur.ev = evaluate(cur); H.render(); } }
+    var sel = el('select', { style: SST }, USES.map(function (u) { var o = el('option', { value: u, text: u || '예정 용도(선택)' }); if (u === useSel) o.selected = true; return o; }));
+    sel.addEventListener('change', function () { useSel = sel.value; useSub = ''; re(); if (!cur) H.render(); });
+    var subs = SUBS[useSel] || [];
+    var sub = subs.length ? el('select', { style: SST + ';max-width:190px' }, [''].concat(subs.map(function (x) { return x[0]; })).map(function (u) { var o = el('option', { value: u, text: u || '세부 용도(전체)' }); if (u === useSub) o.selected = true; return o; })) : null;
+    if (sub) sub.addEventListener('change', function () { useSub = sub.value; re(); });
+    function num(ph, v, set, w) {
+      var i = el('input', { type: 'number', min: '0', placeholder: ph, value: v == null ? '' : v, title: ph, style: SST + ';width:' + w + 'px' });
+      i.addEventListener('keydown', function (e) { e.stopPropagation(); });
+      i.addEventListener('change', function () { set(i.value === '' ? null : +i.value); re(); });
+      return i;
+    }
+    var nums = useSel ? [num('바닥면적㎡', inArea, function (v) { inArea = v; }, 118), num('층수', inFloor, function (v) { inFloor = v; }, 72), num('도로폭m', inRoad, function (v) { inRoad = v; }, 98)] : [];
     var recent = recentGet().slice(0, 5);
-    var bar = el('section', { style: 'grid-column:1 / -1;grid-row:2;flex-direction:row;align-items:center;gap:10px;padding:10px 14px' }, [inp, sel,
+    var bar = el('section', { style: 'grid-column:1 / -1;grid-row:2;flex-direction:row;align-items:center;gap:10px;padding:10px 14px' }, [inp, sel, sub].concat(nums).concat([
       el('button', { type: 'button', style: 'font:inherit;font-weight:800;font-size:18px;background:#1B3A6B;color:#fff;border:0;border-radius:10px;padding:10px 22px;cursor:pointer', text: busy ? '조회 중…' : '검토', onclick: function () { lookup(inp.value); } }),
-      recent.length ? el('div', { class: 'chips', style: 'flex-wrap:nowrap;gap:6px;max-width:42%;overflow:hidden' }, recent.map(function (h) {
-        return el('button', { type: 'button', class: 'chip', style: 'cursor:pointer;border:0;white-space:nowrap;background:' + LV[h.status || 'INFO'].bg + ';color:' + LV[h.status || 'INFO'].c, text: '● ' + String(h.address || h.pnu).replace(/^강원특별자치도\s*동해시\s*/, ''), onclick: function () { lookup(h.pnu); } }); })) : null]);
+      recent.length ? el('div', { class: 'chips', style: 'flex-wrap:nowrap;gap:6px;max-width:' + (useSel ? '18%' : '42%') + ';overflow:hidden' }, recent.map(function (h) {
+        return el('button', { type: 'button', class: 'chip', style: 'cursor:pointer;border:0;white-space:nowrap;background:' + LV[h.status || 'INFO'].bg + ';color:' + LV[h.status || 'INFO'].c, text: '● ' + String(h.address || h.pnu).replace(/^강원특별자치도\s*동해시\s*/, ''), onclick: function () { lookup(h.pnu); } }); })) : null]));
     H.view.appendChild(bar);
     setTimeout(function () { if (!cur) inp.focus(); }, 50);
   }
@@ -507,7 +626,7 @@ window.DHLand = (function () {
       '<button onclick="print()" style="float:right;padding:6px 14px">인쇄</button>' +
       '<h1>부지 검토 브리핑</h1><div class="small">' + esc(new Date().toLocaleString('ko-KR', { hour12: false })) + ' · 동해시 AI 시장실</div>' +
       '<h2>1. 대상지</h2><table><tr><th>소재지</th><td>' + esc(p.addr || d.q) + '</td></tr><tr><th>PNU</th><td>' + d.pnu + '</td></tr><tr><th>용도지역 · 지목 · 면적</th><td>' + esc(ev.zones.join(' · ') || '–') + ' · ' + esc(ev.jimok) + ' · ' + fmt(ev.area) + '㎡</td></tr>' +
-      '<tr><th>공시지가</th><td>' + (ev.price ? fmt(ev.price) + '원/㎡ (' + esc(ev.priceYear) + '년)' : '–') + '</td></tr>' + (useSel ? '<tr><th>예정 용도</th><td>' + esc(useSel) + '</td></tr>' : '') + '</table>' +
+      '<tr><th>공시지가</th><td>' + (ev.price ? fmt(ev.price) + '원/㎡ (' + esc(ev.priceYear) + '년)' : '–') + '</td></tr>' + (useSel ? '<tr><th>예정 용도</th><td>' + esc(useSel + (useSub ? '(' + useSub + ')' : '') + (inArea ? ' · 바닥면적 ' + fmt(inArea) + '㎡' : '') + (inFloor ? ' · ' + inFloor + '층' : '') + (inRoad ? ' · 도로 ' + inRoad + 'm' : '')) + '</td></tr>' : '') + '</table>' +
       '<h2>2. 종합 판정</h2><p><span class="lv" style="background:' + S.c + '">' + { GREEN: '초록', YELLOW: '노랑', RED: '빨강' }[ev.status] + '</span> <b>' + S.t + '</b></p><ol>' + hl.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ol>' +
       '<h2>3. 항목별 판정과 근거</h2><table><tr><th style="width:9%">판정</th><th style="width:22%">항목</th><th>내용 · 영향</th><th style="width:24%">근거</th></tr>' +
       rows.map(function (r) { return '<tr><td style="color:' + LV[r.level].c + ';font-weight:800">' + { GREEN: '초록', YELLOW: '노랑', RED: '빨강', INFO: '참고' }[r.level] + '</td><td>[' + esc(r.area) + '] ' + esc(r.tag) + '</td><td>' + esc(r.detail) + '<br><b>→ ' + esc(r.impact) + '</b></td><td class="small">' + esc(r.cite) + '</td></tr>'; }).join('') + '</table>' +

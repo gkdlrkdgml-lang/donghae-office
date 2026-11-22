@@ -266,7 +266,7 @@ def collect(state, S, C):
         except Exception as e:  # noqa: BLE001
             fail(state, 'water', e)
     # 국토·건축: 18개 시·군 도시계획 조례의 용도지역별 건폐율·용적률(주 1회, 개정된 조례만 다시 받음)
-    if os.environ.get('LAW_OC') and (stale('ordin', 7) or '--force-ordin' in sys.argv or not (((L.get('ordin') or {}).get('regions') or {}).get(C['me']) or {}).get('uses')):
+    if os.environ.get('LAW_OC') and (stale('ordin', 7) or '--force-ordin' in sys.argv or not (((L.get('ordin') or {}).get('regions') or {}).get(C['me']) or {}).get('uses_v') == 2):
         try:
             L['ordin'] = landlaw.collect(C, L.get('ordin'))
             ok(state, 'ordin', '%d개 시·군 조례' % len(L['ordin']['regions']) + (' · 실패 %s' % L['ordin']['errors'] if L['ordin']['errors'] else ''))

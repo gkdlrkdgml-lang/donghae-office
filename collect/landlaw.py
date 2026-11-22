@@ -107,7 +107,11 @@ def parse_uses(md, title):
         elif re.match(r'^\(\d+\)', ln) and out['items']:
             out['items'][-1]['subs'].append(ln)
         elif out['items'] and not re.match(r'^[\[■]', ln):
-            out.setdefault('extra', []).append(ln)   # 항목 형식이 아닌 줄(점검용)
+            it = out['items'][-1]                    # 앞 줄에 이어지는 글(줄바꿈된 조문)
+            if it['subs']:
+                it['subs'][-1] += ' ' + ln
+            else:
+                it['t'] += ' ' + ln
     return out
 
 
@@ -138,13 +142,14 @@ def collect(C, prev=None):
                 continue
             mst = it.get('자치법규일련번호')
             old = (prev.get('regions') or {}).get(r['name'])
-            if old and old.get('mst') == mst and old.get('bcr') and (r['name'] != C['me'] or old.get('uses')):
+            if old and old.get('mst') == mst and old.get('bcr') and (r['name'] != C['me'] or old.get('uses_v') == 2):
                 regs[r['name']] = old           # 개정 없으면 그대로
                 continue
             regs[r['name']] = parse(_get(SERVICE, {'target': 'ordin', 'MST': mst}))
             if r['name'] == C['me']:
                 try:   # 별표(용도지역별 건축 가능·불가 건축물) 한글 파일 → kordoc
                     regs[r['name']]['uses'] = fetch_uses(regs[r['name']].get('annex') or [])
+                    regs[r['name']]['uses_v'] = 2
                 except Exception as e:  # noqa: BLE001
                     errs.append('별표 읽기 실패 %s' % str(e)[:150])
             time.sleep(0.5)
