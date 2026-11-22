@@ -419,26 +419,19 @@ def annex_probe():
 
 
 def lofinlist_probe():
-    import urllib.request, re as R, zipfile, io
-    h = {'User-Agent': 'Mozilla/5.0'}
-    t = urllib.request.urlopen(urllib.request.Request('https://www.data.go.kr/data/15160375/fileData.do', headers=h), timeout=40).read().decode('utf-8', 'replace')
-    for m in R.finditer(r'(atchFileId|fileDownload|fileDetailSn|publicDataPk|download)', t):
-        say('[LL] 주변 ' + t[max(0, m.start() - 120):m.start() + 160].replace('\n', ' '))
-    ids = sorted(set(R.findall(r"(FILE_\d{6,})", t)))
-    say('[LL] 파일 id %s' % ids[:5])
-    sn = R.findall(r"fileDetailSn[^0-9]{0,10}(\d+)", t)[:3]
-    for fid in ids[:2]:
-        for u in ('https://www.data.go.kr/cmm/cmm/fileDownload.do?atchFileId=%s&fileDetailSn=1' % fid,):
-            try:
-                d = urllib.request.urlopen(urllib.request.Request(u, headers=h), timeout=60).read()
-                say('[LL] 받음 %d바이트 %r' % (len(d), d[:4]))
-                z = zipfile.ZipFile(io.BytesIO(d))
-                ss = R.findall(r'<t[^>]*>([^<]*)</t>', z.read('xl/sharedStrings.xml').decode('utf-8'))
-                for x in ss:
-                    if R.search(r'세입|세출|hub|lf/', x):
-                        say('[LL] ' + x[:200])
-            except Exception as e:  # noqa: BLE001
-                say('[LL] 실패 %s %s' % (u, str(e)[:150]))
+    import urllib.request, urllib.parse
+    key = urllib.parse.unquote(os.environ.get('DATA_GO_KR_KEY', ''))
+    u = 'https://api.odcloud.kr/api/15160375/v1/uddi:8dad712c-da2b-4d31-8f2b-d55ad79fa3ed?' + urllib.parse.urlencode({'page': 1, 'perPage': 1000, 'serviceKey': key})
+    try:
+        j = json.loads(urllib.request.urlopen(u, timeout=60).read().decode('utf-8'))
+        rows = j.get('data') or []
+        say('[LL] %d줄 키 %s' % (len(rows), list(rows[0].keys()) if rows else j))
+        for r in rows:
+            t = json.dumps(r, ensure_ascii=False)
+            if '세입' in t or '세출' in t or '자립' in t:
+                say('[LL] ' + t[:300])
+    except Exception as e:  # noqa: BLE001
+        say('[LL] 실패 %s' % str(e)[:300])
 
 
 def lofin_probe():
