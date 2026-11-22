@@ -355,7 +355,22 @@ def ncpms_probe():
                 say('   동해 %s' % [(urllib.parse.unquote(str(x.get('dbyhsNm'))), x.get('inqireValue')) for x in dh[:8]])
 
 
+def ncpms2_probe():
+    import ncpms, json as J
+    s = ncpms.call(serviceCode='SVC31', proxyUrl='http://localhost', div_id='r')
+    for m in (s.get('pestModelByKncrList') or [])[:4]:
+        say('RAW %s | %s | %s' % (m.get('validAlarmRiskIdex'), ncpms._dec(m.get('dbyhsMdlNm')), ncpms._dec(m.get('pestConfigStr'))[:400]))
+    o = ncpms.collect()
+    say('경보 %d개' % len(o['alerts']))
+    for a in o['alerts'][:12]:
+        say('  %s' % J.dumps(a, ensure_ascii=False))
+    for x in o['survey']:
+        say('  예찰 %s' % J.dumps(x, ensure_ascii=False)[:600])
+
+
 def main():
+    if os.environ.get('PROBE_ONLY') == 'ncpms2':
+        ncpms2_probe(); return
     if os.environ.get('PROBE_ONLY') == 'ncpms':
         ncpms_probe(); return
     if os.environ.get('PROBE_ONLY') == 'wipan':
