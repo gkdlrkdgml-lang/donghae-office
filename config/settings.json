@@ -24,11 +24,6 @@
       "show": true
     },
     {
-      "id": "agri",
-      "label": "농업 및 수산",
-      "show": true
-    },
-    {
       "id": "welfare",
       "label": "보건 및 의료",
       "show": true
@@ -56,6 +51,11 @@
     {
       "id": "traffic",
       "label": "교통",
+      "show": true
+    },
+    {
+      "id": "agri",
+      "label": "농업 및 수산",
       "show": true
     },
     {
