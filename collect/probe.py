@@ -418,6 +418,28 @@ def annex_probe():
         say('[annex] 시행령 실패 %s' % str(e)[:300])
 
 
+def kbus_probe():
+    import urllib.request, urllib.parse
+    key = os.environ.get('KOSIS_KEY', '').strip()
+    seen = set()
+    for q in ('시내버스', '노선버스', '농어촌버스', '버스 업체', '여객자동차운송사업', '운수업체 현황', '영업용 자동차', '버스 운행'):
+        u = 'https://kosis.kr/openapi/statisticsSearch.do?' + urllib.parse.urlencode({'method': 'getList', 'apiKey': key, 'searchNm': q, 'format': 'json', 'jsonVD': 'Y', 'resultCount': '100'})
+        try:
+            t = urllib.request.urlopen(u, timeout=60).read().decode('utf-8')
+            rows = json.loads(t)
+        except Exception as e:  # noqa: BLE001
+            say('[KB] %s 실패 %s' % (q, str(e)[:150])); continue
+        if not isinstance(rows, list):
+            say('[KB] %s → %s' % (q, str(rows)[:200])); continue
+        for r in rows:
+            k = (r.get('ORG_ID'), r.get('TBL_ID'))
+            nm = (r.get('TBL_NM') or '') + ' | ' + (r.get('STAT_NM') or '')
+            if k in seen: continue
+            seen.add(k)
+            if any(w in nm for w in ('강원', '동해', '춘천', '원주', '강릉', '시군', '시·군', '시도')):
+                say('[KB] %s %s %s | %s~%s %s' % (r.get('ORG_ID'), r.get('TBL_ID'), nm[:120], r.get('STRT_PRD_DE'), r.get('END_PRD_DE'), r.get('PRD_SE')))
+
+
 def busco_probe():
     import urllib.request, urllib.parse
     from collections import Counter
@@ -554,6 +576,8 @@ def main():
     if os.environ.get('PROBE_ONLY') == 'lock':
         lock_probe(); return
     load_env()
+    if os.environ.get('PROBE_ONLY') == 'kbus':
+        kbus_probe(); return
     if os.environ.get('PROBE_ONLY') == 'busco':
         busco_probe(); return
     if os.environ.get('PROBE_ONLY') == 'rebuild':
