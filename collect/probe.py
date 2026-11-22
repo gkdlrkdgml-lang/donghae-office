@@ -318,18 +318,22 @@ def wipan_probe():
         except Exception as e:  # noqa: BLE001
             say('== %s 오류 %s' % (ns, e))
     key = urllib.parse.unquote(os.environ.get('DATA_GO_KR_KEY', ''))
-    try:
-        t = urllib.request.urlopen('https://infuser.odcloud.kr/oas/docs?namespace=15102792/v1', timeout=60).read().decode()
-        paths = list(J.loads(t).get('paths', {}))
-        for pth in paths[-2:]:
-            u = 'https://api.odcloud.kr/api' + pth + '?' + urllib.parse.urlencode({'page': 1, 'perPage': 3, 'serviceKey': key, 'cond[위판장명::LIKE]': '묵호'})
-            try:
-                r = urllib.request.urlopen(u, timeout=60).read().decode()
-                say('호출 %s → %s' % (pth, r[:600]))
-            except Exception as e:  # noqa: BLE001
-                say('호출 %s → %s %s' % (pth, e, getattr(e, 'read', lambda: b'')()[:200]))
-    except Exception as e:  # noqa: BLE001
-        say('호출 실패 %s' % e)
+    pth = '/15102792/v1/uddi:28a31c94-9371-486c-a4fd-ce808459a04f'
+    t = urllib.request.urlopen('https://infuser.odcloud.kr/oas/docs?namespace=15102792/v1', timeout=60).read().decode()
+    d = J.loads(t)
+    sch = d.get('components', {}).get('schemas', {})
+    say('스키마 %s' % list(sch)[:3])
+    for k, v in list(sch.items())[:2]:
+        say('  %s %s' % (k, J.dumps(v, ensure_ascii=False)[:900]))
+    g = d['paths'][pth]['get']
+    say('파라미터 전체 %s' % J.dumps(g.get('parameters'), ensure_ascii=False)[:1500])
+    for prm in [{}, {'cond[산지조합명::LIKE]': '동해'}, {'cond[위판장명::LIKE]': '동해'}, {'cond[산지조합명::EQ]': '동해시수산업협동조합'}]:
+        u = 'https://api.odcloud.kr/api' + pth + '?' + urllib.parse.urlencode(dict({'page': 1, 'perPage': 3, 'serviceKey': key}, **prm))
+        try:
+            r = urllib.request.urlopen(u, timeout=60).read().decode()
+            say('호출 %s → %s' % (prm, r[:900]))
+        except Exception as e:  # noqa: BLE001
+            say('호출 %s → %s %s' % (prm, e, getattr(e, 'read', lambda: b'')()[:200]))
 
 
 def main():
