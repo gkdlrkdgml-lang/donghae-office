@@ -301,6 +301,14 @@ def chk_probe():
     say('메뉴 %s' % [m['id'] for m in d['menu']])
     say('agri 표 %s 오류 %s' % ({k: v['year'] for k, v in (A.get('tables') or {}).items()}, A.get('errors')))
     say('상태 %s' % (d['status'].get('agri')))
+    W = d['life'].get('wipan') or {}
+    say('위판 %s 달 %d 오류 %s' % (W.get('ym'), len(W.get('months') or {}), W.get('errors')))
+    c = ((W.get('months') or {}).get(W.get('ym')) or {}).get('coops') or {}
+    say('최신 달 수협 %s' % {k: (v['name'], round(v['amt'] / 1e8, 2), round(v['kg'] / 1000, 1), list(v['sp'])[:3]) for k, v in c.items()})
+    say('빈 달 %s' % [m for m, r in (W.get('months') or {}).items() if not (r.get('coops') or {}).get('306')])
+    N = d['life'].get('ncpms') or {}
+    say('예찰 %s' % [(x['crop'], x.get('date'), list(x.get('sites', {}))) for x in N.get('survey', [])])
+    say('상태 위판 %s / 예찰 %s' % (d['status'].get('wipan'), d['status'].get('ncpms')))
     for i in d['indicators']:
         if i['id'] in ('ag_farms', 'ag_land', 'ag_old', 'ag_eco', 'fs_hh'):
             say('%s 동해 %s / %d' % (i['id'], i.get('me'), i.get('n')))
