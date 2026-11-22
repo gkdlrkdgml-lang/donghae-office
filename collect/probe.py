@@ -419,19 +419,20 @@ def annex_probe():
 
 
 def lofinlist_probe():
-    import urllib.request, urllib.parse
-    key = urllib.parse.unquote(os.environ.get('DATA_GO_KR_KEY', ''))
-    u = 'https://api.odcloud.kr/api/15160375/v1/uddi:8dad712c-da2b-4d31-8f2b-d55ad79fa3ed?' + urllib.parse.urlencode({'page': 1, 'perPage': 1000, 'serviceKey': key})
-    try:
-        j = json.loads(urllib.request.urlopen(u, timeout=60).read().decode('utf-8'))
-        rows = j.get('data') or []
-        say('[LL] %d줄 키 %s' % (len(rows), list(rows[0].keys()) if rows else j))
-        for r in rows:
-            t = json.dumps(r, ensure_ascii=False)
-            if '세입' in t or '세출' in t or '자립' in t:
-                say('[LL] ' + t[:300])
-    except Exception as e:  # noqa: BLE001
-        say('[LL] 실패 %s' % str(e)[:300])
+    import re as R
+    from common import kr_get
+    for page, prm in (('LF5100000', {}), ('LF5110000', {}), ('LF5100000', {'srchKwd': '세입예산'}), ('LF5100000', {'searchKeyword': '세입예산'})):
+        try:
+            t = kr_get('https://www.lofin365.go.kr/portal/%s.do' % page, prm)
+            say('[LL] %s %s 길이 %d 제목 %s' % (page, prm, len(t), R.findall(r'<title>([^<]*)', t)[:1]))
+            for m in R.finditer(r'pdtaId=([A-Z0-9]+)[^<]{0,200}', t):
+                pass
+            ids = R.findall(r"([A-Z0-9]{20,})", t)
+            for m in R.finditer(r'세입예산|세출예산', t):
+                say('[LL]   주변 ' + R.sub(r'\s+', ' ', t[max(0, m.start() - 300):m.start() + 100]))
+            say('[LL]   id 예 %s' % ids[:10])
+        except Exception as e:  # noqa: BLE001
+            say('[LL] %s 실패 %s' % (page, str(e)[:200]))
 
 
 def lofin_probe():

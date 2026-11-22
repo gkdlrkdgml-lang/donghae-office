@@ -1,6 +1,6 @@
 // 국내 접속 중계: 해외(GitHub 서버)에서 막히는 정부 사이트를 서울 지역(ap-northeast-2)에서 대신 불러 줌.
 // 수집기(서비스 키)만 쓸 수 있고, 허용한 주소(지방재정365)만 부름 — 아무 주소나 대신 부르는 중계가 되지 않게.
-const ALLOW = [/^https:\/\/(www\.)?lofin365\.go\.kr\/lf\/hub\/[A-Z]+$/];
+const ALLOW = [/^https:\/\/(www\.)?lofin365\.go\.kr\/lf\/hub\/[A-Z]+$/, /^https:\/\/(www\.)?lofin365\.go\.kr\/portal\/LF\d+\.do$/];  // 지방재정365 자료(hub)·공개 안내 화면(portal)만
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json; charset=utf-8" } });
