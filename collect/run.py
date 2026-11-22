@@ -19,6 +19,7 @@ import admin_sync  # noqa: E402
 import landlaw  # noqa: E402
 import agri  # noqa: E402
 import wipan  # noqa: E402
+import ncpms  # noqa: E402
 from rank import rank  # noqa: E402
 
 STATE = os.path.join(WEB_DATA, 'state.json')
@@ -287,6 +288,13 @@ def collect(state, S, C):
             ok(state, 'wipan', '%s 기준 %d개월' % (L['wipan']['ym'], len(L['wipan']['months'])) + (' · 이어 받을 달 %s' % list(L['wipan']['errors']) if L['wipan']['errors'] else ''))
         except Exception as e:  # noqa: BLE001
             fail(state, 'wipan', e)
+    # 농진청 병해충 예찰(강릉·삼척 — 동해는 조사 지역 아님) — 하루 1번
+    if os.environ.get('NCPMS_KEY') and (stale('ncpms', 1) or '--force-ncpms' in sys.argv):
+        try:
+            L['ncpms'] = dict(ncpms.collect(), at=now().strftime('%Y-%m-%d'))
+            ok(state, 'ncpms', ', '.join('%s %s' % (x['crop'], x.get('date', x.get('error', ''))) for x in L['ncpms']['survey']))
+        except Exception as e:  # noqa: BLE001
+            fail(state, 'ncpms', e)
     AG = (L.get('agri') or {}).get('tables') or {}
     def _ag(k, item, lab, f=None):
         t = AG.get(k)

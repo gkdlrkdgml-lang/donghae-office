@@ -2599,15 +2599,24 @@ function startApp() {
       { l: '친환경 인증 농가', sub: EC ? EC.y + '년 유기·무농약' : '', ic: 'leaf', col: '#0F8A8A', bg: '#DDF3F2', v: fmt(ec['농가수'], 0), u: '호',
         chips: [rankChip(indFor(ind('ag_eco'), SN)), ec['면적'] != null ? ['면적 ' + fmt(ec['면적'], 1) + 'ha · 출하 ' + fmt(ec['출하량'], 0) + '톤', ''] : null] }
     ]);
-    var pp = panel('전업·겸업 농가 · ' + fullName(SN), (F ? F.y + '년 12월 1일 · ' : '') + '농가 ' + fmt(f['농가'], 0) + '가구', f['농가'] ? donut([['전업', f['전업 농가'] || 0, '#2E8B57'], ['겸업', f['겸업 농가'] || 0, '#A9DCC0']], fmt(f['농가'], 0), '농가') : el('div', { class: 'empty', text: '자료 없음' }));
+    // 병해충 예찰(최신) — 동해는 조사 지역이 아니라 이웃 강릉·삼척
+    var NC = (D.life || {}).ncpms || {}, sv = (NC.survey || []).filter(function (x) { return !x.error; });
+    var pb = el('div', { style: 'display:flex;flex-direction:column;gap:8px;min-height:0' });
+    sv.filter(function (x) { return Object.keys(x.sites || {}).length; }).forEach(function (x) {
+      var dt = x.date ? (+x.date.slice(4, 6)) + '/' + (+x.date.slice(6)) : '';
+      Object.keys(x.sites).forEach(function (site) {
+        var v = x.sites[site], ks = Object.keys(v), nz = ks.filter(function (k) { return v[k] > 0; }).sort(function (a, b) { return v[b] - v[a]; });
+        pb.appendChild(el('div', { 'data-fit': '1', style: 'background:#F4F8F2;border-radius:10px;padding:8px 12px' }, [
+          el('div', { style: 'font-weight:800;color:#1B3A6B;font-size:16px', text: x.crop + ' · ' + site + ' · ' + dt + ' ' + x.round + '차' + (x.kind && x.kind !== '기본조사' ? ' (' + x.kind + ')' : '') }),
+          el('div', { style: 'font-size:14.5px;color:#38475A;margin-top:2px', text: nz.length ? nz.slice(0, 4).map(function (k) { return k.replace(/^.+? - /, '') + ' ' + fmt(v[k], 2); }).join(' · ') + (ks.length > nz.length ? ' · 나머지 ' + (ks.length - nz.length) + '개 항목 0' : '') : '조사 ' + ks.length + '개 항목 모두 0(발생 없음)' })]));
+      });
+    });
+    var others = sv.filter(function (x) { return !Object.keys(x.sites || {}).length; }).map(function (x) { return x.crop + '(' + (x.gw_sites || []).map(function (g) { return g.replace(/[시군]$/, ''); }).join('·') + ')'; });
+    if (others.length) pb.appendChild(el('div', { style: 'font-size:13px;color:#6B7686', text: '강원 다른 조사 작물: ' + others.join(', ') }));
+    var pp = panel('병해충 예찰 · 이웃 강릉·삼척', '농진청 NCPMS 최신 회차 · 동해시는 예찰 조사 지역이 아님 · 괄호는 단위(%·밀도)', sv.length ? pb : el('div', { class: 'empty', text: '자료 없음' }));
     pp.style.gridRow = '3'; pp.style.gridColumn = '1';
-    if (FP) {
-      var fy = Object.keys(FP.t.data).sort();
-      var pq = panel('농가·농가인구 추이 · ' + fullName(SN), fy[0] + '~' + fy[fy.length - 1] + '년 · 농림어업조사(해마다, 표본)', lineChart(fy.map(function (y) { return y + '년'; }), [
-        { name: '농가인구(명)', color: '#1F6FD1', width: 3, values: fy.map(function (y) { return ((FP.t.data[y] || {})[SN] || {})['농가인구']; }) },
-        { name: '농가(가구)', color: '#2E8B57', width: 3, values: fy.map(function (y) { return ((FP.t.data[y] || {})[SN] || {})['농가']; }) }], { fit: true }));
-      pq.style.gridRow = '4'; pq.style.gridColumn = '1';
-    }
+    var pq = panel('전업·겸업 농가 · ' + fullName(SN), (F ? F.y + '년 12월 1일 · ' : '') + '농가 ' + fmt(f['농가'], 0) + '가구', f['농가'] ? donut([['전업', f['전업 농가'] || 0, '#2E8B57'], ['겸업', f['겸업 농가'] || 0, '#A9DCC0']], fmt(f['농가'], 0), '농가') : el('div', { class: 'empty', text: '자료 없음' }));
+    pq.style.gridRow = '4'; pq.style.gridColumn = '1';
     // 경지면적 추이
     if (LA) {
       var ys = Object.keys(LA.t.data).sort();

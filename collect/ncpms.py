@@ -1,6 +1,7 @@
 """농촌진흥청 국가농작물병해충관리시스템(NCPMS) — 병해충 예찰·예측 경보.
 
-동해시는 예찰 조사 지역이 아님(2026-11 확인) → 강원 영동 이웃 시·군(강릉·삼척) 예찰 값 + 전국 병해충 예측 모델 경보.
+동해시는 예찰 조사 지역이 아님(2026-11 확인) → 강원 영동 이웃 시·군(강릉·삼척) 예찰 값.
+전국 예측 모델(SVC31)은 위험 단계 숫자의 뜻(1이 높은지 낮은지)을 확인할 수 없어 쓰지 않음(11월에 고추탄저병 1단계 등 앞뒤가 안 맞음).
 화면에는 「동해시 자료 아님」을 밝힘. 키: GitHub Secret NCPMS_KEY.
 """
 import html
@@ -78,4 +79,4 @@ def survey():
 
 
 def collect():
-    return {'at': now().strftime('%Y-%m-%d %H:%M'), 'alerts': alerts(), 'survey': survey(), 'near': list(NEAR.values())}
+    return {'at': now().strftime('%Y-%m-%d %H:%M'), 'survey': survey(), 'near': list(NEAR.values())}
