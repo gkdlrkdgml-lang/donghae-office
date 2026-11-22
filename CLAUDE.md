@@ -47,7 +47,7 @@ KOSIS(여러 표), 국세통계포털 TASIS(월별 가동·신규 사업자), �
 - 반영: `collect/admin_sync.py`가 service_role 키(GitHub Secret `SUPABASE_SERVICE_KEY`)로 entries를 받아 `manual/admin_input.json`(예전 형식)으로 만듦 →
   `run.py`의 `apply_admin_input()`이 build 때 복사본에만 덮어씀(동해 총인구·세대·남녀, 65세·15~64세 → 고령·생산연령 비율 재계산, 동별, admin_live).
   `.github/workflows/admin_watch.yml`이 10분마다 바뀜(state.json `admin_sig`)을 보고 `collect.yml mode=admin` 실행.
-  (예약 실행은 돌지만 GitHub가 10분 간격을 지키지 않음 — 2026-11-22 실제 간격 4~7시간. 입력 즉시 반영이 필요하면 저장 때 바로 실행하게 바꿀 것)
+  (예약 실행은 GitHub가 10분 간격을 지키지 않음 — 실제 4~7시간.) → 2026-11-23: admin.html 저장·삭제 때 `rebuildNow()` → Supabase 함수 `rebuild`(admin·super JWT, 1분 1회) → GitHub API로 collect.yml mode=admin 실행. GitHub 토큰은 Secret `GH_DISPATCH_TOKEN`(fine-grained, 이 저장소 Actions 읽기·쓰기) → deploy_functions가 Supabase 비밀값으로 넣음. 토큰 없으면 「몇 시간 안에 반영」 안내.
 - 입력값 적용 규칙: 기준일이 공식 최신 달(인구·동별·인구변동) 또는 고용률 공식 반기 끝날보다 늦을 때만 사용, 아니면 API 값.
   고용 입력이 공식 반기보다 이르면 고용률·취업자만 버리고 일자리 사업 참여자·일자리 창출(공식 자료 없음)은 그대로 씀.
   동별 입력: 법정동(A.dongs) + 행정동은 dong 데이터 안 `_admm`{행정동:{total, age65}} → A.admm 덮어씀(행정동 3D 지도·행정동 표, 고령 비율 재계산, prev_total=공식 최신 달 값, 입력 안 한 동은 prev_total 비움), A.admm_live={date, official_ym}.

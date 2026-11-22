@@ -383,7 +383,7 @@
         if (!secs.length) { say('이 기준일에서 지울 수 있는 분야가 없습니다.', 'err'); return; }
         if (!confirm(e.date + ' 입력을 삭제할까요? 시장실 화면에서도 빠집니다.')) return;
         sb.from('entries').update({ deleted: true }).eq('ref_date', e.date).in('section', secs).then(function (r) {
-          if (r.error) say(kerr(r.error), 'err'); else { say(e.date + ' 입력을 지웠습니다. 다음 갱신 때 화면에서도 빠집니다.', 'ok'); loadEntries(); }
+          if (r.error) say(kerr(r.error), 'err'); else { say(e.date + ' 입력을 지웠습니다. 시장실 화면을 다시 만드는 중…', 'ok'); loadEntries(); rebuildNow(); }
         });
       };
       tb.appendChild(tr);
@@ -395,6 +395,15 @@
       rows = r.data || []; drawHist();
     });
   }
+  // 저장·삭제하면 바로 시장실 화면 다시 만들기(Supabase 함수 rebuild → GitHub 실행, 1~2분)
+  function rebuildNow() {
+    sb.functions.invoke('rebuild', { body: {} }).then(function (r) {
+      var err = r.error ? (r.error.context && r.error.context.status === 503 ? 'no_token' : r.error.message) : (r.data && r.data.error);
+      if (!err) say('저장했습니다. 1~2분 뒤 시장실 화면에 반영됩니다(아래 「시장실 반영」 칸이 「반영 중」으로 바뀜).', 'ok');
+      else if (err === 'no_token') say('저장했습니다. 즉시 반영 설정이 아직 안 되어 몇 시간 안에 자동 반영됩니다.', 'ok');
+      else say('저장했습니다. 즉시 반영 요청은 실패(' + err + ') — 몇 시간 안에 자동 반영됩니다.', 'info');
+    }).catch(function () { say('저장했습니다. 몇 시간 안에 자동 반영됩니다.', 'ok'); });
+  }
   $('save').onclick = function () {
     var r = collectForm(), e = r.e;
     if (!e.date) { say('기준일을 넣어 주세요.', 'err'); return; }
@@ -404,7 +413,7 @@
     $('save').disabled = true; say('저장 중…', 'info');
     sb.from('entries').insert(secs.map(function (s) { return { ref_date: e.date, section: s, data: e[s], author: me.id, author_name: prof.name }; })).then(function (q) {
       if (q.error) say('저장 실패: ' + kerr(q.error), 'err');
-      else { say('저장했습니다. 아래 「시장실 반영」 칸에서 반영 여부를 확인하세요.', 'ok'); loadEntries(); }
+      else { say('저장했습니다. 시장실 화면을 다시 만드는 중…', 'ok'); loadEntries(); rebuildNow(); }
       $('save').disabled = false;
     });
   };
