@@ -28,7 +28,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: pip install -q olefile
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
       - name: 수집·계산
         env:
           TZ: Asia/Seoul

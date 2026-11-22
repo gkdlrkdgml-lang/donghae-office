@@ -16,7 +16,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: pip install -q olefile
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
       - name: 각 API 한 번씩 호출
         env:
           TZ: Asia/Seoul
