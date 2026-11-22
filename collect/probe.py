@@ -294,7 +294,21 @@ def agri2_probe():
         say('   강원: ' + str({a: b for a, b in list((d.get('강원') or {}).items())[:6]}))
 
 
+def chk_probe():
+    import store, gzip, json as J
+    d = J.loads(gzip.decompress(store.get('data/data.json.gz')))
+    A = (d.get('life') or {}).get('agri') or {}
+    say('메뉴 %s' % [m['id'] for m in d['menu']])
+    say('agri 표 %s 오류 %s' % ({k: v['year'] for k, v in (A.get('tables') or {}).items()}, A.get('errors')))
+    say('상태 %s' % (d['status'].get('agri')))
+    for i in d['indicators']:
+        if i['id'] in ('ag_farms', 'ag_land', 'ag_old', 'ag_eco', 'fs_hh'):
+            say('%s 동해 %s / %d' % (i['id'], i.get('me'), i.get('n')))
+
+
 def main():
+    if os.environ.get('PROBE_ONLY') == 'chk':
+        chk_probe(); return
     if os.environ.get('PROBE_ONLY') == 'agri2':
         agri2_probe(); return
     if os.environ.get('PROBE_ONLY') == 'agri':
