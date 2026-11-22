@@ -177,7 +177,7 @@
   .tag { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 13px; }
   .tag.strong { background: var(--goodbg); color: var(--good); }
   .tag.weak { background: var(--badbg); color: var(--bad); }
-  .tag.middle { background: #EAF0F8; color: #3D5677; }
+  .tag.middle { background: #FFF4D2; color: #8A6100; }
   .tag.excluded { background: #EFF1F4; color: var(--mute); }
   .list { display: flex; flex-direction: column; gap: 8px; }
   .item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; background: #F6F8FB; border: 1px solid #E6EBF1; border-radius: 8px; padding: 12px 14px; font-size: 16px; }
@@ -326,7 +326,7 @@ function startApp() {
   }
   function fmt(v, d) { return v == null ? '–' : Number(v).toLocaleString('ko-KR', { minimumFractionDigits: d, maximumFractionDigits: d }); }
   function judgeLabel(j) { return { strong: '강점', weak: '개선 필요', middle: '중간', excluded: '판정 제외' }[j] || ''; }
-  function judgeColor(j) { return { strong: '#2E9C6A', weak: '#D9822B', middle: '#6B8FBF', excluded: '#B3BDCB' }[j] || '#6B8FBF'; }
+  function judgeColor(j) { return { strong: '#2E9C6A', weak: '#D9443F', middle: '#F2B51C', excluded: '#B3BDCB' }[j] || '#F2B51C'; }   // 초록 좋음 · 노랑 보통 · 빨강 개선 필요
   function ind(id) { return (D.indicators || []).filter(function (i) { return i.id === id; })[0]; }
   function ymLabel(ym) { return ym ? ym.slice(0, 4) + '년 ' + Number(ym.slice(4)) + '월' : ''; }
 
@@ -435,7 +435,7 @@ function startApp() {
     view.appendChild(el('div', { class: 'title' }, [
       el('h1', { text: '강원 ' + D.regions.length + '개 시·군 중 ' + D.me + '시의 위치' }),
       el('span', { style: 'margin-left:14px;background:#1B3A6B;color:#fff;font-size:20px;font-weight:900;padding:6px 16px;border-radius:999px;white-space:nowrap;letter-spacing:-.2px', text: '★ 1위에 가까울수록 좋음' }),
-      el('span', { style: 'margin-left:auto', text: '1위 = 도내에서 가장 좋은 곳 · 막대가 높을수록 좋음 · 초록 강점 · 주황 개선 필요 · 누르면 세부 현황' })
+      el('span', { style: 'margin-left:auto', text: '1위 = 도내에서 가장 좋은 곳 · 막대가 높을수록 좋음 · 초록 좋음 · 노랑 보통 · 빨강 개선 필요 · 누르면 세부 현황' })
     ]));
     var GO = { pop_change: ['admin', 'compare'], working_age: ['admin', 'compare'], elderly: ['admin', 'compare'], medical: ['welfare'], ev: ['traffic', 'ev'], cars: ['traffic', 'cars'],
       accidents: ['traffic', 'safe'], parking: ['traffic', 'park'], bus_stops: ['traffic', 'busst'], taxi: ['traffic', 'taxi'], visitors: ['tour', 'now'], wx_rain: ['env', 'wx'], wx_heat: ['env', 'wx'], wx_trop: ['env', 'wx'], air_good: ['env', 'air'], air_bad: ['env', 'air'], air_avg: ['env', 'air'], attr_visit: ['tour', 'attr'], shop_new: ['economy'], emp_rate: ['economy'], biz_yoy: ['economy'], doc_per: ['welfare'], sew_rate: ['water'], sup_rate: ['water'], pw_total: ['power'], pw_house: ['power'], pw_house_bill: ['power'], pw_yoy: ['power'], pw_ind_share: ['power'], tour_exp: ['tour', 'dem'], budget: ['finance'], fin_indep: ['finance'] };
