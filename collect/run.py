@@ -143,6 +143,8 @@ def collect(state, S, C):
     pops = {k: v.get('total') for k, v in ((state.get('admin') or {}).get('regions') or {}).items()}
 
     def stale(key, days):
+        if '--force-all' in sys.argv:   # 수동 실행 mode=force: 캐시 무시하고 모든 API 다시 호출
+            return True
         at = (L.get(key) or {}).get('at')
         try:
             return (now().date() - __import__('datetime').date.fromisoformat(at)).days >= days
