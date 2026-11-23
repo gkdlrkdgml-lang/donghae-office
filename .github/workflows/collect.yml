@@ -4,6 +4,7 @@ on:
   schedule:
     - cron: '7 21 * * *'   # 매일 06:07 (한국시간). 정각은 GitHub이 붐벼서 7분 뒤로.
     - cron: '47 23,2,5,8,11 * * *'   # 날씨·혼잡 예측 갱신: 08:47, 11:47, 14:47, 17:47, 20:47
+    - cron: '17 18 * * 0'   # 매주 월요일 03:17(한국시간): 캐시 무시하고 모든 API 다시 호출(새로 올라온 자료 놓치지 않게)
   workflow_dispatch:        # Actions 탭에서 "Run workflow"로 바로 실행
     inputs:
       mode:
@@ -50,7 +51,7 @@ jobs:
           # 키를 아직 안 넣었으면 시연용 값으로 화면만 띄웁니다(키를 넣으면 자동으로 실제 수집).
           if [ "${{ inputs.mode }}" = "admin" ]; then python collect/run.py --admin-only
           elif [ -z "$DATA_GO_KR_KEY" ]; then python collect/run.py --demo
-          elif [ "${{ inputs.mode }}" = "force" ]; then python collect/run.py --force-all --force-life --force-agri --force-attr --force-stores --force-water --force-wipan --force-ncpms --force-power
+          elif [ "${{ inputs.mode }}" = "force" ] || [ "${{ github.event.schedule }}" = "17 18 * * 0" ]; then python collect/run.py --force-all --force-life --force-agri --force-attr --force-stores --force-water --force-wipan --force-ncpms --force-power
           else python collect/run.py; fi
           if [ "${{ inputs.mode }}" != "admin" ]; then python collect/tiles.py || true; fi
           # 수집 캐시·화면 자료는 Supabase 비공개 저장소에만 올림(GitHub에는 올리지 않음)

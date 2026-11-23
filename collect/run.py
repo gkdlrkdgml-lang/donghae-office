@@ -236,19 +236,19 @@ def collect(state, S, C):
         set_ind(state, 'accidents', {k: v.get('A1') for k, v in T['acc']['regions'].items() if v.get('A1') is not None},
                 '%s년 교통사고(행정안전부)' % T['acc']['year'])
     # 경제: 국세청 사업자(연) — 30일마다
-    if stale('economy', 30) or '--force-life' in sys.argv:
+    if stale('economy', 7) or '--force-life' in sys.argv:
         try:
             L['economy'] = sources.economy(S, C)
             ok(state, 'economy', '%s년 %d개 시·군' % (L['economy']['year'], len(L['economy']['active'].get(L['economy']['year'], {}))))
         except Exception as e:  # noqa: BLE001
             fail(state, 'economy', e)
-    if stale('eco_ind', 30) or '--force-life' in sys.argv:
+    if stale('eco_ind', 7) or '--force-life' in sys.argv:
         try:
             L['eco_ind'] = sources.economy_industry(S, C)
             ok(state, 'eco_ind', '%s년' % L['eco_ind']['year'])
         except Exception as e:  # noqa: BLE001
             fail(state, 'eco_ind', e)
-    if stale('social', 30) or 'ltc' not in (L.get('social') or {}) or '--force-life' in sys.argv:
+    if stale('social', 7) or 'ltc' not in (L.get('social') or {}) or '--force-life' in sys.argv:
         try:
             L['social'] = sources.social(S, C)
             ok(state, 'social', '시설 %s · 수급 %s' % (L['social'].get('fac_year'), L['social'].get('rcp_year')))
@@ -273,7 +273,7 @@ def collect(state, S, C):
             ok(state, 'stores', '%s 기준 %d개 시·군' % (L['stores']['stdrYm'], len(L['stores']['regions'])))
         except Exception as e:  # noqa: BLE001
             fail(state, 'stores', e)
-    if stale('water', 30) or '--force-life' in sys.argv or '--force-water' in sys.argv:
+    if stale('water', 7) or '--force-life' in sys.argv or '--force-water' in sys.argv:
         try:
             L['water'] = sources.water(C)
             ok(state, 'water', ', '.join('%s %s' % (k, v['year']) for k, v in L['water']['tables'].items()) + (' · 실패 %s' % list(L['water']['errors']) if L['water']['errors'] else ''))
@@ -343,7 +343,7 @@ def collect(state, S, C):
         if pm:
             set_ind(state, 'pw_yoy', {k: (v['total'] - pm[k]['total']) / pm[k]['total'] * 100 for k, v in cm.items() if pm.get(k) and pm[k]['total']},
                     lab + ' (전년 같은 달 대비) · 한전')
-    if stale('employ', 15) or '--force-life' in sys.argv:
+    if stale('employ', 7) or '--force-life' in sys.argv:
         try:
             L['employ'] = sources.employment(S, C)
             ok(state, 'employ', L['employ']['period'])
