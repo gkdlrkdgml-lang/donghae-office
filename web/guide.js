@@ -80,7 +80,7 @@
     '#dhAideBtn .say{position:relative;margin-bottom:80px;background:#fff;border:1.5px solid #C9D8EE;border-radius:16px;padding:9px 14px;text-align:left;box-shadow:0 6px 18px rgba(27,58,107,.18);white-space:nowrap;transition:opacity .4s}' +
     '#dhAideBtn .say:after{content:"";position:absolute;right:-8px;bottom:14px;border:8px solid transparent;border-left-color:#fff;border-right:0}' +
     '#dhAideBtn .say b{display:block;font-size:13px;color:#2F6DB5;letter-spacing:.5px}' +
-    '#dhAideBtn .say span{font-size:15px;font-weight:700;color:#1B3A6B}' +
+    '#dhAideBtn .say span{font-size:15px;font-weight:700;color:#1B3A6B;line-height:1.45}#dhAideBtn .say u{text-decoration:none;color:#D9443F}' +
     '#dhAideBtn .say{opacity:0;pointer-events:none}#dhAideBtn.talk .say,#dhAideBtn:hover .say{opacity:1}#dhAideBtn:hover .say{border-color:#2F6DB5}body.dh-noaide #dhAideBtn{display:none}body:not(.dh-noaide) .help{right:100px!important}' +
     '#dhAide{position:fixed;inset:0;z-index:900;display:none;align-items:center;justify-content:center;background:rgba(20,35,60,.35);font-family:"Pretendard","Malgun Gothic",system-ui,sans-serif}' +
     '#dhAide.open{display:flex}' +
@@ -161,8 +161,25 @@
     if (hide) close();
     mount();
   }
-  // 말풍선은 처음 6초만 보였다가 사라짐(마우스를 올리면 다시 보임)
-  btn.classList.add('talk'); setTimeout(function () { btn.classList.remove('talk'); }, 6000);
-  window.addEventListener('hashchange', sync); setInterval(sync, 700); setTimeout(sync, 0);
+  // 말풍선: 처음 6초 + 탭을 옮길 때마다 8초 동안 「다른 시·군 보는 법」 안내(마우스를 올리면 기본 문구)
+  var say = btn.querySelector('.say span'), SAY0 = say.innerHTML, talkT = null, lastTab = null;
+  var TIP = {
+    land: '위쪽 칸에 <u>지번·도로명 주소</u>를 넣고 검토를 누르세요<br>아래 탭에서 18개 시·군 조례도 비교하실 수 있습니다'
+  };
+  var TIP0 = '<u>왼쪽 순위표·막대의 시·군 이름</u>을 누르시면 그 시·군 자료로 바뀝니다<br>한 번 더 누르시면 동해시로 돌아옵니다 · 제목 옆 둥근 단추로 세부 화면 이동';
+  function talk(html, ms) {
+    say.innerHTML = html; btn.classList.add('talk');
+    clearTimeout(talkT); talkT = setTimeout(function () { btn.classList.remove('talk'); setTimeout(function () { say.innerHTML = SAY0; }, 450); }, ms);
+  }
+  function tabTip() {
+    var t = (location.hash || '#main').slice(1);
+    if (t === lastTab) return;
+    var first = lastTab === null; lastTab = t;
+    if (first || document.body.classList.contains('dh-noaide')) return;
+    talk(TIP[t] || TIP0, 8000);
+  }
+  btn.addEventListener('mouseenter', function () { if (!btn.classList.contains('talk')) say.innerHTML = SAY0; });
+  talk(SAY0, 6000);
+  window.addEventListener('hashchange', function () { sync(); tabTip(); }); setInterval(sync, 700); setTimeout(function () { sync(); tabTip(); }, 0);
   window.DHAide = { open: open, close: close, ask: answer };
 })();
