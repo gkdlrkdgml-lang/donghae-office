@@ -1,3 +1,4 @@
+import time
 """점검 스크립트: 키를 넣은 뒤 한 번 실행합니다.
 
 각 API를 동해시 기준으로 한 번씩 불러서
@@ -139,6 +140,20 @@ def statemsg_probe():
             elif isinstance(v, dict):
                 walk(v, path + '.' + k, depth + 1)
     walk(D, 'D', 0)
+
+
+def lic_probe():
+    from urllib.parse import unquote
+    from common import http_get
+    k = unquote(os.environ.get('DATA_GO_KR_KEY', '').strip())
+    for svc in ('general_restaurants', 'rest_cafes', 'lodgings'):
+        for n in ('2', '100'):
+            t0 = time.time()
+            try:
+                t = http_get('https://apis.data.go.kr/1741000/%s/info' % svc, {'serviceKey': k, 'pageNo': '1', 'numOfRows': n, 'returnType': 'json', 'cond[OPN_ATMY_GRP_CD::EQ]': '4211000'}, tries=1, timeout=90)
+                say('[LC] %s %s %.1fs %s' % (svc, n, time.time() - t0, t[:300].replace('\n', ' ')))
+            except Exception as e:  # noqa: BLE001
+                say('[LC] %s %s %.1fs 실패 %s' % (svc, n, time.time() - t0, str(e)[:300]))
 
 
 def adminchk_probe():
@@ -672,6 +687,8 @@ def main():
         fixyouth_probe(); return
     if os.environ.get('PROBE_ONLY') == 'refdate':
         refdate_probe(); return
+    if os.environ.get('PROBE_ONLY') == 'lic':
+        lic_probe(); return
     if os.environ.get('PROBE_ONLY') == 'statemsg':
         statemsg_probe(); return
     if os.environ.get('PROBE_ONLY') == 'adminchk':
