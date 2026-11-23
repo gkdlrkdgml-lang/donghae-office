@@ -171,15 +171,27 @@
     say.innerHTML = html; btn.classList.add('talk');
     clearTimeout(talkT); talkT = setTimeout(function () { btn.classList.remove('talk'); setTimeout(function () { say.innerHTML = SAY0; }, 450); }, ms);
   }
+  // 화면(메뉴 + 아래 탭)이 바뀔 때마다: 시·군을 눌러 바꿀 수 있는 화면(data-reg="1")에서만 안내
   function tabTip() {
-    var t = (location.hash || '#main').slice(1);
-    if (t === lastTab) return;
-    var first = lastTab === null; lastTab = t;
+    var t = (location.hash || '#main').slice(1), v = document.getElementById('view');
+    var sub = v && v.querySelector('.title .subtabs button.on, .title [data-subtab].on');
+    var key = t + '|' + (sub ? sub.textContent.trim() : '');
+    if (key === lastTab) return;
+    var first = lastTab === null || Date.now() - T0 < 2000; lastTab = key;
     if (first || document.body.classList.contains('dh-noaide')) return;
-    talk(TIP[t] || TIP0, 8000);
+    if (t === 'land') { if (/부지/.test(key)) talk(TIP.land, 8000); return; }
+    if (v && v.querySelector('[data-reg="1"]')) talk(TIP0, 8000);
+    else if (btn.classList.contains('talk') && say.innerHTML !== SAY0) { clearTimeout(talkT); btn.classList.remove('talk'); setTimeout(function () { say.innerHTML = SAY0; }, 450); }
+  }
+  var tipT = null, T0 = Date.now();
+  function watchView() {
+    var v = document.getElementById('view');
+    if (!v || v._dhTip) return;
+    v._dhTip = 1;
+    new MutationObserver(function () { clearTimeout(tipT); tipT = setTimeout(tabTip, 250); }).observe(v, { childList: true });
   }
   btn.addEventListener('mouseenter', function () { if (!btn.classList.contains('talk')) say.innerHTML = SAY0; });
   talk(SAY0, 6000);
-  window.addEventListener('hashchange', function () { sync(); tabTip(); }); setInterval(sync, 700); setTimeout(function () { sync(); tabTip(); }, 0);
+  window.addEventListener('hashchange', sync); setInterval(function () { sync(); watchView(); }, 700); setTimeout(function () { sync(); watchView(); tabTip(); }, 0);
   window.DHAide = { open: open, close: close, ask: answer };
 })();

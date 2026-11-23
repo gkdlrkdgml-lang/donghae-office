@@ -377,6 +377,8 @@ function startApp() {
   });
 
   // ---------- 순위 막대 목록 ----------
+  // 시·군을 눌러 바꿀 수 있는 곳 표시(data-reg) — 비서실장 말풍선이 이것이 있는 화면에서만 「다른 시·군 보는 법」 안내
+  var REG18 = ['춘천', '원주', '강릉', '동해', '태백', '속초', '삼척', '홍천', '횡성', '영월', '평창', '정선', '철원', '화천', '양구', '인제', '고성', '양양'];
   function rankList(i, onPick, selected) {
     var max = Math.max.apply(null, i.ranking.map(function (r) { return Math.abs(r.value); })) || 1;
     var rows = el('div', { class: 'rows' }), N = i.ranking.length;
@@ -384,7 +386,7 @@ function startApp() {
     i.ranking.forEach(function (r, ri) {
       var me = r.name === D.me;
       var w = Math.abs(r.value) / max * 100;
-      var row = el('div', { class: 'row' + (me ? ' me' : '') + (selected === r.name ? ' sel' : ''), role: onPick ? 'button' : null, tabindex: onPick ? '0' : null,
+      var row = el('div', { class: 'row' + (me ? ' me' : '') + (selected === r.name ? ' sel' : ''), role: onPick ? 'button' : null, tabindex: onPick ? '0' : null, 'data-reg': onPick && REG18.indexOf(r.name) >= 0 ? '1' : null,
         onclick: onPick ? function () { onPick(r.name); } : null }, [
         el('span', { class: 'rk', text: String(r.rank) }),
         el('span', { text: r.name }),
@@ -416,7 +418,7 @@ function startApp() {
       var m = c[0] === D.me, p = c[0] === selected && !m;
       var good = opts.lower ? i >= series.length - cut : i < cut, bad = opts.lower ? i < cut : i >= series.length - cut;
       var base = opts.plain ? (i === series.length - 1 ? '#1F6FD1' : '#8FB2E0') : good ? '#5DB88E' : bad ? '#E8A867' : '#8FB2E0';
-      cols.appendChild(el('div', { class: 'col', style: onPick ? 'cursor:pointer' : '', onclick: onPick ? function () { onPick(c[0]); } : null }, [
+      cols.appendChild(el('div', { class: 'col', style: onPick ? 'cursor:pointer' : '', 'data-reg': onPick && REG18.indexOf(c[0]) >= 0 ? '1' : null, onclick: onPick ? function () { onPick(c[0]); } : null }, [
         el('b', { text: big ? fmtK(c[1]) : fmt(c[1], digits || 0), style: 'font-size:11.5px' + (m ? ';color:#1F6FD1' : p ? ';color:#1B3A6B' : '') }),
         el('div', { class: 'c', style: 'height:' + (Math.abs(c[1]) / mx * 82).toFixed(1) + '%;background:' + (m ? '#1F6FD1' : p ? '#1B3A6B' : base) }),
         el('span', { text: c[0], style: 'font-size:12px;' + (m ? 'color:#1F6FD1;font-weight:700' : p ? 'color:#1B3A6B;font-weight:800;text-decoration:underline' : '') })]));
