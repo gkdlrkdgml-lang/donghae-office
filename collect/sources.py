@@ -1050,16 +1050,28 @@ def tasis(C):
 LICENSE_SVCS = [('general_restaurants', '일반음식점'), ('rest_cafes', '휴게음식점'), ('bakeries', '제과점'), ('lodgings', '숙박업'), ('rural_homestays', '농어촌민박')]
 
 
-def licenses(C, code='4211000'):
+def licenses(C, code='4211000', prev=None):
     """행정안전부 지방행정 인허가(공공데이터포털): 동해시 업종별 개업(인허가일)·폐업(폐업일) 월별 건수와 영업 중 업소 수, 최근 개업 업소."""
     key = urllib.parse.unquote(os.environ.get('DATA_GO_KR_KEY', '').strip())
     res = {'at': now().strftime('%Y-%m-%d'), 'kinds': {}, 'recent': []}
     y0 = str(int(now().strftime('%Y')) - 1)
+    import time as _t
+    pk = (prev or {}).get('kinds') or {}
+    res['stale'] = {}
     for svc, nm in LICENSE_SVCS:
-        rows, page = [], 1
-        while page <= 120:
-            t = http_get('https://apis.data.go.kr/1741000/%s/info' % svc, {'serviceKey': key, 'pageNo': str(page), 'numOfRows': '100', 'returnType': 'json',
-                                                                         'cond[OPN_ATMY_GRP_CD::EQ]': code}, tries=3, timeout=90)
+        # 일반음식점은 기관 서버가 느려 100건씩 받으면 60초 넘김(504) → 실패하면 25건씩으로 줄여 다시, 그래도 안 되면 지난 값 유지
+        rows, n, t0, failed = [], 100, _t.time(), None
+        while len(rows) < 12000:
+            page = len(rows) // n + 1
+            try:
+                t = http_get('https://apis.data.go.kr/1741000/%s/info' % svc, {'serviceKey': key, 'pageNo': str(page), 'numOfRows': str(n), 'returnType': 'json',
+                                                                             'cond[OPN_ATMY_GRP_CD::EQ]': code}, tries=2 if n < 100 else 1, timeout=90)
+            except Exception as e:  # noqa: BLE001
+                if n == 100 and len(rows) % 25 == 0:
+                    n = 25
+                    continue
+                failed = e
+                break
             body = (json.loads(t).get('response') or {}).get('body') or {}
             items = (body.get('items') or {}).get('item') or []
             if isinstance(items, dict):
@@ -1067,7 +1079,17 @@ def licenses(C, code='4211000'):
             rows += items
             if not items or len(rows) >= int(body.get('totalCount') or 0):
                 break
-            page += 1
+            if _t.time() - t0 > 600:
+                failed = RuntimeError('10분 넘음')
+                break
+        if failed is not None:
+            if nm in pk:
+                res['kinds'][nm] = pk[nm]
+                res['stale'][nm] = (prev or {}).get('at') or ''
+                res['recent'] += [x for x in ((prev or {}).get('recent') or []) if x[1] == nm]
+                log('  인허가 %s 실패(%s) → 지난 값(%s) 유지' % (nm, str(failed)[:80], res['stale'][nm]))
+                continue
+            raise failed
         rows = [r for r in rows if str(r.get('OPN_ATMY_GRP_CD')) == code]
         op, cl, active = {}, {}, 0
         for r in rows:

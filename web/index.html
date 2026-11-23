@@ -2283,7 +2283,7 @@ function startApp() {
     function sg(v) { return (v > 0 ? '+' : '') + fmt(v, 0); }
     view.style.gridTemplateColumns = 'minmax(0, 1.25fr) minmax(0, 1fr)';
     view.style.gridTemplateRows = '44px auto minmax(0, 1fr) minmax(0, 1fr)';
-    view.appendChild(el('div', { class: 'title' }, [el('h1', { text: D.me + '시 음식점·숙박 개업·폐업 · ' + Y + '년' }), el('span', { class: 'basis', text: '행정안전부 지방행정 인허가(공공데이터포털, 매일 갱신) · ' + (LC.at || '') + ' 기준 · 일반·휴게음식점·제과점·숙박업·농어촌민박' })]));
+    view.appendChild(el('div', { class: 'title' }, [el('h1', { text: D.me + '시 음식점·숙박 개업·폐업 · ' + Y + '년' }), el('span', { class: 'basis', text: '행정안전부 지방행정 인허가(공공데이터포털, 매일 갱신) · ' + (LC.at || '') + ' 기준' + Object.keys(LC.stale || {}).map(function (k) { return ' · ' + k + '은 ' + LC.stale[k] + ' 값(기관 서버 응답 지연)'; }).join('') + ' · 일반·휴게음식점·제과점·숙박업·농어촌민박' })]));
     var g = K['일반음식점'] || {}, h = K['휴게음식점'] || {}, sk = K['숙박업'] || {};
     cardsRow([
       { l: '올해 개업', sub: '1월 ~ 오늘', ic: 'doorIn', v: fmt(T.o, 0), u: '곳', chips: [['작년 같은 기간 ' + fmt(T.po, 0) + ' (' + sg(T.o - T.po) + ')', T.o >= T.po ? 'good' : 'bad']] },
