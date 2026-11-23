@@ -683,7 +683,7 @@ function startApp() {
     card('여자', 'female', '#D6457A', '#FCE6EE', fmt(me.female, 0), '명', me.prev_m_female ? me.female - me.prev_m_female : null);
     card('세대', 'house', '#2E8B57', '#E2F3E9', fmt(me.hh, 0), '세대', me.prev_m_hh ? me.hh - me.prev_m_hh : null, '세대', '세대당 ' + fmt(me.total / me.hh, 2) + '명');
     var V = A.vital || {}, VH = V.hsmb || {}, h1 = (VH.cur || {})[D.me], h1p = (VH.prev || {})[D.me];
-    if (h1) card('1인가구', 'people', '#7A4FC4', '#EFE9FB', fmt(h1.one, 0), '세대', h1p ? h1.one - h1p.one : null, '세대', '전체 세대의 ' + fmt(h1.one / h1.total * 100, 1) + '%' + (VH.live ? ' · ' + VH.live.replace(/-/g, '.') + ' 관리자 입력' : V.ym !== A.ym ? ' · ' + ymLabel(V.ym) : ''));
+    if (h1) card('1인가구', 'people', '#7A4FC4', '#EFE9FB', fmt(h1.one, 0), '세대', h1p ? h1.one - h1p.one : null, '세대', '전체 세대의 ' + fmt(h1.one / h1.total * 100, 1) + '%' + (VH.live ? '' : V.ym !== A.ym ? ' · ' + ymLabel(V.ym) : ''));
     card('인구 증감률', 'trend', '#7A4FC4', '#EFE9FB', pcI && pcI.me ? fmt(pcI.me.value, 2) : '–', '%', null, null, pcI && pcI.me ? '전년 같은 달 대비 · 도내 ' + pcI.me.rank + '위' : '');
     r1.lastChild.querySelector('.pd').remove();
     L.appendChild(r1);
