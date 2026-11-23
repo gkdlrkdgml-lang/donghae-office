@@ -1621,10 +1621,10 @@ function startApp() {
       function lastI(l) { for (var q = l.values.length - 1; q >= 0; q--) if (l.values[q] != null) return q; return -1; }
       lines.forEach(function (l) { l.values.forEach(function (v) { if (v != null) all.push(v); }); });
       var mn0 = Math.min.apply(null, all), mx0 = Math.max.apply(null, all), pad = Math.max(2, (mx0 - mn0) * 0.15), lo = opts.fit ? Math.floor(mn0 - pad) : 0;
-      var tickTxt = opts.fit ? fmt(mx0, 0) + (opts.unit || '') : fmtK(mx0); pL = Math.max(62, 14 + tickTxt.length * 8.2); pR = Math.max(pR, zoomed ? 40 : 26);
+      var tickTxt = opts.fit ? fmt(mx0, 0) + (opts.unit || '') : fmtK(mx0); pL = Math.max(62, 14 + tickTxt.length * 8.2); pR = Math.max(pR, zoomed ? 40 : 26); if (opts.pL) { pL = opts.pL; pR = opts.pR || 0; }
       var mx = Math.max.apply(null, all.concat([lo + 1])), span = mx - lo, mag = Math.pow(10, Math.floor(Math.log10(span))), top = lo + Math.ceil(span / mag * 2) / 2 * mag;
       if (opts.fit) top = lo + Math.ceil((mx0 + pad - lo) / 4) * 4;
-      function X(i) { return pL + (n <= 1 ? 0 : i / (n - 1)) * (W - pL - pR); }
+      function X(i) { return opts.center ? pL + (i + 0.5) / n * (W - pL - pR) : pL + (n <= 1 ? 0 : i / (n - 1)) * (W - pL - pR); }   // center: 아래 표의 칸 가운데와 맞춤
       function Y(v) { return pT + (1 - (v - lo) / (top - lo)) * (H - pT - pB); }
       var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H });
       (opts.bands || []).forEach(function (b, bi) {
@@ -1854,14 +1854,16 @@ function startApp() {
     var series = yrs.map(function (y, i) { return { name: y + '년', color: cols[i], values: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(function (m) { var key = y + ('0' + m).slice(-2); return key <= full && mon[key] != null && key >= ks[0].slice(0, 6) && !(key === ks[0].slice(0, 6) && ks[0].slice(6) !== '01') ? mon[key] : null; }) }; });
     var M12 = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
     var lines = series.map(function (sr, i) { return { name: sr.name, color: ['#9AA8BA', '#F0A04B', '#1F6FD1'][i], values: sr.values, width: i === 2 ? 4 : 2.5, area: i === 2, labels: i === 2, dash: i === 0 ? '6 4' : '' }; });
-    var tbl = el('table', { class: 'dt', style: 'margin-top:8px;font-size:15px' });
-    var th = el('tr', {}, [el('th', { text: '' })].concat(M12.map(function (m) { return el('th', { class: 'r', text: m }); })));
+    // 표 칸을 그래프의 달 위치와 똑같이(첫 칸 90px, 나머지 12칸 같은 너비)
+    var tbl = el('table', { class: 'dt', style: 'margin-top:8px;font-size:15px;table-layout:fixed;width:100%' });
+    tbl.appendChild(el('colgroup', {}, [el('col', { style: 'width:90px' })].concat(M12.map(function () { return el('col'); }))));
+    var th = el('tr', {}, [el('th', { text: '' })].concat(M12.map(function (m) { return el('th', { style: 'text-align:center', text: m }); })));
     tbl.appendChild(el('thead', {}, [th]));
     var tb = el('tbody');
-    series.forEach(function (sr, i) { tb.appendChild(el('tr', {}, [el('td', { html: '<i style="display:inline-block;width:12px;height:12px;border-radius:3px;background:' + lines[i].color + ';margin-right:6px"></i><b>' + sr.name + '</b>' })].concat(sr.values.map(function (v) { return el('td', { class: 'r', text: v == null ? '' : fmtK(v) }); })))); });
-    tb.appendChild(el('tr', {}, [el('td', { html: '<b>전년 대비</b>' })].concat(series[2].values.map(function (v, j) { var p = series[1].values[j]; if (v == null || !p) return el('td', {}); var c = (v / p - 1) * 100; return el('td', { class: 'r', html: '<b style="color:' + (c >= 0 ? '#1B7A4B' : '#C0392B') + '">' + (c >= 0 ? '+' : '') + fmt(c, 1) + '%</b>' }); }))));
+    series.forEach(function (sr, i) { tb.appendChild(el('tr', {}, [el('td', { html: '<i style="display:inline-block;width:12px;height:12px;border-radius:3px;background:' + lines[i].color + ';margin-right:6px"></i><b>' + sr.name + '</b>' })].concat(sr.values.map(function (v) { return el('td', { style: 'text-align:center', text: v == null ? '' : fmtK(v) }); })))); });
+    tb.appendChild(el('tr', {}, [el('td', { html: '<b>전년 대비</b>' })].concat(series[2].values.map(function (v, j) { var p = series[1].values[j]; if (v == null || !p) return el('td', {}); var c = (v / p - 1) * 100; return el('td', { style: 'text-align:center', html: '<b style="color:' + (c >= 0 ? '#1B7A4B' : '#C0392B') + '">' + (c >= 0 ? '+' : '') + fmt(c, 1) + '%</b>' }); }))));
     tbl.appendChild(tb);
-    var sec = panel('연도별 같은 달 비교', '월 방문자(외지인+외국인) · 명 · 굵은 파란 선 = ' + yE + '년', [lineChart(M12, lines, { step: 1 }), tbl]);
+    var sec = panel('연도별 같은 달 비교', '월 방문자(외지인+외국인) · 명 · 굵은 파란 선 = ' + yE + '년', [lineChart(M12, lines, { step: 1, center: true, pL: 90, pR: 0 }), tbl]);
     sec.style.gridColumn = 'span 2';
     // 요일별
     panel('요일별 하루 평균', '최근 1년 · 명', colChart([1, 2, 3, 4, 5, 6, 0].map(function (w) { return [WD[w], dow[w][1] ? dow[w][0] / dow[w][1] : 0]; }), null, null, 0, null, true, { plain: true, avgLabel: '평균' }));
