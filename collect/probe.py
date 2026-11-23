@@ -92,6 +92,22 @@ def kepco_probe():
             say('[한전] %s 실패 %s' % (nm, str(e)[:250]))
 
 
+def adminchk_probe():
+    import admin_sync, store, gzip, urllib.request as ur
+    key = os.environ.get('SUPABASE_SERVICE_KEY', '').strip()
+    h = {'apikey': key, 'Accept': 'application/json', 'User-Agent': 'donghae-office-collector/1.0'}
+    with ur.urlopen(ur.Request(admin_sync._url() + '/rest/v1/entries?select=ref_date,section,data,author_name,deleted,created_at&deleted=is.false&order=created_at.desc&limit=6', headers=h), timeout=30) as r:
+        for e in json.loads(r.read().decode('utf-8')):
+            say('[AC] E %s %s %s %s %s' % (e['created_at'][:16], e['ref_date'], e['section'], e['author_name'], json.dumps(e['data'], ensure_ascii=False)[:900]))
+    D = json.loads(gzip.decompress(store.get('data/data.json.gz')).decode('utf-8'))
+    A = D.get('admin') or {}
+    say('[AC] ym %s live %s' % (A.get('ym'), json.dumps(D.get('admin_live'), ensure_ascii=False)[:600]))
+    say('[AC] 동해 %s' % json.dumps((A.get('regions') or {}).get('동해'), ensure_ascii=False)[:900])
+    say('[AC] admm_live %s' % json.dumps(A.get('admm_live'), ensure_ascii=False))
+    for k, v in list((A.get('admm') or {}).items())[:12]:
+        say('[AC] admm %s %s' % (k, json.dumps(v, ensure_ascii=False)[:200]))
+
+
 def supabase_probe():
     import admin_sync, urllib.request as ur
     key = os.environ.get('SUPABASE_SERVICE_KEY', '').strip()
@@ -592,6 +608,8 @@ def main():
     if os.environ.get('PROBE_ONLY', '').startswith('sbtest_'):
         supabase_test(os.environ['PROBE_ONLY'][7:])
         return
+    if os.environ.get('PROBE_ONLY') == 'adminchk':
+        adminchk_probe(); return
     if os.environ.get('PROBE_ONLY') == 'supabase':
         supabase_probe()
         return
