@@ -55,8 +55,9 @@
   }
   main { padding: 24px 28px 20px; min-height: 0; display: grid; gap: 16px; }
   .title { grid-column: 1 / -1; display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
-  .title h1 { margin: 0; font-size: 28px; color: var(--navy); }
+  .title h1 { margin: 0; font-size: 28px; color: var(--navy); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; }
   .title span { font-size: 14px; color: var(--sub); }
+  .title > span:last-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; text-align: right; }
   section { background: var(--panel); border: 1px solid var(--line); box-shadow: 0 1px 2px rgba(20,30,50,.05); border-radius: 12px; padding: 16px 20px; min-height: 0; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
   section h2 { margin: 0; font-size: 20px; color: var(--navy); }
   section.zoom .landlist { overflow: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-y; }
@@ -158,7 +159,8 @@
   .dr b { font-size: 19px; } .dr .dn { font-size: 20px; font-weight: 800; text-align: right; color: var(--navy); }
   .dr .dl { text-align: right; font-size: 16px; } .dr .de { grid-column: 2 / 4; text-align: right; font-size: 12.5px; color: var(--sub); }
   section.dongs .note { margin: 10px 16px 14px; }
-  .subtabs { display: flex; gap: 6px; margin-left: 18px; margin-right: auto; }
+  .subtabs { display: flex; gap: 6px; margin-left: 18px; margin-right: auto; flex-shrink: 0; }
+  .subtabs button { white-space: nowrap; }
   .subtabs button { font: inherit; font-size: 16px; font-weight: 700; padding: 6px 16px; border-radius: 999px; border: 1.5px solid #C9D8EE; background: #fff; color: var(--sub); cursor: pointer; }
   .subtabs button.on { background: var(--navy); border-color: var(--navy); color: #fff; }
   .pc.click, section.click { position: relative; cursor: pointer; }
@@ -788,8 +790,8 @@ function startApp() {
     var liveIn = isMe && A.live && A.live.date;   // 동해시는 관리자 입력(공식 최신 달보다 늦은 기준일)이 쓰이는 중
     var mLab = liveIn ? ymLabel(A.ym).replace(/^\d+년 /, '') + '보다' : '지난달보다', yLab = liveIn ? ymLabel(A.prev_ym) + '보다' : '1년 새';
     view.appendChild(el('div', { class: 'title' }, [
-      el('h1', { text: full + ' 인구 ' + fmt(me.total, 0) + '명' + (dm != null ? ' · ' + mLab + ' ' + sgn(dm) + '명' : '') + (diff != null ? ' · ' + yLab + ' ' + sgn(diff) + '명' : '') }),
-      el('span', { text: (isMe ? '왼쪽 시·군을 누르면 그 지역 지표로 바뀝니다 · ' : '다시 누르면 동해시로 돌아옵니다 · ') + (liveIn ? '동해시는 ' + A.live.date + ' 기준 관리자 입력 · 다른 시·군은 행정안전부 주민등록 ' + ymLabel(A.ym) : '행정안전부 주민등록 인구 · ' + ymLabel(A.ym) + ' 기준') })
+      el('h1', { text: full + ' 인구 ' + fmt(me.total, 0) + '명' + (dm != null ? ' · ' + mLab + ' ' + sgn(dm) + '명' : '') + (diff != null && !liveIn ? ' · ' + yLab + ' ' + sgn(diff) + '명' : '') }),
+      el('span', { text: liveIn ? '동해시 ' + A.live.date.slice(5).replace('-', '.') + ' 관리자 입력 · 다른 시·군 주민등록 ' + ymLabel(A.ym) : '행정안전부 주민등록 · ' + ymLabel(A.ym) + ' 기준' })
     ]));
     var k = el('div', { class: 'pr1 fin' });
     var cn = 0, CIC = [['people', '#fff', 'rgba(255,255,255,.18)'], ['trend', '#7A4FC4', '#EFE9FB'], ['house', '#2E8B57', '#E2F3E9'], ['youth', '#1F6FD1', '#E4EEFB'], ['senior', '#1B7A6B', '#E0F2EE']];
