@@ -674,10 +674,13 @@ def apply_admin_input(state, S):
                 A['live']['prev_in'] = dict(pv[-1]['v'], date=pv[-1]['date'])
             tot = r['total']
             Y = A.get('youth') or {}
-            if Y.get('cur') and (v.get('age65') is not None or v.get('age15_64') is not None):
+            if Y.get('cur') and any(v.get(k) is not None for k in ('age65', 'age15_64', 'age19_34')):
                 Y['prev'] = dict(Y['cur'])
+                Y['cur']['total'] = tot
                 if v.get('age65') is not None:
                     Y['cur']['elderly'] = float(v['age65'])
+                if v.get('age19_34') is not None:
+                    Y['cur']['youth'] = float(v['age19_34'])
                 if v.get('age15_64') is not None:
                     Y['cur']['working'] = float(v['age15_64'])
             for iid, k in (('elderly', 'age65'), ('working_age', 'age15_64')):

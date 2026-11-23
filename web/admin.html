@@ -95,14 +95,15 @@
 
   <section data-scope="admin">
     <h2>② 주민등록 인구·세대</h2>
-    <p class="sub">행정 분야 · 입력하면 시장실의 동해시 인구 화면과 고령·생산연령 비율 순위에 바로 반영됩니다. <span id="popOff"></span></p>
+    <p class="sub">행정 분야 · 입력하면 시장실의 동해시 인구 화면(청년·고령층)과 고령·생산연령 비율 순위에 바로 반영됩니다. <span id="popOff"></span></p>
     <div class="grid">
       <label>총인구 <small>명</small><input class="num" data-s="pop" data-k="total"></label>
       <label>세대수 <small>세대</small><input class="num" data-s="pop" data-k="hh"></label>
       <label>남자 <small>명</small><input class="num" data-s="pop" data-k="male"></label>
       <label>여자 <small>명</small><input class="num" data-s="pop" data-k="female"></label>
       <label>65세 이상 <small>명 · 고령인구 비율 계산</small><input class="num" data-s="pop" data-k="age65"></label>
-      <label>15~64세 <small>명 · 생산연령 비율 계산</small><input class="num" data-s="pop" data-k="age15_64"></label>
+      <label>청년 19~34세 <small>명 · 청년층 인구</small><input class="num" data-s="pop" data-k="age19_34"></label>
+      <label>15~64세 <small>명 · 생산연령 비율(선택)</small><input class="num" data-s="pop" data-k="age15_64"></label>
     </div>
     <div class="warn" id="popWarn"></div>
     <details style="margin-top:12px" open><summary>행정동 인구 (선택 · 시장실 「행정동 3D 지도」와 행정동 표에 반영)</summary>
@@ -309,6 +310,14 @@
     var p = collectForm().e.pop || {}, w = [];
     if (p.total != null && p.male != null && p.female != null && p.male + p.female !== p.total) w.push('남자+여자(' + fmt(p.male + p.female) + ')가 총인구와 다릅니다.');
     if (p.age65 != null && p.total && p.age65 > p.total) w.push('65세 이상이 총인구보다 큽니다.');
+    if (p.age19_34 != null && p.total && p.age19_34 > p.total) w.push('청년(19~34세)이 총인구보다 큽니다.');
+    if (p.age15_64 != null && p.total && p.age15_64 < p.total * 0.4) w.push('15~64세가 총인구의 40%도 안 됩니다. 청년(19~34세) 인원이면 「청년 19~34세」 칸에 넣어 주세요.');
+    if (p.age15_64 != null && p.age65 != null && p.total && p.age15_64 + p.age65 > p.total) w.push('15~64세 + 65세 이상이 총인구보다 큽니다.');
+    var am = (collectForm().e.dong || {})._admm || {}, s65 = 0, n65 = 0, sT = 0, nT = 0;
+    Object.keys(am).forEach(function (k) { if (am[k].age65 != null) { s65 += am[k].age65; n65++; } if (am[k].total != null) { sT += am[k].total; nT++; } });
+    var nDong = document.querySelectorAll('[data-admm][data-k="total"]').length;
+    if (p.age65 != null && n65 === nDong && n65 && s65 !== p.age65) w.push('행정동 65세 이상 합계(' + fmt(s65) + ')가 시 전체 65세 이상(' + fmt(p.age65) + ')과 ' + fmt(Math.abs(s65 - p.age65)) + '명 다릅니다.');
+    if (p.total != null && nT === nDong && nT && sT !== p.total) w.push('행정동 인구 합계(' + fmt(sT) + ')가 총인구와 다릅니다.');
     $('popWarn').textContent = w.join(' ');
   });
   // 기준일별 최신 값으로 묶기

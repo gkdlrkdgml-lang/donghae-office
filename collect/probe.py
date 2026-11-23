@@ -92,6 +92,25 @@ def kepco_probe():
             say('[한전] %s 실패 %s' % (nm, str(e)[:250]))
 
 
+def fixyouth_probe():
+    # 2026-11-23 사용자 요청: 그날 인구 입력의 15~64세 칸 값(12,301)은 청년 19~34세 → age19_34로 옮김
+    import admin_sync, urllib.request as ur
+    key = os.environ.get('SUPABASE_SERVICE_KEY', '').strip()
+    h = {'apikey': key, 'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'donghae-office-collector/1.0', 'Prefer': 'return=representation'}
+    base = admin_sync._url() + '/rest/v1/entries'
+    with ur.urlopen(ur.Request(base + '?select=id,data&ref_date=eq.2026-11-23&section=eq.pop&deleted=is.false', headers=h), timeout=30) as r:
+        rows = json.loads(r.read().decode('utf-8'))
+    for e in rows:
+        d = dict(e['data'] or {})
+        if d.get('age15_64') == 12301 and 'age19_34' not in d:
+            d['age19_34'] = d.pop('age15_64')
+            req = ur.Request(base + '?id=eq.%s' % e['id'], data=json.dumps({'data': d}).encode(), headers=h, method='PATCH')
+            with ur.urlopen(req, timeout=30) as r:
+                say('[FY] 고침 %s' % r.read().decode('utf-8')[:400])
+        else:
+            say('[FY] 그대로 %s' % json.dumps(d, ensure_ascii=False))
+
+
 def adminchk_probe():
     import admin_sync, store, gzip, urllib.request as ur
     key = os.environ.get('SUPABASE_SERVICE_KEY', '').strip()
@@ -608,6 +627,8 @@ def main():
     if os.environ.get('PROBE_ONLY', '').startswith('sbtest_'):
         supabase_test(os.environ['PROBE_ONLY'][7:])
         return
+    if os.environ.get('PROBE_ONLY') == 'fixyouth':
+        fixyouth_probe(); return
     if os.environ.get('PROBE_ONLY') == 'adminchk':
         adminchk_probe(); return
     if os.environ.get('PROBE_ONLY') == 'supabase':
