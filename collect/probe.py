@@ -126,6 +126,7 @@ def adminchk_probe():
     for iid in ('elderly', 'working_age'):
         I = (D.get('indicators') or {}).get(iid) or {}
         say('[AC] %s %s' % (iid, json.dumps(I.get('me') or (I.get('values') or {}).get('동해'), ensure_ascii=False)[:200]))
+    say('[AC] hsmb %s %s' % (json.dumps(((A.get('vital') or {}).get('hsmb') or {}).get('cur', {}).get('동해'), ensure_ascii=False), ((A.get('vital') or {}).get('hsmb') or {}).get('live')))
     say('[AC] admm_live %s' % json.dumps(A.get('admm_live'), ensure_ascii=False))
     for k, v in list((A.get('admm') or {}).items())[:12]:
         say('[AC] admm %s %s' % (k, json.dumps(v, ensure_ascii=False)[:200]))

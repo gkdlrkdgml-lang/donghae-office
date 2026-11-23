@@ -102,6 +102,7 @@
       <label>남자 <small>명</small><input class="num" data-s="pop" data-k="male"></label>
       <label>여자 <small>명</small><input class="num" data-s="pop" data-k="female"></label>
       <label>65세 이상 <small>명 · 고령인구 비율 계산</small><input class="num" data-s="pop" data-k="age65"></label>
+      <label>1인가구 <small>세대</small><input class="num" data-s="pop" data-k="hh1"></label>
       <label>청년 19~34세 <small>명 · 청년층 인구</small><input class="num" data-s="pop" data-k="age19_34"></label>
       <label>15~64세 <small>명 · 생산연령 비율(선택)</small><input class="num" data-s="pop" data-k="age15_64"></label>
     </div>
@@ -310,6 +311,7 @@
     var p = collectForm().e.pop || {}, w = [];
     if (p.total != null && p.male != null && p.female != null && p.male + p.female !== p.total) w.push('남자+여자(' + fmt(p.male + p.female) + ')가 총인구와 다릅니다.');
     if (p.age65 != null && p.total && p.age65 > p.total) w.push('65세 이상이 총인구보다 큽니다.');
+    if (p.hh1 != null && p.hh != null && p.hh1 > p.hh) w.push('1인가구가 세대수보다 많습니다.');
     if (p.age19_34 != null && p.total && p.age19_34 > p.total) w.push('청년(19~34세)이 총인구보다 큽니다.');
     if (p.age15_64 != null && p.total && p.age15_64 < p.total * 0.4) w.push('15~64세가 총인구의 40%도 안 됩니다. 청년(19~34세) 인원이면 「청년 19~34세」 칸에 넣어 주세요.');
     if (p.age15_64 != null && p.age65 != null && p.total && p.age15_64 + p.age65 > p.total) w.push('15~64세 + 65세 이상이 총인구보다 큽니다.');

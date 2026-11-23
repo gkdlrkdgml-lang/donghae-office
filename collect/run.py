@@ -683,6 +683,12 @@ def apply_admin_input(state, S):
                     Y['cur']['youth'] = float(v['age19_34'])
                 if v.get('age15_64') is not None:
                     Y['cur']['working'] = float(v['age15_64'])
+            VH = (A.get('vital') or {}).get('hsmb') or {}
+            if v.get('hh1') is not None and (VH.get('cur') or {}).get(me):
+                A['vital'] = dict(A['vital']); VH = A['vital']['hsmb'] = dict(VH)
+                VH['prev'] = dict(VH.get('prev') or {}); VH['prev'][me] = dict(VH['cur'][me])
+                VH['cur'] = dict(VH['cur']); VH['cur'][me] = dict(VH['cur'][me], one=float(v['hh1']), total=float(r.get('hh') or VH['cur'][me].get('total') or 0))
+                VH['live'] = d
             for iid, k in (('elderly', 'age65'), ('working_age', 'age15_64')):
                 I = st['indicators'].get(iid)
                 if I and v.get(k) is not None and tot:
