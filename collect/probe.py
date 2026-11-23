@@ -140,6 +140,8 @@ def adminchk_probe():
         I = (D.get('indicators') or {}).get(iid) or {}
         say('[AC] %s %s' % (iid, json.dumps(I.get('me') or (I.get('values') or {}).get('동해'), ensure_ascii=False)[:200]))
     say('[AC] hsmb %s %s' % (json.dumps(((A.get('vital') or {}).get('hsmb') or {}).get('cur', {}).get('동해'), ensure_ascii=False), ((A.get('vital') or {}).get('hsmb') or {}).get('live')))
+    _V = A.get('vital') or {}
+    say('[AC] vital ym %s prev_ym %s hsmb %s' % (_V.get('ym'), _V.get('prev_ym'), json.dumps({k: (v.get('동해') if isinstance(v, dict) else v) for k, v in (_V.get('hsmb') or {}).items() if k in ('cur', 'prev', 'live', 'ym')}, ensure_ascii=False)))
     say('[AC] admm_live %s' % json.dumps(A.get('admm_live'), ensure_ascii=False))
     for k, v in list((A.get('admm') or {}).items())[:12]:
         say('[AC] admm %s %s' % (k, json.dumps(v, ensure_ascii=False)[:200]))
