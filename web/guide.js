@@ -143,7 +143,8 @@
   function open() {
     root.classList.add('open');
     if (!log.children.length) bubble('bot', '안녕하세요, <b>AI 비서실장 이정후</b>입니다. 무엇이 궁금하세요? 보실 화면을 찾아 바로 열어 드릴게요.');
-    setTimeout(function () { try { inp.focus(); } catch (e) {} }, 50);
+    // 터치 화면(태블릿·휴대폰)은 입력칸을 눌러야 키보드가 올라오게 — 마우스만 있는 PC·TV에서만 바로 입력
+    if (window.matchMedia && matchMedia('(pointer: fine)').matches && !('ontouchstart' in window) && !(navigator.maxTouchPoints > 0)) setTimeout(function () { try { inp.focus(); } catch (e) {} }, 50);
   }
   function close() { root.classList.remove('open'); }
   btn.onclick = open;
