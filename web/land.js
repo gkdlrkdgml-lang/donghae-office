@@ -348,13 +348,22 @@ window.DHLand = (function () {
         m.addSource('bld', { type: 'geojson', data: fc });
         m.addLayer({ id: 'bld', type: 'fill-extrusion', source: 'bld', paint: { 'fill-extrusion-height': ['get', 'h'], 'fill-extrusion-base': 0, 'fill-extrusion-opacity': 0.88,
           'fill-extrusion-color': ['case', ['==', ['get', 'me'], 1], '#D9534F', '#8FA3BF'] } });
-        var pop = new window.maplibregl.Popup({ closeButton: false });
-        m.on('mousemove', 'bld', function (e) { var q = e.features[0].properties; pop.setLngLat(e.lngLat).setHTML('<b>' + (q.nm || '건물') + '</b><br>' + (q.f !== '' ? '지상 ' + q.f + '층 · ' : '') + '높이 약 ' + Math.round(q.h) + 'm').addTo(m); });
-        m.on('mouseleave', 'bld', function () { pop.remove(); });
+        var pop = new window.maplibregl.Popup({ closeButton: false, closeOnClick: false, maxWidth: '320px' });
+        // 건물 정보: 마우스를 올리거나 누르면(태블릿·휴대폰은 누르기) 말풍선, 빈 곳을 누르면 닫힘
+        function bInfo(e) { var q = e.features[0].properties; pop.setLngLat(e.lngLat).setHTML('<b>' + (q.nm || '건물') + '</b><br>' + (q.f !== '' ? '지상 ' + q.f + '층 · ' : '') + '높이 약 ' + Math.round(q.h) + 'm' + (q.me == 1 ? '<br><span style="color:#D9534F">검토 필지 건물</span>' : '')).addTo(m); }
+        var pinned = false;
+        m.on('mousemove', 'bld', function (e) { if (!pinned) bInfo(e); });
+        m.on('mouseleave', 'bld', function () { if (!pinned) pop.remove(); });
+        m.on('click', function (e) {
+          var f = m.getLayer('bld') ? m.queryRenderedFeatures(e.point, { layers: ['bld'] }) : [];
+          if (f.length) { pinned = true; bInfo({ features: f, lngLat: e.lngLat }); } else { pinned = false; pop.remove(); }
+        });
+        m.on('mouseenter', 'bld', function () { m.getCanvas().style.cursor = 'pointer'; });
+        m.on('mouseleave', 'bld', function () { m.getCanvas().style.cursor = ''; });
         if (PL) drawPlan();
       });
       note.textContent = '주변 250m 건물 ' + feats.length + '동' + (feats.length ? ' (층수 있는 건물 ' + withF + '동)' : '') + ' · 높이는 도로명주소 건물의 지상층수 × 3.3m로 세운 예상치' +
-        (myH ? ' · 붉은 건물(검토 필지)은 건축물대장 높이 ' + fmt(myH, 1) + 'm' : mine ? ' · 붉은 건물 = 검토 필지' : '') + (feats.length && !withF ? ' · ⚠ 층수 자료가 없어 모두 1층 높이로 표시' : '') + ' · 마우스 오른쪽 끌기(태블릿은 두 손가락)로 돌리기·기울이기';
+        (myH ? ' · 붉은 건물(검토 필지)은 건축물대장 높이 ' + fmt(myH, 1) + 'm' : mine ? ' · 붉은 건물 = 검토 필지' : '') + (feats.length && !withF ? ' · ⚠ 층수 자료가 없어 모두 1층 높이로 표시' : '') + ' · 마우스 오른쪽 끌기(태블릿은 두 손가락)로 돌리기·기울이기 · 건물을 누르면 정보';
     }).catch(function (e) { note.textContent = '3D 지도를 열지 못했습니다: ' + e.message; });
   }
 
@@ -733,7 +742,7 @@ window.DHLand = (function () {
     p2.style.gridRow = '4';
     // ③ 지도(필지 경계 + 브이월드 레이어 켜고 끄기)
     var mb = el('div', { style: 'position:absolute;inset:0' });
-    var mwrap = el('div', { style: 'flex:1;min-height:0;border-radius:10px;overflow:hidden;background:#EEF3F8;position:relative' }, [mb,
+    var mwrap = el('div', { style: 'flex:1;min-height:0;border-radius:10px;overflow:hidden;background:#EEF3F8;position:relative;isolation:isolate' }, [mb,
       el('button', { type: 'button', style: 'position:absolute;right:10px;top:10px;z-index:500;font:inherit;font-size:17px;font-weight:900;cursor:pointer;border:0;border-radius:10px;padding:8px 14px;background:#D9534F;color:#fff;box-shadow:0 3px 10px rgba(0,0,0,.25)', text: '🏢 3D로 보기 · 도면 올리기', onclick: function (e) { e.stopPropagation(); open3D(d); } })]);
     var ll = center(d.feat.geometry);
     var p3 = H.panel('위치 · 필지 경계', (p.jibun || '') + ' · 브이월드 지도', el('div', { style: 'display:flex;flex-direction:column;gap:6px;flex:1;min-height:0' }, [
