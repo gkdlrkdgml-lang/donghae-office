@@ -111,6 +111,19 @@ def fixyouth_probe():
             say('[FY] 그대로 %s' % json.dumps(d, ensure_ascii=False))
 
 
+def refdate_probe():
+    # 2026-11-23 사용자 요청: 11-23로 올린 인구 입력의 기준일은 11-20
+    import admin_sync, urllib.request as ur
+    key = os.environ.get('SUPABASE_SERVICE_KEY', '').strip()
+    h = {'apikey': key, 'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'donghae-office-collector/1.0', 'Prefer': 'return=representation'}
+    base = admin_sync._url() + '/rest/v1/entries'
+    with ur.urlopen(ur.Request(base + '?select=id,ref_date,section,author_name&ref_date=in.(2026-11-20,2026-11-23)', headers=h), timeout=30) as r:
+        say('[RD] 전 %s' % r.read().decode('utf-8'))
+    req = ur.Request(base + '?ref_date=eq.2026-11-23&author_name=eq.' + __import__('urllib.parse').parse.quote('인구담당자'), data=json.dumps({'ref_date': '2026-11-20'}).encode(), headers=h, method='PATCH')
+    with ur.urlopen(req, timeout=30) as r:
+        say('[RD] 고침 %d건' % len(json.loads(r.read().decode('utf-8'))))
+
+
 def adminchk_probe():
     import admin_sync, store, gzip, urllib.request as ur
     key = os.environ.get('SUPABASE_SERVICE_KEY', '').strip()
@@ -634,6 +647,8 @@ def main():
         return
     if os.environ.get('PROBE_ONLY') == 'fixyouth':
         fixyouth_probe(); return
+    if os.environ.get('PROBE_ONLY') == 'refdate':
+        refdate_probe(); return
     if os.environ.get('PROBE_ONLY') == 'adminchk':
         adminchk_probe(); return
     if os.environ.get('PROBE_ONLY') == 'supabase':
