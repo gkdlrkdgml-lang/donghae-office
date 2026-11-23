@@ -124,6 +124,23 @@ def refdate_probe():
         say('[RD] 고침 %d건' % len(json.loads(r.read().decode('utf-8'))))
 
 
+def statemsg_probe():
+    import store, gzip
+    st = json.loads(gzip.decompress(store.get('cache/state.json.gz')).decode('utf-8'))
+    for k, v in sorted((st.get('status') or {}).items()):
+        say('[SM] %s | %s | %s | %s' % (k, v.get('ok'), v.get('at'), str(v.get('msg') or v.get('error') or '')[:160]))
+    D = json.loads(gzip.decompress(store.get('data/data.json.gz')).decode('utf-8'))
+    def walk(o, path, depth):
+        if depth > 3 or not isinstance(o, dict):
+            return
+        for k, v in o.items():
+            if k in ('ym', 'period', 'year', 'month', 'latest', 'prd', 'base_ym', 'date', 'ymd', 'prev_ym') and isinstance(v, (str, int)):
+                say('[PD] %s.%s = %s' % (path, k, v))
+            elif isinstance(v, dict):
+                walk(v, path + '.' + k, depth + 1)
+    walk(D, 'D', 0)
+
+
 def adminchk_probe():
     import admin_sync, store, gzip, urllib.request as ur
     key = os.environ.get('SUPABASE_SERVICE_KEY', '').strip()
@@ -655,6 +672,8 @@ def main():
         fixyouth_probe(); return
     if os.environ.get('PROBE_ONLY') == 'refdate':
         refdate_probe(); return
+    if os.environ.get('PROBE_ONLY') == 'statemsg':
+        statemsg_probe(); return
     if os.environ.get('PROBE_ONLY') == 'adminchk':
         adminchk_probe(); return
     if os.environ.get('PROBE_ONLY') == 'supabase':
