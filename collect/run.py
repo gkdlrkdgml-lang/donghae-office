@@ -248,7 +248,7 @@ def collect(state, S, C):
             ok(state, 'eco_ind', '%s년' % L['eco_ind']['year'])
         except Exception as e:  # noqa: BLE001
             fail(state, 'eco_ind', e)
-    if stale('social', 7) or 'ltc' not in (L.get('social') or {}) or '--force-life' in sys.argv:
+    if stale('social', 3) or 'ltc' not in (L.get('social') or {}) or '--force-life' in sys.argv:
         try:
             L['social'] = sources.social(S, C)
             ok(state, 'social', '시설 %s · 수급 %s' % (L['social'].get('fac_year'), L['social'].get('rcp_year')))
@@ -267,7 +267,7 @@ def collect(state, S, C):
             ok(state, 'attr', '최신 %s · %d개월' % (L['attr']['latest'], len(L['attr']['months'])))
         except Exception as e:  # noqa: BLE001
             fail(state, 'attr', e)
-    if stale('stores', 7) or '--force-stores' in sys.argv:
+    if stale('stores', 3) or '--force-stores' in sys.argv:
         try:
             L['stores'] = sources.stores(C, os.path.join(WEB_DATA, 'stores_snap.json'))
             ok(state, 'stores', '%s 기준 %d개 시·군' % (L['stores']['stdrYm'], len(L['stores']['regions'])))
@@ -288,7 +288,7 @@ def collect(state, S, C):
             fail(state, 'ordin', e)
     # 에너지·전력(한전): 새 달은 보통 2달 뒤 공표 → 사흘마다 확인
     # 농업 및 수산(KOSIS: 2025 농림어업총조사·농림어업조사·경지면적·친환경 인증) — 주 1회
-    if stale('agri', 7) or not (L.get('agri') or {}).get('tables') or '--force-agri' in sys.argv:
+    if stale('agri', 3) or not (L.get('agri') or {}).get('tables') or '--force-agri' in sys.argv:
         try:
             L['agri'] = agri.collect(C)
             ok(state, 'agri', ', '.join('%s %s' % (k, v['year']) for k, v in L['agri']['tables'].items()) + (' · 실패 %s' % list(L['agri']['errors']) if L['agri']['errors'] else ''))
@@ -343,7 +343,7 @@ def collect(state, S, C):
         if pm:
             set_ind(state, 'pw_yoy', {k: (v['total'] - pm[k]['total']) / pm[k]['total'] * 100 for k, v in cm.items() if pm.get(k) and pm[k]['total']},
                     lab + ' (전년 같은 달 대비) · 한전')
-    if stale('employ', 7) or '--force-life' in sys.argv:
+    if stale('employ', 3) or '--force-life' in sys.argv:
         try:
             L['employ'] = sources.employment(S, C)
             ok(state, 'employ', L['employ']['period'])
@@ -353,7 +353,7 @@ def collect(state, S, C):
     if EM.get('period'):
         pdl = EM['period']
         set_ind(state, 'emp_rate', {k: v.get('rate_1564') for k, v in EM['data'][pdl].items() if v.get('rate_1564') is not None}, '%s년 %s반기 15~64세 고용률(통계청 지역별고용조사)' % (pdl[:4], '상' if pdl.endswith('01') or '1/2' in pdl else '하'))
-    if stale('bokjiro', 7) or '--force-life' in sys.argv:
+    if stale('bokjiro', 3) or '--force-life' in sys.argv:
         try:
             L['bokjiro'] = sources.bokjiro(C)
             ok(state, 'bokjiro', L['bokjiro']['ym'])
@@ -380,7 +380,7 @@ def collect(state, S, C):
         set_ind(state, 'soc_dis', {k: v.get('disabled_rate') for k, v in SO['recipients'].items() if v.get('disabled_rate') is not None}, '%s년 등록장애인 비율(행정안전부)' % SO.get('rcp_year'))
     if SO.get('elderly'):
         set_ind(state, 'soc_old', {k: v.get('per1000') for k, v in SO['elderly'].items() if v.get('per1000') is not None}, '%s년 노인 천명당 노인여가복지시설(통계청)' % SO.get('old_year'))
-    if stale('tasis', 7) or 'young' not in (L.get('tasis') or {}) or '--force-life' in sys.argv:
+    if stale('tasis', 2) or 'young' not in (L.get('tasis') or {}) or '--force-life' in sys.argv:
         try:
             L['tasis'] = sources.tasis(C)
             ok(state, 'tasis', L['tasis']['ym'])
