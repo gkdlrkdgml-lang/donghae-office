@@ -718,20 +718,16 @@ def portapt_probe():
 
 def nlic_probe():
     import re as _re
-    for u in ('https://www.nlic.go.kr/nlic/harborPrdlstGtqy.action', 'https://www.nlic.go.kr/nlic/seaHarborGtqy.action'):
-        try:
-            h = http_get(u, {}, tries=1, timeout=40)
-            print('[NL] %s 길이 %d' % (u, len(h)))
-            for m in _re.findall(r'<(?:form|select|input)[^>]*>', h)[:40]:
-                print('[NL] tag', m[:200])
-            sel = _re.findall(r'<option[^>]*value="([^"]*)"[^>]*>([^<]*)<', h)
-            print('[NL] options', [(v, t.strip()) for v, t in sel if '동해' in t or '묵호' in t or len(sel) < 80][:80])
-            for m in sorted(set(_re.findall(r'[\'"]([/\w.]*\.(?:action|do|json)[^\'"]*)[\'"]', h)))[:40]:
-                print('[NL] url', m)
-            for m in _re.findall(r'\$\.ajax\(\{[^}]{0,400}', h)[:6]:
-                print('[NL] ajax', m.replace('\n', ' ')[:400])
-        except Exception as e:  # noqa: BLE001
-            print('[NL] %s 실패 %s' % (u, str(e)[:300]))
+    u = 'https://www.nlic.go.kr/nlic/harborPrdlstGtqy.action'
+    h = http_get(u, {}, tries=1, timeout=40)
+    i = h.find("S_HARBOR_CODE' name")
+    print('[NL] harbor', h[i:i + 2500].replace('\n', ' '))
+    for kw in ('S_HARBOR_CODE', 'ajax', 'json', 'tbody'):
+        for m in _re.finditer(kw, h):
+            print('[NL] ctx %s: %s' % (kw, h[max(0, m.start() - 150):m.start() + 250].replace('\n', ' ')))
+            break
+    j = h.find('<table')
+    print('[NL] table', _re.sub(r'\s+', ' ', h[j:j + 3000]))
 
 
 def main():
