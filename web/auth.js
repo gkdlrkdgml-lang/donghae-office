@@ -50,8 +50,9 @@ window.DHAuth = (function () {
         '<form class="card" autocomplete="on"><h1>동해시 AI 시장실</h1><p>승인된 계정으로 로그인해 주세요.</p>' +
         '<label>아이디<input name="id" autocomplete="username" required></label>' +
         '<label>비밀번호<input name="pw" type="password" autocomplete="current-password" required></label>' +
+        '<label style="display:flex;align-items:center;gap:8px;font-weight:700;margin-top:14px"><input type="checkbox" name="keep" checked style="width:20px;height:20px">이 기기에서 계속 로그인(로그인이 풀려도 자동으로 다시 로그인)</label>' +
         '<button type="submit">로그인</button><div class="msg"></div>' +
-        '<div class="foot">처음이시면 <a href="admin.html">관리자 화면</a>에서 가입 신청 후 승인을 받으세요. 한 번 로그인하면 이 기기에서는 계속 유지됩니다.<br><a href="#" id="dhInstLink">⤓ 이 기기 바탕화면(홈 화면)에 앱으로 설치</a></div></form>';
+        '<div class="foot">처음이시면 <a href="admin.html">관리자 화면</a>에서 가입 신청 후 승인을 받으세요. 시장실 TV처럼 늘 켜 두는 기기는 「계속 로그인」을 켜 두세요. 여러 사람이 쓰는 PC에서는 끄세요.<br><a href="#" id="dhInstLink">⤓ 이 기기 바탕화면(홈 화면)에 앱으로 설치</a></div></form>';
       document.body.appendChild(box);
       var il = box.querySelector('#dhInstLink');
       if (il) { if (window.DHInstall && !DHInstall.installed()) { il.style.display = DHInstall.ready() ? '' : 'none'; window.addEventListener('beforeinstallprompt', function () { setTimeout(function () { il.style.display = ''; }, 0); }); } if (window.DHInstall && !DHInstall.installed()) il.onclick = function (e) { e.preventDefault(); DHInstall.open(); }; else il.remove(); }
@@ -63,24 +64,59 @@ window.DHAuth = (function () {
   }
   function hide() { if (box) { box.remove(); box = null; } }
 
+  // ---------- 로그인 유지 ----------
+  // 30분마다 화면을 새로 고칠 때 인터넷이 잠깐 끊기거나 토큰 갱신이 꼬여도 로그인 화면으로 떨어지지 않게:
+  //  ① 잠깐 실패하면 몇 번 다시 시도  ② 그래도 안 되면 이 기기에 저장한 승인 정보로 화면을 열고 다음에 다시 확인
+  //  ③ 세션이 정말 사라졌으면 「이 기기에서 계속 로그인」으로 저장한 아이디·비밀번호로 조용히 다시 로그인
+  var RK = 'dh_auth_role', AK = 'dh_auth_keep';
+  function lsGet(k) { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } }
+  function lsSet(k, v) { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  function enc(t) { try { return btoa(unescape(encodeURIComponent(t))).split('').reverse().join(''); } catch (e) { return ''; } }
+  function dec(t) { try { return decodeURIComponent(escape(atob(String(t).split('').reverse().join('')))); } catch (e) { return ''; } }
+  function wait(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  function profileRetry(n) {   // 네트워크 오류면 다시 시도, 세션 없음(null)은 바로 돌려줌
+    return profile().catch(function (e) {
+      if (n <= 0) throw e;
+      return wait(n >= 3 ? 1500 : n === 2 ? 4000 : 9000).then(function () { return profileRetry(n - 1); });
+    });
+  }
+  function silentLogin() {
+    var k = lsGet(AK);
+    if (!k || !k.id || !k.pw) return Promise.resolve(null);
+    return signIn(k.id, dec(k.pw)).then(function () { return profileRetry(2); }).catch(function (e) {
+      if (/Invalid login/i.test((e && e.message) || '')) lsSet(AK, null);   // 비밀번호가 바뀐 경우만 지움
+      return null;
+    });
+  }
+  function ok(p) { if (p && ROLE_OK[p.profile.role]) { lsSet(RK, { role: p.profile.role, uid: p.session.user.id, at: Date.now() }); return true; } return false; }
+
   // 승인된 계정이 로그인할 때까지 기다림
   function gate() {
     if (!sb) return Promise.reject(new Error('로그인 설정(admin-config.js)이 없습니다'));
-    return profile().catch(function () { return null; }).then(function (p) {
+    return profileRetry(3).then(function (p) {
+      if (ok(p)) return p;
+      if (p) return p;                    // 승인 안 됨·중지 → 아래에서 안내
+      return silentLogin().then(function (q) { return ok(q) ? q : (q || null); });
+    }, function () {
+      // 계속 연결이 안 됨: 이 기기에서 승인된 적이 있으면 마지막 자료로 일단 화면을 엶
+      var c = lsGet(RK);
+      if (c && ROLE_OK[c.role]) return { session: null, profile: { role: c.role }, offline: true };
+      return null;
+    }).then(function (p) {
       if (p && ROLE_OK[p.profile.role]) return p;
       return new Promise(function (resolve) {
         var b = overlay(p ? (p.profile.role === 'off' ? '사용이 중지된 계정입니다.' : '아직 승인되지 않은 계정입니다. 최고관리자의 승인을 기다려 주세요.') : '', p ? 'err' : '');
         var f = b.querySelector('form');
         f.onsubmit = function (e) {
           e.preventDefault();
-          var id = f.id.value.trim(), pw = f.pw.value;
+          var id = f.id.value.trim(), pw = f.pw.value, keep = f.keep ? f.keep.checked : true;
           overlay('로그인 중…', 'info');
-          signIn(id, pw).then(profile).then(function (q) {
-            if (q && ROLE_OK[q.profile.role]) { hide(); resolve(q); }
+          signIn(id, pw).then(function () { return profileRetry(2); }).then(function (q) {
+            if (ok(q)) { lsSet(AK, keep ? { id: id, pw: enc(pw) } : null); hide(); resolve(q); }
             else overlay(q && q.profile.role === 'off' ? '사용이 중지된 계정입니다.' : '아직 승인되지 않은 계정입니다. 최고관리자의 승인을 기다려 주세요.', 'err');
           }).catch(function (err) {
             var t = (err && err.message) || String(err);
-            overlay(/Invalid login/i.test(t) ? '아이디 또는 비밀번호가 맞지 않습니다.' : t, 'err');
+            overlay(/Invalid login/i.test(t) ? '아이디 또는 비밀번호가 맞지 않습니다.' : /fetch|network|Failed/i.test(t) ? '인터넷 연결을 확인해 주세요.' : t, 'err');
           });
         };
         setTimeout(function () { try { f.id.focus(); } catch (e) {} }, 50);
@@ -94,10 +130,15 @@ window.DHAuth = (function () {
     if (!window.DecompressionStream) return Promise.reject(new Error('이 브라우저는 자료 압축 풀기를 지원하지 않습니다(최신 Chrome·Edge를 써 주세요)'));
     return new Response(blob.stream().pipeThrough(new DecompressionStream('gzip'))).text();
   }
-  function loadData() {
+  function download() {
     return sb.storage.from('dash').download('data/data.json.gz?t=' + Date.now()).then(function (r) {
       if (r.error) throw r.error;
       return gunzip(r.data);
+    });
+  }
+  function loadData() {
+    return download().catch(function (e) {   // 로그인이 풀려 못 받았으면 조용히 다시 로그인해서 한 번 더
+      return silentLogin().then(function (q) { if (q && ok(q)) return download(); throw e; });
     }).then(function (txt) {
       var d = JSON.parse(txt);
       if (window.caches) caches.open(CK).then(function (c) { c.put(CKEY, new Response(txt)); }).catch(function () {});
@@ -110,7 +151,7 @@ window.DHAuth = (function () {
       });
     });
   }
-  function logout() { return sb.auth.signOut().then(function () { if (window.caches) caches.delete(CK); }); }
+  function logout() { lsSet(AK, null); lsSet(RK, null); return sb.auth.signOut().then(function () { if (window.caches) caches.delete(CK); }); }
   function fatal(e) {
     overlay('화면을 열지 못했습니다: ' + ((e && e.message) || e), 'err');
   }
