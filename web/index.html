@@ -2608,6 +2608,61 @@ function startApp() {
   }
   // 상하수도: 환경부 상·하수도 통계 + 행안부 지방공기업 경영정보(KOSIS), 강원 18개 시·군 비교
   var watMet = 'sew_rate';
+  // ---------- 상하수도 › 수돗물 수질검사(K-water 상수도 법정수질, 월별) ----------
+  var wtrTab = 'q', wqMet = 'hr';
+  function screenWaterTabs() {
+    var L = D.life || {}, tabs = [];
+    if (L.waterq && L.waterq.months) tabs.push(['q', '수돗물 수질검사 · 최신']);
+    if (L.water) tabs.push(['stat', '상하수도 통계 · 18개 시·군']);
+    if (!tabs.some(function (t) { return t[0] === wtrTab; })) wtrTab = tabs.length ? tabs[0][0] : 'stat';
+    if (wtrTab === 'q') screenWaterQ(); else screenWater();
+    var title = view.querySelector('.title');
+    if (title && tabs.length > 1) title.insertBefore(tabsBar(tabs, wtrTab, function (k) { wtrTab = k; }), title.children[1] || null);
+  }
+  function screenWaterQ() {
+    var Q = (D.life || {}).waterq || {}, M = Q.months || {}, mk = Object.keys(M).sort(), lm = mk[mk.length - 1];
+    var rows = M[lm] || [], regs = {};
+    rows.forEach(function (r) { regs[r.sg.replace(/(시|군)$/, '')] = 1; });
+    var SN = regs[regName()] ? regName() : D.me, isMe = SN === D.me;
+    function mine(m, n) { return (M[m] || []).filter(function (r) { return r.sg.replace(/(시|군)$/, '') === (n || SN); }); }
+    function avg(a, k) { var v = a.map(function (r) { return r[k]; }).filter(function (x) { return typeof x === 'number'; }); return v.length ? v.reduce(function (t, x) { return t + x; }, 0) / v.length : null; }
+    function ymL(k) { return k ? k.slice(0, 4) + '년 ' + Number(k.slice(4)) + '월' : ''; }
+    var my = mine(lm);
+    var bad = my.filter(function (r) { return (r.tc && r.tc !== '불검출') || (r.ec && r.ec !== '불검출') || (r.tw && r.tw !== '적합') || (r.od && r.od !== '적합') || (r.tu != null && r.tu > 0.5) || (r.rc != null && r.rc > 4) || (r.ph != null && (r.ph < 5.8 || r.ph > 8.5)); });
+    lifeTitle(fullName(SN) + ' 수돗물 수질검사', '한국수자원공사 상수도 법정수질 · ' + ymL(lm) + ' 채수 · 정수장 ' + my.length + '곳' + (isMe ? '' : ' · 다시 누르면 동해시로'));
+    view.style.gridTemplateColumns = 'minmax(0, 1fr) minmax(0, 1.3fr)';
+    view.style.gridTemplateRows = '44px auto minmax(0, 1fr) minmax(0, 1fr)';
+    var rc = avg(my, 'rc'), tu = Math.max.apply(null, my.map(function (r) { return r.tu || 0; })), hr = avg(my, 'hr'), ph = avg(my, 'ph');
+    cardsRow([
+      { l: '주요 항목 판정', sub: ymL(lm) + ' · 정수장 ' + my.length + '곳', ic: 'house', col: bad.length ? '#D9534F' : '#2E8B57', bg: bad.length ? '#FDE7E4' : '#E2F3E9', v: bad.length ? bad.length + '곳 확인' : '모두 기준 안', u: '', chips: [['대장균·맛·냄새·탁도·잔류염소·pH', '']] },
+      { l: '잔류염소', sub: '정수장 평균 · 기준 4.0 이하', ic: 'trend', col: '#1F6FD1', bg: '#E8F0FC', v: fmt(rc, 2), u: 'mg/L', chips: [] },
+      { l: '탁도', sub: '가장 높은 곳 · 기준 0.5 이하', ic: 'trend', col: '#2AAFB8', bg: '#E1F5F6', v: fmt(tu, 2), u: 'NTU', chips: [] },
+      { l: '경도', sub: '정수장 평균 · 낮을수록 단물', ic: 'trend', col: '#7A4FC4', bg: '#EFE9FB', v: fmt(hr, 0), u: 'mg/L', chips: [ph != null ? ['pH ' + fmt(ph, 1), ''] : null] }
+    ]);
+    // 18개 시·군 비교
+    var MET = [['hr', '경도', 'mg/L', 0], ['rc', '잔류염소', 'mg/L', 2], ['tu', '탁도', 'NTU', 2]];
+    var met = MET.filter(function (m) { return m[0] === wqMet; })[0] || MET[0];
+    var names = Object.keys(regs), vals = names.map(function (n) { return [n, avg(mine(lm, n), met[0])]; }).filter(function (x) { return x[1] != null; }).sort(function (a, b) { return b[1] - a[1]; });
+    var I = { name: met[1], digits: met[3], unit: met[2], ranking: vals.map(function (x, i) { return { name: x[0], rank: i + 1, value: x[1] }; }) };
+    var sw = el('div', { class: 'chips', style: 'flex-wrap:nowrap;gap:6px;margin-bottom:6px' }, MET.map(function (m) {
+      return el('button', { type: 'button', class: 'chip', style: 'cursor:pointer;border:0;font-weight:800' + (m[0] === wqMet ? ';background:#1B3A6B;color:#fff' : ''), text: m[1], onclick: function () { wqMet = m[0]; render(); } }); }));
+    var p1 = panel(met[1] + ' · 강원 ' + vals.length + '개 시·군', ymL(lm) + ' · 정수장 평균 · 높은 순(좋고 나쁨 판정 안 함) · 누르면 그 지역', [sw, rankList(I, regPick, regSel)]);
+    p1.style.gridRow = '3 / span 2';
+    // 정수장별 표
+    var hd = ['정수장', '채수일', '잔류염소', '탁도', 'pH', '경도', '대장균', '맛·냄새'];
+    panel('정수장별 검사 결과 · ' + fullName(SN), ymL(lm) + ' · mg/L·NTU · 검사기관 ' + ((my[0] || {}).lab || ''), el('table', { class: 'dt big' }, [
+      el('thead', {}, [el('tr', {}, hd.map(function (h, j) { return el('th', { class: j >= 2 && j <= 5 ? 'r' : '', text: h }); }))]),
+      el('tbody', {}, my.map(function (r) { var ok2 = (!r.tc || r.tc === '불검출') && (!r.ec || r.ec === '불검출'); return el('tr', {}, [
+        el('td', { html: '<b>' + r.f + '</b>' }), el('td', { text: r.d ? Number(r.d.slice(4, 6)) + '.' + Number(r.d.slice(6)) : '' }),
+        el('td', { class: 'r', text: fmt(r.rc, 2) }), el('td', { class: 'r', text: fmt(r.tu, 2) }), el('td', { class: 'r', text: fmt(r.ph, 1) }), el('td', { class: 'r', text: fmt(r.hr, 0) }),
+        el('td', { html: '<b style="color:' + (ok2 ? '#2E8B57' : '#D9534F') + '">' + (ok2 ? '불검출' : '검출') + '</b>' }), el('td', { text: (r.tw || '') + (r.od && r.od !== r.tw ? '·' + r.od : '') })]); }))]));
+    // 월별 잔류염소·탁도
+    var lab = mk.map(function (k) { return Number(k.slice(4)) + '월'; });
+    panel('월별 잔류염소·탁도 · ' + fullName(SN), mk.length ? ymL(mk[0]) + '~' + ymL(lm) + ' · 정수장 평균 · mg/L·NTU' : '', lineChart(lab, [
+      { name: '잔류염소', color: '#1F6FD1', values: mk.map(function (k) { var v = avg(mine(k), 'rc'); return v == null ? null : Math.round(v * 100) / 100; }), width: 3.5, labels: true },
+      { name: '탁도', color: '#2AAFB8', values: mk.map(function (k) { var v = avg(mine(k), 'tu'); return v == null ? null : Math.round(v * 100) / 100; }), width: 3 }], { fit: true, unit: '' }));
+  }
+
   function screenWater() {
     var WT = ((D.life || {}).water || {}).tables || {};
     function T(tk) { return WT[tk] || null; }
@@ -3044,7 +3099,7 @@ function startApp() {
     panel('날짜별 위판 금액 · ' + short(C.name), ymL + ' · 백만원', dk.length ? lineChart(dk.map(function (d) { return +d.slice(8) + '일'; }), [{ name: '', color: '#1F6FD1', area: true, width: 3, values: dk.map(function (d) { return C.days[d][0] / 1e6; }) }], { fit: true, step: 3 }) : el('div', { class: 'empty', text: isMe ? '자료 없음' : '날짜별은 동해시수협만 봅니다' }));
   }
 
-  var SCREENS = { agri: screenAgriTabs, flow: screenFlow, main: screenMain, admin: screenAdminTabs, welfare: screenWelfareTabs, social: screenSocial, traffic: screenTrafficTabs, rail: screenRail, port: screenPort, env: screenEnvTabs, water: screenWater, power: screenPower, land: function () { window.DHLand.screen({ el: el, panel: panel, view: view, render: render, D: D, baseLayer: baseLayer, rankList: rankList }); }, tour: screenTourTabs, economy: screenEconomyTabs, finance: screenFinance, frame: screenFrame };
+  var SCREENS = { agri: screenAgriTabs, flow: screenFlow, main: screenMain, admin: screenAdminTabs, welfare: screenWelfareTabs, social: screenSocial, traffic: screenTrafficTabs, rail: screenRail, port: screenPort, env: screenEnvTabs, water: screenWaterTabs, power: screenPower, land: function () { window.DHLand.screen({ el: el, panel: panel, view: view, render: render, D: D, baseLayer: baseLayer, rankList: rankList }); }, tour: screenTourTabs, economy: screenEconomyTabs, finance: screenFinance, frame: screenFrame };
   function render() {
     view.textContent = '';
     view.className = '';
