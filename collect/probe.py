@@ -684,13 +684,21 @@ def econ3_probe():
             print('[%s] %s' % (name, r[:700].replace('\n', ' ')))
         except Exception as e:  # noqa: BLE001
             print('[%s] 실패 %s' % (name, str(e)[:300]))
-    t('아파트', 'https://apis.data.go.kr/1613000/RTMSDataSvcAptTrade/getRTMSDataSvcAptTrade', {'LAWD_CD': '51170', 'DEAL_YMD': '202610', 'numOfRows': '5', 'pageNo': '1'})
-    t('아파트전월세', 'https://apis.data.go.kr/1613000/RTMSDataSvcAptRent/getRTMSDataSvcAptRent', {'LAWD_CD': '51170', 'DEAL_YMD': '202610', 'numOfRows': '3', 'pageNo': '1'})
+    #t('아파트', 'https://apis.data.go.kr/1613000/RTMSDataSvcAptTrade/getRTMSDataSvcAptTrade', {'LAWD_CD': '51170', 'DEAL_YMD': '202610', 'numOfRows': '5', 'pageNo': '1'})
+    #t('아파트전월세', 'https://apis.data.go.kr/1613000/RTMSDataSvcAptRent/getRTMSDataSvcAptRent', {'LAWD_CD': '51170', 'DEAL_YMD': '202610', 'numOfRows': '3', 'pageNo': '1'})
     B = 'https://apis.data.go.kr/1192000/'
-    for path in ('SsopVsslEtryndHarbor2/Info', 'SsopVsslEtryndHarbor2/InfoYm', 'SsopVsslEtryndHarbor2/getInfo', 'SsopVsslEtryndHarbor2'):
-        t('입출항 ' + path, B + path, {'sym': '202609', 'eym': '202610', 'numOfRows': '100', 'pageNo': '1'})
-    for path in ('SsopCargFrghtCoa2/Info', 'SsopCargFrghtCoa/Info', 'SsopCargFrghtCoa2'):
-        t('연안화물 ' + path, B + path, {'sym': '202609', 'eym': '202610', 'numOfRows': '100', 'pageNo': '1'})
+    import re as _re
+    for svc in ('SsopVsslEtryndHarbor2', 'SsopCargFrghtCoa2', 'SsopCargFrghtCoa', 'SsopCargFrghtHarbor2', 'SsopCargTrnsHarbor2', 'SsopCargHarbor2', 'SsopContnHarbor2'):
+        for op, q in (('YM', {'sym': '202606', 'eym': '202612'}), ('Y', {'syear': '2026', 'eyear': '2026'})):
+            prm = {'serviceKey': k, 'numOfRows': '999', 'pageNo': '1'}; prm.update(q)
+            try:
+                r = http_get(B + svc + '/' + op, prm, tries=1, timeout=40)
+                yms = sorted(set(_re.findall(r'<useYm>(\d+)</useYm>', r)))
+                tot = _re.findall(r'<totalCount>(\d+)', r)
+                dh = [m for m in _re.findall(r'<item>(.*?)</item>', r, _re.S) if '동해' in m or '묵호' in m]
+                print('[항만] %s/%s 총%s 월%s 동해묵호%d %s' % (svc, op, tot, yms[-4:], len(dh), (dh[0] if dh else r[:300]).replace('\n', ' ')[:500]))
+            except Exception as e:  # noqa: BLE001
+                print('[항만] %s/%s 실패 %s' % (svc, op, str(e)[90:200]))
 
 
 def main():
