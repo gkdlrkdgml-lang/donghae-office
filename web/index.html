@@ -28,16 +28,19 @@
   html, body { margin: 0; height: 100%; background: #E9EDF2; overflow: hidden; }
   body { font-family: 'Noto Sans KR', 'Malgun Gothic', system-ui, sans-serif; color: var(--ink); font-variant-numeric: tabular-nums; }
   #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; background: var(--bg);
-           display: grid; grid-template-rows: 64px minmax(0, 1fr); }
-  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 18px; border-bottom: 1px solid var(--line); background: #FFFFFF; }
+           display: grid; grid-template-rows: 112px minmax(0, 1fr); }
+  header { display: grid; grid-template-columns: auto 1fr; grid-template-rows: 54px 58px; align-items: center; column-gap: 12px; padding: 0 18px; border-bottom: 1px solid var(--line); background: #FFFFFF; }
+  header .brand { grid-column: 1; grid-row: 1; }
+  header .hright { grid-column: 2; grid-row: 1; justify-self: end; }
+  header nav { grid-column: 1 / span 2; grid-row: 2; justify-content: space-between; border-top: 1px solid var(--line); height: 100%; align-items: center; }
   .brand { display: flex; align-items: center; gap: 12px; white-space: nowrap; font-size: 20px; font-weight: 700; color: var(--navy); }
-  .brand .slogan { font-size: 15px; font-weight: 600; color: var(--blue); padding-left: 14px; margin-left: 2px; border-left: 2px solid var(--line); }
+  .brand .slogan { display: none; font-size: 15px; font-weight: 600; color: var(--blue); padding-left: 14px; margin-left: 2px; border-left: 2px solid var(--line); }
   .brand .emblem { height: 34px; width: auto; display: block; }
   .brand .emblink { display: block; cursor: default; -webkit-tap-highlight-color: transparent; outline: none; }
   .brand i { width: 38px; height: 38px; border-radius: 8px; background: var(--blue); display: inline-block; }
-  nav { display: flex; gap: 7px; }
-  nav button { font: inherit; font-size: 14.5px; color: var(--sub); background: none; border: 0; padding: 8px 6px; white-space: nowrap; border-radius: 6px; cursor: pointer; min-height: 40px; }
-  nav button[aria-current="page"] { background: var(--blue); color: #fff; font-weight: 700; }
+  nav { display: flex; gap: 4px; }
+  nav button { font: inherit; font-size: 25px; font-weight: 800; letter-spacing: -0.5px; color: #2B3443; background: none; border: 0; padding: 4px 5px; white-space: nowrap; border-radius: 8px; cursor: pointer; min-height: 46px; }
+  nav button[aria-current="page"] { background: var(--blue); color: #fff; font-weight: 800; }
   .hright { display: flex; align-items: center; gap: 9px; font-size: 14px; color: var(--sub); }
   .badge { padding: 5px 10px; border-radius: 999px; font-size: 13px; }
   .badge.demo { background: var(--warnbg); color: var(--warn); border: 1px solid #F0C98A; }
@@ -1450,7 +1453,7 @@ function startApp() {
       { l: '오늘 출발 열차', sub: dL(td) + ' 시간표', ic: 'trend', col: '#1F6FD1', bg: '#E4EEFB', v: T.length ? fmt(T.length, 0) : '–', u: T.length ? '편' : '', chips: Object.keys(grades).sort(function (a, b) { return grades[b] - grades[a]; }).slice(0, 2).map(function (g) { return [g + ' ' + grades[g], '']; }) },
       { l: '어제 정차 열차', sub: dL(last) + ' 실제 정차', ic: 'people', col: '#7A4FC4', bg: '#EFE9FB', v: fmt(cnt(last, railSt), 0), u: '편', chips: [a30 != null ? ['최근 30일 하루 평균 ' + fmt(a30, 1), ''] : null] },
       { l: '최근 30일 정차 열차', sub: dL(l30[0]) + '~' + dL(last), ic: 'trend', col: '#C0602B', bg: '#FDEBDD', v: fmt(l30.reduce(function (a, d) { return a + cnt(d, railSt); }, 0), 0), u: '편', chips: [p30 ? ['그 전 30일보다 ' + (a30 - p30 >= 0 ? '+' : '') + fmt((a30 - p30) * l30.length, 0) + '편', a30 >= p30 ? 'good' : 'bad'] : null] },
-      { l: '강원 역 중', sub: '하루 평균 정차 열차 수 기준 · 승객 수 아님', ic: 'trend', col: '#2E8B57', bg: '#E2F3E9', v: myRk ? myRk + '위' : '–', u: '', chips: [['강원 ' + rk.length + '개 역 · 정차 수 순위', '']] }
+      { l: '강원 역 중', sub: '정차 열차 수 · 승객 수 아님', ic: 'trend', col: '#2E8B57', bg: '#E2F3E9', v: myRk ? myRk + '위' : '–', u: '', chips: [['강원 ' + rk.length + '개 역 · 정차 수 순위', '']] }
     ]);
     // 오늘 시간표
     var st0 = nxt[0] ? Math.max(0, T.indexOf(nxt[0]) - 2) : (isToday && T.length ? Math.max(0, T.length - 3) : 0);
@@ -1476,7 +1479,7 @@ function startApp() {
     var top = Object.keys(dn).sort(function (a, b) { return dn[b] - dn[a]; }).slice(0, 7);
     var mx = avg(l30, rk[0]) || 1;
     var body = el('div', { style: 'display:grid;grid-template-columns:1fr 1.25fr;gap:16px;height:100%;overflow:hidden' }, [
-      el('div', { style: 'overflow:auto' }, [el('div', { style: 'font-weight:800;color:#1B3A6B;margin-bottom:4px', text: '강원 역 하루 평균 정차 열차 수(승객 수 아님) · 누르면 그 역' })].concat(rk.slice(0, 14).map(function (s, i) {
+      el('div', { style: 'overflow:auto' }, [el('div', { style: 'font-weight:800;color:#1B3A6B;margin-bottom:4px', text: '강원 역 하루 평균 정차 열차 수(승객 수 아님)' })].concat(rk.slice(0, 14).map(function (s, i) {
         var v = avg(l30, s), me = s === railSt, dh = mine.indexOf(s) >= 0;
         return el('div', { style: 'display:grid;grid-template-columns:22px 70px 1fr 44px;gap:6px;align-items:center;padding:3px 0;cursor:pointer;font-size:14px' + (me ? ';font-weight:800' : ''), onclick: function () { railSt = s; render(); } }, [
           el('span', { style: 'color:#8A94A3', text: i + 1 }), el('span', { style: 'color:' + (dh ? '#1F6FD1' : '#38475A'), text: s }),
