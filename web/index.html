@@ -48,6 +48,7 @@
   #updated { font-size: 12.5px; line-height: 1.25; text-align: right; white-space: nowrap; }
   #clock { font-size: 18px; color: var(--navy); font-weight: 700; }
   #printBtn { font: inherit; font-size: 17px; line-height: 1; color: var(--navy); background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 6px 7px; cursor: pointer; white-space: nowrap; }
+  #flowBtn { font: inherit; font-size: 16px; font-weight: 800; color: #fff; background: #1B3A6B; border: 0; border-radius: 8px; padding: 7px 12px; cursor: pointer; white-space: nowrap; }
   #printBtn:hover { background: #EEF4FD; border-color: var(--blue); }
   @page { size: A4 landscape; margin: 5mm; }
   @media print {
@@ -321,7 +322,7 @@
   <header>
     <div class="brand"><a href="admin.html" class="emblink" aria-label="관리자" tabindex="-1"><img class="emblem" src="img/emblem.png" alt="동해시 상징마크"></a><span id="appTitle" title="새로 고침" style="cursor:pointer" onclick="location.reload()">동해시 AI 시장실</span><span id="appSlogan" class="slogan"></span></div>
     <nav id="nav" aria-label="화면 메뉴"></nav>
-    <div class="hright"><span id="badges"></span><button id="printBtn" type="button" title="지금 화면 인쇄(PDF 저장 가능)" onclick="dhPrint()" aria-label="인쇄">🖨</button><span id="updated"></span><span id="clock"></span></div>
+    <div class="hright"><span id="badges"></span><button id="flowBtn" type="button" title="여러 화면을 정해진 간격으로 돌려 보기" onclick="location.hash='flow'">▶ 흘러가기</button><button id="printBtn" type="button" title="지금 화면 인쇄(PDF 저장 가능)" onclick="dhPrint()" aria-label="인쇄">🖨</button><span id="updated"></span><span id="clock"></span></div>
   </header>
   <main id="view"></main>
 </div>
@@ -386,7 +387,7 @@ function startApp() {
   var order = D.menu.map(function (m) { return m.id; });
   var current = (location.hash || '#' + order[0]).slice(1);
   if (order.indexOf(current) < 0) current = order[0];
-  D.menu.forEach(function (m, i) {
+  D.menu.filter(function (m) { return m.id !== 'flow'; }).forEach(function (m, i) {
     nav.appendChild(el('button', { type: 'button', 'data-id': m.id, text: (i + 1) + ' ' + m.label, onclick: function () { go(m.id); } }));
   });
   function go(id) { current = id; zoomIdx = null; finDetail = null; admDetail = null; regSel = null; if (location.hash !== '#' + id) location.hash = id; render(); }
@@ -2318,14 +2319,13 @@ function startApp() {
     if (L.stores) tabs.push(['store', '상가 신규·폐업 · 18개 시·군']);
     if (L.licenses) tabs.push(['shop', '음식점·숙박 개업·폐업']);
     if (L.apt && L.apt.stat) tabs.push(['apt', '아파트 거래 · 18개 시·군']);
-    if (L.port && (Object.keys(L.port.vessel || {}).length || Object.keys(L.port.cargo || {}).length)) tabs.push(['port', '항만물류']);
     if (!tabs.some(function (t) { return t[0] === ecoTab; })) ecoTab = 'biz';
-    if (ecoTab === 'shop') screenShop(); else if (ecoTab === 'store') screenStores(); else if (ecoTab === 'apt') screenApt(); else if (ecoTab === 'port') screenPort(); else screenEconomy();
+    if (ecoTab === 'shop') screenShop(); else if (ecoTab === 'store') screenStores(); else if (ecoTab === 'apt') screenApt(); else screenEconomy();
     var title = view.querySelector('.title');
     if (title && tabs.length > 1) title.insertBefore(tabsBar(tabs, ecoTab, function (k) { ecoTab = k; }), title.children[1] || null);
   }
   var stoMet = 'shop_new';
-  // ---------- 경제 › 항만물류(해양수산부 PORT-MIS 월 통계) ----------
+  // ---------- 항만(해양수산부 PORT-MIS 월 통계) ----------
   function screenPort() {
     var P = (D.life || {}).port || {}, V = P.vessel || {}, C = P.cargo || {}, ME = P.me || '동해.묵호';
     function ymL(k) { return k ? k.slice(0, 4) + '년 ' + Number(k.slice(4)) + '월' : ''; }
@@ -3002,7 +3002,7 @@ function startApp() {
     panel('날짜별 위판 금액 · ' + short(C.name), ymL + ' · 백만원', dk.length ? lineChart(dk.map(function (d) { return +d.slice(8) + '일'; }), [{ name: '', color: '#1F6FD1', area: true, width: 3, values: dk.map(function (d) { return C.days[d][0] / 1e6; }) }], { fit: true, step: 3 }) : el('div', { class: 'empty', text: isMe ? '자료 없음' : '날짜별은 동해시수협만 봅니다' }));
   }
 
-  var SCREENS = { agri: screenAgriTabs, flow: screenFlow, main: screenMain, admin: screenAdminTabs, welfare: screenWelfareTabs, social: screenSocial, traffic: screenTrafficTabs, rail: screenRail, env: screenEnvTabs, water: screenWater, power: screenPower, land: function () { window.DHLand.screen({ el: el, panel: panel, view: view, render: render, D: D, baseLayer: baseLayer, rankList: rankList }); }, tour: screenTourTabs, economy: screenEconomyTabs, finance: screenFinance, frame: screenFrame };
+  var SCREENS = { agri: screenAgriTabs, flow: screenFlow, main: screenMain, admin: screenAdminTabs, welfare: screenWelfareTabs, social: screenSocial, traffic: screenTrafficTabs, rail: screenRail, port: screenPort, env: screenEnvTabs, water: screenWater, power: screenPower, land: function () { window.DHLand.screen({ el: el, panel: panel, view: view, render: render, D: D, baseLayer: baseLayer, rankList: rankList }); }, tour: screenTourTabs, economy: screenEconomyTabs, finance: screenFinance, frame: screenFrame };
   function render() {
     view.textContent = '';
     view.className = '';

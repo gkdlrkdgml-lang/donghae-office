@@ -24,6 +24,10 @@
       "show": true
     },
     {
+      "id": "port",
+      "label": "항만"
+    },
+    {
       "id": "rail",
       "label": "철도"
     },
