@@ -716,7 +716,27 @@ def portapt_probe():
     print('[PA] 끝 %d' % len(b))
 
 
+def nlic_probe():
+    import re as _re
+    for u in ('https://www.nlic.go.kr/nlic/harborPrdlstGtqy.action', 'https://www.nlic.go.kr/nlic/seaHarborGtqy.action'):
+        try:
+            h = http_get(u, {}, tries=1, timeout=40)
+            print('[NL] %s 길이 %d' % (u, len(h)))
+            for m in _re.findall(r'<(?:form|select|input)[^>]*>', h)[:40]:
+                print('[NL] tag', m[:200])
+            sel = _re.findall(r'<option[^>]*value="([^"]*)"[^>]*>([^<]*)<', h)
+            print('[NL] options', [(v, t.strip()) for v, t in sel if '동해' in t or '묵호' in t or len(sel) < 80][:80])
+            for m in sorted(set(_re.findall(r'[\'"]([/\w.]*\.(?:action|do|json)[^\'"]*)[\'"]', h)))[:40]:
+                print('[NL] url', m)
+            for m in _re.findall(r'\$\.ajax\(\{[^}]{0,400}', h)[:6]:
+                print('[NL] ajax', m.replace('\n', ' ')[:400])
+        except Exception as e:  # noqa: BLE001
+            print('[NL] %s 실패 %s' % (u, str(e)[:300]))
+
+
 def main():
+    if os.environ.get('PROBE_ONLY') == 'nlic':
+        return nlic_probe()
     if os.environ.get('PROBE_ONLY') == 'portapt':
         return portapt_probe()
     if os.environ.get('PROBE_ONLY') == 'econ3':
