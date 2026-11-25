@@ -2423,7 +2423,7 @@ function startApp() {
   }
 
   // ---------- 경제 › 아파트 거래(국토교통부 실거래가, 18개 시·군) ----------
-  var aptMet = 'n';
+  var aptMet = 'per';
   function screenApt() {
     var A = (D.life || {}).apt || {}, ST = A.stat || {}, Y = A.ytd || {}, to = A.ytd_to || '', ms = A.months || [];
     var SN = ST[regName()] ? regName() : D.me, isMe = SN === D.me, y = Y[SN] || {}, s = ST[SN] || {};
@@ -2438,31 +2438,31 @@ function startApp() {
     var rkP = Object.keys(Y).filter(function (r) { return Y[r].per != null; }).sort(function (a, b) { return Y[b].per - Y[a].per; });
     var cm = (s[lastM] || {}).n;
     cardsRow([
+      { l: '평당 가격', sub: Yr + '년 1~' + Mo + '월 · 전용 3.3㎡당 중앙값', ic: 'trend', col: '#C0602B', bg: '#FCEBDD', v: fmt(y.per * 3.3058, 0), u: '만원', chips: [y.per_prev ? ['지난해 ' + fmt(y.per_prev * 3.3058, 0) + '만원 · ' + sg(pct(y.per, y.per_prev)) + '%', pct(y.per, y.per_prev) >= 0 ? 'good' : 'bad'] : null, y.per ? ['㎡당 ' + fmt(y.per, 0) + '만원', ''] : null] },
       { l: '올해 거래', sub: Yr + '년 1~' + Mo + '월', ic: 'house', col: '#1F6FD1', bg: '#E8F0FC', v: fmt(y.n, 0), u: '건', chips: [y.n_prev ? ['지난해 같은 기간 ' + fmt(y.n_prev, 0) + '건 · ' + sg(pct(y.n, y.n_prev)) + '%', pct(y.n, y.n_prev) >= 0 ? 'good' : 'bad'] : null, ['도내 ' + (rkN.indexOf(SN) + 1) + '위 / ' + rkN.length, 'navy']] },
-      { l: '㎡당 가격', sub: Yr + '년 1~' + Mo + '월 · 전용면적 기준 중앙값', ic: 'trend', col: '#C0602B', bg: '#FCEBDD', v: fmt(y.per, 0), u: '만원', chips: [y.per ? ['3.3㎡(1평)당 ' + fmt(y.per * 3.3058, 0) + '만원', ''] : null, y.per_prev ? ['지난해 ' + sg(pct(y.per, y.per_prev)) + '%', ''] : null] },
-      { l: '도내 가격 순위', sub: '㎡당 가격 높은 순(판정 안 함)', ic: 'trend', col: '#7A4FC4', bg: '#EFE9FB', v: (rkP.indexOf(SN) + 1) + '위', u: '', chips: [['18개 시·군', 'violet']] },
+      { l: '도내 가격 순위', sub: '평당 가격 높은 순(판정 안 함)', ic: 'trend', col: '#7A4FC4', bg: '#EFE9FB', v: (rkP.indexOf(SN) + 1) + '위', u: '', chips: [['18개 시·군', 'violet']] },
       { l: '이번 달 신고', sub: (lastM ? Number(lastM.slice(4)) + '월' : '') + ' · 지금까지 신고된 것', ic: 'doorIn', col: '#2E8B57', bg: '#E2F3E9', v: fmt(cm || 0, 0), u: '건', chips: [['달이 끝나고 30일까지 늘어남', '']] }
     ]);
-    var MET = [['n', '거래 건수'], ['per', '㎡당 가격']];
+    var MET = [['n', '거래 건수'], ['per', '평당 가격']];
     var sw = el('div', { class: 'chips', style: 'flex-wrap:nowrap;gap:6px;margin-bottom:6px' }, MET.map(function (m) {
       return el('button', { type: 'button', class: 'chip', style: 'cursor:pointer;border:0;font-weight:800' + (m[0] === aptMet ? ';background:#1B3A6B;color:#fff' : ''), text: m[1], onclick: function () { aptMet = m[0]; render(); } }); }));
     var order = aptMet === 'per' ? rkP : rkN;
-    var I = { name: aptMet === 'per' ? '㎡당 가격' : '거래 건수', digits: 0, unit: aptMet === 'per' ? '만원' : '건', ranking: order.map(function (r, i) { return { name: r, rank: i + 1, value: Y[r][aptMet] }; }) };
+    var I = { name: aptMet === 'per' ? '평당 가격' : '거래 건수', digits: 0, unit: aptMet === 'per' ? '만원' : '건', ranking: order.map(function (r, i) { return { name: r, rank: i + 1, value: aptMet === 'per' ? Math.round(Y[r].per * 3.3058) : Y[r].n }; }) };
     var p1 = panel(I.name + ' · 강원 18개 시·군', Yr + '년 1~' + Mo + '월 · 많은·높은 순(좋고 나쁨 판정 안 함) · 누르면 그 지역', [sw, rankList(I, regPick, regSel)]);
     p1.style.gridRow = '3 / span 2';
-    // 월별 거래 건수 · ㎡당 가격
+    // 월별 거래 건수 · 평당 가격
     var Y1 = lastM ? lastM.slice(0, 4) : Yr, Y0 = String(Number(Y1) - 1), lab = [], a = [], b = [], pa = [], pb = [];
-    for (var i = 1; i <= 12; i++) { var mm = ('0' + i).slice(-2), x = s[Y1 + mm], z = s[Y0 + mm]; lab.push(i + '월'); a.push(x ? x.n : null); b.push(z ? z.n : null); pa.push(x && x.per != null ? x.per : null); pb.push(z && z.per != null ? z.per : null); }
+    for (var i = 1; i <= 12; i++) { var mm = ('0' + i).slice(-2), x = s[Y1 + mm], z = s[Y0 + mm]; lab.push(i + '월'); a.push(x ? x.n : null); b.push(z ? z.n : null); pa.push(x && x.per != null ? Math.round(x.per * 3.3058) : null); pb.push(z && z.per != null ? Math.round(z.per * 3.3058) : null); }
     panel('월별 거래 건수 · ' + fullName(SN), Y1 + '년 실선 · ' + Y0 + '년 점선 · 건 · 이번 달은 아직 신고 중', lineChart(lab, [{ name: Y1 + '년', color: '#1F6FD1', values: a, width: 3.5, labels: true }, { name: Y0 + '년', color: '#9AA7B8', values: b, width: 2.5, dash: '5 4' }], { fit: true, unit: '건' }));
     var L6 = A.list || {}, lk = Object.keys(L6).sort().reverse();
     if (isMe && lk.length) {
       var rows = [];
       lk.forEach(function (k) { (L6[k] || []).forEach(function (r) { rows.push([k, r]); }); });
       panel('동해시 최근 거래', '최근 ' + lk.length + '개월 · 계약일 늦은 순 · 해제 거래 뺌', el('table', { class: 'dt big' }, [
-        el('thead', {}, [el('tr', {}, ['계약일', '단지', '동', '전용', '층', '금액'].map(function (h, j) { return el('th', { class: j >= 3 ? 'r' : '', text: h }); }))]),
-        el('tbody', {}, rows.map(function (q) { var r = q[1]; return el('tr', {}, [el('td', { text: Number(q[0].slice(4)) + '.' + r.d }), el('td', { html: '<b>' + r.nm + '</b>' }), el('td', { text: r.dong }), el('td', { class: 'r', text: fmt(r.ar, 1) + '㎡' }), el('td', { class: 'r', text: r.fl + '층' }), el('td', { class: 'r', html: '<b>' + won(r.amt) + '</b>' })]); }))]));
+        el('thead', {}, [el('tr', {}, ['계약일', '단지', '동', '전용', '층', '금액', '평당'].map(function (h, j) { return el('th', { class: j >= 3 ? 'r' : '', text: h }); }))]),
+        el('tbody', {}, rows.map(function (q) { var r = q[1]; return el('tr', {}, [el('td', { text: Number(q[0].slice(4)) + '.' + r.d }), el('td', { html: '<b>' + r.nm + '</b>' }), el('td', { text: r.dong }), el('td', { class: 'r', text: fmt(r.ar, 1) + '㎡' }), el('td', { class: 'r', text: r.fl + '층' }), el('td', { class: 'r', html: '<b>' + won(r.amt) + '</b>' }), el('td', { class: 'r', text: r.ar ? fmt(r.amt / r.ar * 3.3058, 0) + '만' : '' })]); }))]));
     } else {
-      panel('월별 ㎡당 가격 · ' + fullName(SN), Y1 + '년 실선 · ' + Y0 + '년 점선 · 만원 · 달마다 중앙값', lineChart(lab, [{ name: Y1 + '년', color: '#C0602B', values: pa, width: 3.5, labels: true }, { name: Y0 + '년', color: '#9AA7B8', values: pb, width: 2.5, dash: '5 4' }], { fit: true, unit: '만원' }));
+      panel('월별 평당 가격 · ' + fullName(SN), Y1 + '년 실선 · ' + Y0 + '년 점선 · 만원(3.3㎡당) · 달마다 중앙값', lineChart(lab, [{ name: Y1 + '년', color: '#C0602B', values: pa, width: 3.5, labels: true }, { name: Y0 + '년', color: '#9AA7B8', values: pb, width: 2.5, dash: '5 4' }], { fit: true, unit: '만원' }));
     }
   }
 
@@ -3133,7 +3133,7 @@ function startApp() {
   // ---------- 최신 업데이트 알림: 탭·내용·최신 자료 교체 때(이용자 눈으로 쓴 말), 올린 날부터 7일 동안 열 때마다(자동 새로 고침 제외) ----------
   var NEWS = { id: '2026-11-26a', day: '2026-11-26', at: '2026년 11월 26일(목) 00:30', by: '동해시 관리자', items: [
     ['새 메뉴', '4번 「항만」', '동해·묵호항 입출항 선박·품목별 물동량, 전국 항만 비교', 'port'],
-    ['새 내용', '경제 › 「아파트 거래」', '18개 시·군 매매 건수·㎡당 가격, 동해시 최근 거래', 'economy:apt'],
+    ['새 내용', '경제 › 「아파트 거래」', '18개 시·군 매매 건수·평당 가격, 동해시 최근 거래', 'economy:apt'],
     ['새 메뉴', '5번 「철도」', '동해역·묵호역 오늘 시간표·다음 열차, 강원 역별 정차 수', 'rail'],
     ['화면', '메뉴 글자 크게 · 흘러가기 단추', '메뉴 글자를 키우고, 흘러가기는 오른쪽 위 인쇄 옆으로', 'flow']
   ] };
