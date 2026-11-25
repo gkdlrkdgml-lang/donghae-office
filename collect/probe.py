@@ -728,41 +728,28 @@ def nlic_probe():
 
 def kwater_probe():
     from urllib.parse import unquote as _unq
-    import datetime as _dt, re as _re, ssl as _ssl, urllib.request as _ur
+    import re as _re, ssl as _ssl, urllib.request as _ur
     k = _unq(os.environ.get('DATA_GO_KR_KEY', '').strip())
-    d = (_dt.datetime.utcnow() + _dt.timedelta(hours=9)).date()
-    d1 = (d - _dt.timedelta(days=1)).isoformat()
-    B = 'https://apis.data.go.kr/B500001/'
-    for nm, path, key in (('수질', 'rwis/waterQuality/list', 'fcltyMngNm'), ('수위', 'rwis/waterLevel/list', 'fcltyNm'), ('유량', 'rwis/waterFlux/waterFlux', 'fcltyNm')):
-        names, addrs, tot = {}, {}, None
-        for pg in range(1, 30):
-            try:
-                r = json.loads(http_get(B + path, {'serviceKey': k, 'stDt': d1, 'stTm': '12', 'edDt': d1, 'edTm': '12', 'numOfRows': '1000', 'pageNo': str(pg), '_type': 'json'}, tries=1, timeout=60))
-            except Exception as e:  # noqa: BLE001
-                print('[KW] %s %d 실패 %s' % (nm, pg, str(e)[:200])); break
-            bd = r['response']['body']; it = (bd.get('items') or {}) or {}
-            it = it.get('item') if isinstance(it, dict) else []
-            it = it if isinstance(it, list) else [it]
-            tot = bd.get('totalCount')
-            for x in it:
-                n = x.get(key) or x.get('fcltyMngNm') or x.get('fcltyNm'); names[n] = names.get(n, 0) + 1
-                if x.get('fcltyAddr'): addrs[n] = x['fcltyAddr']
-            if not it or pg * 1000 >= int(tot or 0):
-                break
-        gw = sorted(n for n in names if '강원' in addrs.get(n, '') or any(w in str(n) for w in ('동해', '달방', '묵호', '삼척', '강릉', '광동', '원주', '횡성', '춘천')))
-        print('[KW] %s 총 %s 시설 %d 강원관련 %s' % (nm, tot, len(names), gw))
-        print('[KW] %s 시설들 %s' % (nm, sorted(names)[:200]))
-    ctx = _ssl.create_default_context(); ctx.set_ciphers('DEFAULT:@SECLEVEL=1')
-    try: ctx.minimum_version = _ssl.TLSVersion.TLSv1
-    except Exception: pass
-    for u in ('https://sudo.dh.go.kr/', 'http://sudo.dh.go.kr/'):
+    U = 'https://apis.data.go.kr/B500001/qltWtrSvc/MonPurification'
+    for q in ({}, {'stDt': '202610', 'edDt': '202610'}, {'stDt': '2026-10-01', 'edDt': '2026-10-31'}, {'sgcnm': '동해시'}, {'stdt': '202610', 'eddt': '202610'}):
+        prm = {'serviceKey': k, 'numOfRows': '50', 'pageNo': '1', '_type': 'json'}; prm.update(q)
         try:
-            h = _ur.urlopen(_ur.Request(u, headers={'User-Agent': 'Mozilla/5.0'}), timeout=30, context=ctx if u.startswith('https') else None).read().decode('utf-8', 'ignore')
-            print('[KW] 사업소 %s 길이 %d' % (u, len(h)))
-            for m in sorted(set(_re.findall(r'href="([^"]+)"[^>]*>\s*([^<]*요금[^<]*)<', h)))[:15]:
-                print('[KW] 요금링크', m)
+            r = http_get(U, prm, tries=1, timeout=60)
+            print('[KW] 법정 %s 길이 %d %s' % (q, len(r), r[:900].replace('\n', ' ')))
+            h = r.find('동해'); print('[KW] 법정 동해', r[max(0, h - 200):h + 400] if h >= 0 else '-')
         except Exception as e:  # noqa: BLE001
-            print('[KW] 사업소 %s 실패 %s' % (u, str(e)[:200]))
+            print('[KW] 법정 %s 실패 %s' % (q, str(e)[:300]))
+    r = http_get('https://apis.data.go.kr/B500001/fcltySvc/getItkFclty', {'serviceKey': k, 'numOfRows': '5', 'pageNo': '1'}, tries=1, timeout=60)
+    print('[KW] 취수시설 원문', r[:400])
+    for nm in ('tn_pubr_public_wtrsply_chrge_api', 'tn_pubr_public_wtrsply_charge_api', 'tn_pubr_public_wtr_chrge_api', 'tn_pubr_public_sewer_chrge_api', 'tn_pubr_public_water_fee_api'):
+        try:
+            r = http_get('https://api.data.go.kr/openapi/' + nm, {'serviceKey': k, 'type': 'json', 'numOfRows': '3', 'pageNo': '1'}, tries=1, timeout=40)
+            print('[KW] 요금표준 %s %s' % (nm, r[:300]))
+        except Exception as e:  # noqa: BLE001
+            print('[KW] 요금표준 %s 실패 %s' % (nm, str(e)[:150]))
+    ctx = _ssl.create_default_context(); ctx.set_ciphers('DEFAULT:@SECLEVEL=1')
+    h = _ur.urlopen(_ur.Request('https://sudo.dh.go.kr/', headers={'User-Agent': 'Mozilla/5.0'}), timeout=30, context=ctx).read().decode('utf-8', 'ignore')
+    print('[KW] 사업소 원문', h)
 
 
 def main():
