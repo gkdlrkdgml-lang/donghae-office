@@ -2613,15 +2613,19 @@ function startApp() {
   function screenWaterTabs() {
     var L = D.life || {}, tabs = [];
     if (L.waterq && L.waterq.months) tabs.push(['q', '수돗물 수질검사 · 최신']);
+    if (L.waterfee && L.waterfee.tables) tabs.push(['fee', '요금 · 2026년']);
     if (L.water) tabs.push(['stat', '상하수도 통계 · 18개 시·군']);
     if (!tabs.some(function (t) { return t[0] === wtrTab; })) wtrTab = tabs.length ? tabs[0][0] : 'stat';
-    if (wtrTab === 'q') screenWaterQ(); else screenWater();
+    if (wtrTab === 'q') screenWaterQ(); else if (wtrTab === 'fee') screenWaterFee(); else screenWater();
     var title = view.querySelector('.title');
     if (title && tabs.length > 1) title.insertBefore(tabsBar(tabs, wtrTab, function (k) { wtrTab = k; }), title.children[1] || null);
   }
   function screenWaterQ() {
-    var Q = (D.life || {}).waterq || {}, M = Q.months || {}, mk = Object.keys(M).sort(), lm = mk[mk.length - 1];
-    var rows = M[lm] || [], regs = {};
+    var Q = (D.life || {}).waterq || {}, M = Q.months || {}, mk = Object.keys(M).sort(), regs = {};
+    // 검사 결과가 다 들어온 달(정수장 수가 가장 많은 달의 80% 이상)만 「최신」으로
+    var mx = Math.max.apply(null, mk.map(function (k) { return (M[k] || []).length; }).concat([0]));
+    mk = mk.filter(function (k) { return (M[k] || []).length >= mx * 0.8; });
+    var lm = mk[mk.length - 1], rows = M[lm] || [];
     rows.forEach(function (r) { regs[r.sg.replace(/(시|군)$/, '')] = 1; });
     var SN = regs[regName()] ? regName() : D.me, isMe = SN === D.me;
     function mine(m, n) { return (M[m] || []).filter(function (r) { return r.sg.replace(/(시|군)$/, '') === (n || SN); }); }
@@ -2660,7 +2664,73 @@ function startApp() {
     var lab = mk.map(function (k) { return Number(k.slice(4)) + '월'; });
     panel('월별 잔류염소·탁도 · ' + fullName(SN), mk.length ? ymL(mk[0]) + '~' + ymL(lm) + ' · 정수장 평균 · mg/L·NTU' : '', lineChart(lab, [
       { name: '잔류염소', color: '#1F6FD1', values: mk.map(function (k) { var v = avg(mine(k), 'rc'); return v == null ? null : Math.round(v * 100) / 100; }), width: 3.5, labels: true },
-      { name: '탁도', color: '#2AAFB8', values: mk.map(function (k) { var v = avg(mine(k), 'tu'); return v == null ? null : Math.round(v * 100) / 100; }), width: 3 }], { fit: true, unit: '' }));
+      { name: '탁도', color: '#2AAFB8', values: mk.map(function (k) { var v = avg(mine(k), 'tu'); return v == null ? null : Math.round(v * 100) / 100; }), width: 3 }], { fit: true, unit: '', d: 2 }));
+  }
+
+  // ---------- 상하수도 › 요금(동해시 상하수도사업소 요금 산정기준 표 그대로) ----------
+  function screenWaterFee() {
+    var F = (D.life || {}).waterfee || {}, TB = F.tables || [];
+    function tab(k) { return TB.filter(function (t) { return t.kind === k; })[0] || { rows: [] }; }
+    function num(x) { var v = Number(String(x || '').replace(/[^0-9.]/g, '')); return isNaN(v) ? null : v; }
+    var W = tab('water'), S = tab('sewer'), B = tab('base');
+    // 머리 줄에서 적용 시기 찾기
+    var per = (W.rows.filter(function (r) { return r.some(function (c) { return /고지분/.test(c); }); })[0] || []).filter(function (c) { return /고지분/.test(c); });
+    var cy = new Date().getFullYear(), ci = -1;
+    per.forEach(function (p, i) { var y = Number((p.match(/(20\d\d)년/) || [])[1]); if (y && y <= cy) ci = i; });
+    var wh = W.rows.filter(function (r) { return /^가정용/.test(r[0].replace(/\s/g, '')); })[0] || [];
+    var whv = wh.slice(2).map(num);           // 가정용 1~20톤: [2017, 2025, 2026, 2027]
+    var sh = S.rows.filter(function (r) { return /^가정용/.test(r[0].replace(/\s/g, '')); })[0] || [];
+    var shv = sh.slice(2).map(num);           // [분류,합류] × 시기
+    var b13 = num(((B.rows.filter(function (r) { return r[0] === '13'; })[0]) || [])[2]);
+    var wNow = whv[ci], wPrev = whv[ci - 1], wNext = whv[ci + 1];
+    var sNow = shv[ci * 2 + 1], sNowS = shv[ci * 2], sPrev = shv[(ci - 1) * 2 + 1], sNext = shv[(ci + 1) * 2 + 1];
+    function pct(a, b) { return a != null && b ? (a - b) / b * 100 : null; }
+    function pl(i) { return (per[i] || '').replace(/\s*고지분\s*부터/, ''); }
+    lifeTitle('동해시 상하수도 요금', '동해시 상하수도사업소 요금 산정기준 · ' + (F.fetched || '') + ' 확인 · 매주 자동 확인');
+    view.style.gridTemplateColumns = 'minmax(0, 1fr) minmax(0, 1fr)';
+    view.style.gridTemplateRows = '44px auto minmax(0, 1fr) minmax(0, 1fr)';
+    var tons = 15, ex = (b13 || 0) + tons * (wNow || 0) + tons * (sNow || 0);
+    cardsRow([
+      { l: '가정용 상수도', sub: pl(ci) + ' · 월 20톤까지 1톤당', ic: 'trend', col: '#1F6FD1', bg: '#E8F0FC', v: fmt(wNow, 0), u: '원', chips: [wPrev ? ['이전 ' + fmt(wPrev, 0) + '원 · +' + fmt(pct(wNow, wPrev), 0) + '%', 'bad'] : null, wNext ? [pl(ci + 1) + ' ' + fmt(wNext, 0) + '원', ''] : null] },
+      { l: '가정용 하수도', sub: pl(ci) + ' · 합류식 · 20톤까지 1톤당', ic: 'trend', col: '#2AAFB8', bg: '#E1F5F6', v: fmt(sNow, 0), u: '원', chips: [sNowS ? ['분류식 ' + fmt(sNowS, 0) + '원', ''] : null, sPrev ? ['이전 ' + fmt(sPrev, 0) + '원', ''] : null, sNext ? [pl(ci + 1) + ' ' + fmt(sNext, 0) + '원', ''] : null] },
+      { l: '한 달 15톤 쓰면', sub: '가정용 · 계량기 13mm · 합류식 · 계산값', ic: 'house', col: '#1B3A6B', bg: '#E8EEF7', v: fmt(ex, 0), u: '원', chips: [['정액 ' + fmt(b13, 0) + ' + 상수도 ' + fmt(tons * wNow, 0) + ' + 하수도 ' + fmt(tons * sNow, 0), ''], ['실제 고지서와 다를 수 있음', '']] }
+    ]);
+    // 표를 「업종 · 구간 · 시기별 단가」로 다시 정리(가로·세로 합친 칸 풀기). 지금 적용 중인 시기는 파랗게.
+    function isNum(c) { return /^[\d,]+$/.test(String(c).replace(/\s/g, '')); }
+    function rowsOf(T, nper, pair) {
+      var out = [], cur = '';
+      T.rows.forEach(function (r) {
+        var vals = r.filter(isNum);
+        if (!vals.length) return;
+        var head = r.filter(function (c) { return !isNum(c); });
+        var name = head.length >= 2 ? head[0].replace(/\s/g, '') : cur;
+        var band = head.length >= 2 ? head[1] : head[0] || '';
+        if (head.length >= 2) cur = name;
+        if (/톤당/.test(name)) { band = name; name = cur; }
+        out.push({ name: name, band: band, v: vals.map(num) });
+      });
+      return out.filter(function (x) { return x.v.length === nper * (pair ? 2 : 1); });
+    }
+    function cleanTable(T, title, sub, pair) {
+      var np = per.length, R = rowsOf(T, np, pair), from = pair ? ci : Math.max(0, ci - 1);
+      var hd = ['업종', '구간(㎥)'];
+      for (var i = from; i < np; i++) { if (pair) { hd.push(pl(i).replace(/년 \d+월/, '년') + ' 분류식'); hd.push(pl(i).replace(/년 \d+월/, '년') + ' 합류식'); } else hd.push(pl(i)); }
+      var last = '';
+      panel(title, sub, el('table', { class: 'dt big' }, [
+        el('thead', {}, [el('tr', {}, hd.map(function (h, j) { return el('th', { class: j >= 2 ? 'r' : '', text: h }); }))]),
+        el('tbody', {}, R.map(function (x) {
+          var tds = [el('td', { html: x.name !== last ? '<b>' + x.name + '</b>' : '' }), el('td', { text: x.band })]; last = x.name;
+          for (var i = from; i < np; i++) {
+            (pair ? [x.v[i * 2], x.v[i * 2 + 1]] : [x.v[i]]).forEach(function (v) { tds.push(el('td', { class: 'r', html: i === ci ? '<b style="color:#1F6FD1">' + fmt(v, 0) + '</b>' : fmt(v, 0) })); });
+          }
+          return el('tr', {}, tds); }))]));
+    }
+    cleanTable(W, '업종별 상수도 요금 · 원/㎥', '파란 글씨 = 지금 적용 중 · 고지분 기준', false);
+    cleanTable(S, '업종별 하수도 요금 · 원/㎥', '파란 글씨 = 지금 적용 중 · 분류식·합류식', true);
+    var BR = B.rows.filter(function (r) { return isNum(r[0]); });
+    panel('계량기 구경별 정액요금 · 원', '상하수도 · ' + ((B.rows[1] || [])[1] || ''), el('table', { class: 'dt big' }, [
+      el('thead', {}, [el('tr', {}, ['구경(mm)', '정액요금'].map(function (h, j) { return el('th', { class: j ? 'r' : '', text: h }); }))]),
+      el('tbody', {}, BR.map(function (r) { return el('tr', {}, [el('td', { html: '<b>' + r[0] + '</b>' }), el('td', { class: 'r', text: fmt(num(r[r.length - 1]), 0) })]); }))]));
   }
 
   function screenWater() {
@@ -3186,11 +3256,12 @@ function startApp() {
 
 
   // ---------- 최신 업데이트 알림: 탭·내용·최신 자료 교체 때(이용자 눈으로 쓴 말), 올린 날부터 7일 동안 열 때마다(자동 새로 고침 제외) ----------
-  var NEWS = { id: '2026-11-26a', day: '2026-11-26', at: '2026년 11월 26일(목) 00:30', by: '동해시 관리자', items: [
+  var NEWS = { id: '2026-11-26b', day: '2026-11-26', at: '2026년 11월 26일(목) 01:05', by: '동해시 관리자', items: [
+    ['최신 교체', '상하수도 · 수돗물 수질검사', '동해시 정수장 3곳 10월 법정 수질검사, 18개 시·군 비교', 'water:q'],
+    ['새 내용', '상하수도 · 요금 2026년', '가정용 1톤당 상수도 1,220원·하수도 820원, 15톤 예시', 'water:fee'],
     ['새 메뉴', '4번 「항만」', '동해·묵호항 입출항 선박·품목별 물동량, 전국 항만 비교', 'port'],
-    ['새 내용', '경제 › 「아파트 거래」', '18개 시·군 매매 건수·거래 기준 평당 가격, 최근 거래', 'economy:apt'],
-    ['새 메뉴', '5번 「철도」', '동해역·묵호역 오늘 시간표·다음 열차, 강원 역별 정차 수', 'rail'],
-    ['화면', '메뉴 글자 크게 · 흘러가기 단추', '메뉴 글자를 키우고, 흘러가기는 오른쪽 위 인쇄 옆으로', 'flow']
+    ['새 내용', '경제 › 「아파트 거래」', '18개 시·군 거래 건수·거래 기준 평당 가격, 최근 거래', 'economy:apt'],
+    ['새 메뉴', '5번 「철도」', '동해역·묵호역 오늘 시간표·다음 열차, 강원 역별 정차 수', 'rail']
   ] };
   function showNews(force) {
     var seen = ''; try { seen = localStorage.getItem('dh_news_seen') || ''; } catch (e) { /* 저장소 없음 */ }
@@ -3209,6 +3280,7 @@ function startApp() {
           if (x[3]) kids.push(el('button', { type: 'button', class: 'ngo', text: '바로 가기 ›', onclick: function () {
             close(); var t = x[3].split(':');
             if (t[0] === 'economy' && t[1]) ecoTab = t[1];
+            if (t[0] === 'water' && t[1]) wtrTab = t[1];
             go(t[0]);
           } }));
           return el('li', {}, kids); })),
