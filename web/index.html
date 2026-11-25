@@ -369,9 +369,7 @@ function startApp() {
   // ---------- 화면 크기에 맞춰 1920×1080을 늘리거나 줄임 ----------
   // 휴대폰: 주소창이 생기고 사라질 때·가로로 돌릴 때도 실제 보이는 크기(visualViewport)에 딱 맞춤
   function fit() {
-    // 손가락으로 확대 중이면(scale > 1) 그대로 두고, 화면 틀 크기(확대와 상관없는 값)로 맞춤
-    var vv = window.visualViewport;
-    if (vv && vv.scale > 1.01) return;
+    // 화면 틀 크기(손가락 확대와 상관없는 값)로 맞춤
     var W = document.documentElement.clientWidth || window.innerWidth, H = document.documentElement.clientHeight || window.innerHeight;
     var s = Math.min(W / 1920, H / 1080);
     stage.style.transform = 'translate(' + (W - 1920 * s) / 2 + 'px,' + (H - 1080 * s) / 2 + 'px) scale(' + s + ')';
@@ -380,8 +378,16 @@ function startApp() {
   }
   var tipOff = false;
   window.addEventListener('resize', fit);
-  window.addEventListener('orientationchange', function () { fit(); setTimeout(fit, 250); setTimeout(fit, 700); });
-  if (window.visualViewport) window.visualViewport.addEventListener('resize', fit);
+  // 처음 열 때·돌릴 때는 손가락 확대를 풀고(브라우저가 기억한 확대 포함) 화면에 맞춤
+  function resetZoom() {
+    var m = document.querySelector('meta[name=viewport]'); if (!m) return;
+    var c = m.getAttribute('content');
+    m.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover');
+    setTimeout(function () { m.setAttribute('content', c); fit(); }, 350);
+  }
+  window.addEventListener('orientationchange', function () { resetZoom(); fit(); setTimeout(fit, 250); setTimeout(fit, 700); });
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', function () { if (window.visualViewport.scale <= 1.01) fit(); });
+  if (window.visualViewport && window.visualViewport.scale > 1.01) resetZoom();
   // 세로로 들고 있으면 「가로로 돌려 주세요」(누르면 전체 화면 + 가로 고정 — 안드로이드)
   (function () {
     var tip = document.createElement('div'); tip.id = 'rotTip';
