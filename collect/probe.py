@@ -641,34 +641,25 @@ def annex2_probe():
 
 
 def train_probe():
-    import re as _re
     from urllib.parse import unquote as _unq
     k = _unq(os.environ.get('DATA_GO_KR_KEY', '').strip())
-    for pk in ('15098552', '15125762'):
+    R = 'https://apis.data.go.kr/B551457/run/v2/travelerTrainRunInfo2'
+    for extra in ({'cond[stn_nm::EQ]': '동해'}, {'stn_nm': '동해'}, {'cond[run_ymd::EQ]': '20260901', 'cond[stn_nm::EQ]': '동해'}, {'cond[run_ymd::EQ]': '20261124'}):
         try:
-            h = http_get('https://www.data.go.kr/data/%s/openapi.do' % pk, {}, tries=1)
-            mj = _re.search(r'swaggerJson = `(.*?)`', h, _re.S)
-            if not mj:
-                print('[열차] %s 스웨거 없음' % pk); continue
-            sj = json.loads(mj.group(1))
-            base = 'https://' + str(sj.get('host', '')) + str(sj.get('basePath', ''))
-            for pth, v in (sj.get('paths') or {}).items():
-                for meth, d in (v.items() if isinstance(v, dict) else []):
-                    if not isinstance(d, dict):
-                        continue
-                    print('[열차] %s %s%s %s | 인자원문 %s' % (pk, base, pth, d.get('summary'), json.dumps(d.get('parameters'), ensure_ascii=False)[:1500]))
-                    rs = json.dumps(d.get('responses', {}), ensure_ascii=False)
-                    print('[열차]   응답항목 %s' % ','.join(sorted(set(_re.findall(r'"([a-zA-Z_]{3,})": \{"type"', rs))))[:900])
-                    q = {'serviceKey': k, '_type': 'json', 'numOfRows': '3', 'pageNo': '1', 'returnType': 'json', 'cityCode': '32', 'cond[run_ymd::EQ]': '20261124', 'run_ymd': '20261124'}
-                    if 'GetStrtpntAlocFndTrainInfo' in pth:
-                        q.update({'depPlaceId': 'NAT601275', 'arrPlaceId': 'NAT010000', 'depPlandTime': '20261125'})
-                    try:
-                        t = http_get(base + pth, q, tries=1, timeout=40)
-                        print('[열차]   → %s' % t[:900].replace(k, '***').replace('\n', ' '))
-                    except Exception as e:  # noqa: BLE001
-                        print('[열차]   실패 %s' % str(e)[:250])
+            q = {'serviceKey': k, 'returnType': 'json', 'numOfRows': '1000', 'pageNo': '1'}; q.update(extra)
+            j = json.loads(http_get(R, q, tries=1, timeout=60))
+            bd = j['response']['body']; it = (bd.get('items') or {}).get('item') or []
+            print('[열차] %s 총 %s 이번 %d 날짜 %s 역 %s' % (extra, bd.get('totalCount'), len(it), sorted(set(x['run_ymd'] for x in it))[:3], sorted(set(x['stn_nm'] for x in it))[:8]))
         except Exception as e:  # noqa: BLE001
-            print('[열차] %s 실패 %s' % (pk, str(e)[:200]))
+            print('[열차] %s 실패 %s' % (extra, str(e)[:250]))
+    T = 'https://apis.data.go.kr/1613000/TrainInfo/'
+    for cc in ('32', '11', '21', '26', '37', '33'):
+        try:
+            j = json.loads(http_get(T + 'GetCtyAcctoTrainSttnList', {'serviceKey': k, '_type': 'json', 'numOfRows': '200', 'pageNo': '1', 'cityCode': cc}, tries=1, timeout=40))
+            it = j['response']['body']['items']['item']
+            print('[역목록] %s %s' % (cc, ' '.join('%s=%s' % (x['nodename'], x['nodeid']) for x in it)))
+        except Exception as e:  # noqa: BLE001
+            print('[역목록] %s 실패 %s' % (cc, str(e)[:200]))
 
 
 def main():
