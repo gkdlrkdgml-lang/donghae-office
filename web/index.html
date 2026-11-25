@@ -63,6 +63,7 @@
   #moreMenu { position: absolute; right: 0; top: 52px; z-index: 95; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 32px rgba(15,30,60,.25); padding: 8px; min-width: 220px; }
   #moreMenu button { display: block; width: 100%; text-align: left; font: inherit; font-size: 22px; font-weight: 800; color: #2B3443; background: none; border: 0; border-radius: 8px; padding: 10px 14px; cursor: pointer; }
   #moreMenu button:hover, #moreMenu button.cur { background: #E8F0FC; color: #1F6FD1; }
+  #instBtn { font: inherit; font-size: 16px; font-weight: 800; color: #1B3A6B; background: #fff; border: 1.5px solid #1B3A6B; border-radius: 8px; padding: 6px 12px; cursor: pointer; white-space: nowrap; }
   #flowBtn { font: inherit; font-size: 16px; font-weight: 800; color: #fff; background: #1B3A6B; border: 0; border-radius: 8px; padding: 7px 12px; cursor: pointer; white-space: nowrap; }
   #printBtn:hover { background: #EEF4FD; border-color: var(--blue); }
   @page { size: A4 landscape; margin: 5mm; }
@@ -132,6 +133,8 @@
   #newsBox li div small { display: block; font-size: 20px; color: #4A5566; margin-top: 4px; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #newsBox li > div { min-width: 0; }
   #newsBox .ngo { flex: none; align-self: center; font: inherit; font-size: 20px; font-weight: 800; color: #fff; background: #1F6FD1; border: 0; border-radius: 10px; padding: 10px 18px; cursor: pointer; white-space: nowrap; }
+  #newsBox .ninst { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 4px 32px 0; padding: 14px 18px; background: #FFF4D6; border-radius: 12px; font-size: 19px; color: #5A4A1A; }
+  #newsBox .ninst button { flex: none; font: inherit; font-size: 20px; font-weight: 800; color: #fff; background: #1B3A6B; border: 0; border-radius: 10px; padding: 10px 18px; cursor: pointer; }
   #newsBox .nf { display: flex; justify-content: space-between; align-items: center; padding: 14px 32px 24px; font-size: 18px; color: #6B7686; }
   #newsBox .nf button { font: inherit; font-size: 24px; font-weight: 800; color: #fff; background: #1F6FD1; border: 0; border-radius: 12px; padding: 12px 40px; cursor: pointer; }
   #newsBtn { font: inherit; font-size: 15px; font-weight: 800; color: #1F6FD1; background: #E8F0FC; border: 0; border-radius: 999px; padding: 6px 14px; cursor: pointer; }
@@ -343,7 +346,7 @@
   <header>
     <div class="brand"><a href="admin.html" class="emblink" aria-label="관리자" tabindex="-1"><img class="emblem" src="img/emblem.png" alt="동해시 상징마크"></a><span id="appTitle" title="새로 고침" style="cursor:pointer" onclick="location.reload()">동해시 AI 시장실</span><span id="appSlogan" class="slogan"></span></div>
     <nav id="nav" aria-label="화면 메뉴"></nav>
-    <div class="hright"><span id="badges"></span><button id="flowBtn" type="button" title="여러 화면을 정해진 간격으로 돌려 보기" onclick="location.hash='flow'">▶ 흘러가기</button><button id="printBtn" type="button" title="지금 화면 인쇄(PDF 저장 가능)" onclick="dhPrint()" aria-label="인쇄">🖨</button><span id="updated"></span><span id="clock"></span></div>
+    <div class="hright"><span id="badges"></span><button id="instBtn" type="button" title="바탕화면·홈 화면에 앱처럼 설치" onclick="window.DHInstall && DHInstall.open()">📲 앱 설치</button><button id="flowBtn" type="button" title="여러 화면을 정해진 간격으로 돌려 보기" onclick="location.hash='flow'">▶ 흘러가기</button><button id="printBtn" type="button" title="지금 화면 인쇄(PDF 저장 가능)" onclick="dhPrint()" aria-label="인쇄">🖨</button><span id="updated"></span><span id="clock"></span></div>
   </header>
   <main id="view"></main>
 </div>
@@ -432,6 +435,7 @@ function startApp() {
     nav.appendChild(el('button', { type: 'button', 'data-id': m.id, text: (i + 1) + ' ' + m.label, onclick: function () { go(m.id); } }));
   });
   if (D.menu.some(function (m) { return m.more; })) nav.appendChild(el('span', { id: 'moreWrap' }, [el('button', { type: 'button', id: 'moreBtn', title: '다른 화면', text: '더보기 ▾', onclick: function (ev) { window.dhMore(ev); } })]));
+  try { if (window.DHInstall && DHInstall.installed()) document.getElementById('instBtn').style.display = 'none'; } catch (e) { /* 무시 */ }
   // ---------- 더보기: 덜 쓰는 탭(menu.more)은 맨 윗줄 「더보기 ▾」 목록에서 ----------
   window.dhMore = function (ev) {
     if (ev) ev.stopPropagation();
@@ -3313,6 +3317,9 @@ function startApp() {
             go(t[0]);
           } }));
           return el('li', {}, kids); })),
+        (window.DHInstall && !DHInstall.installed()) ? el('div', { class: 'ninst' }, [
+          el('span', { html: '<b>📲 시장실을 앱처럼 쓰기</b> · 바탕화면·홈 화면에 설치하면 주소창 없이 한 번에 열립니다' }),
+          el('button', { type: 'button', text: '바탕화면에 설치', onclick: function () { close(); DHInstall.open(); } })]) : null,
         el('div', { class: 'nf' }, [el('span', { html: '<b style="color:#D9534F">' + NEWS.by + '가 업데이트했습니다</b> · 30초 뒤 저절로 닫힙니다 · 다시 보기: 제목 옆 「새 소식」' }), el('button', { type: 'button', text: '확인', onclick: close })])
       ])
     ]);
