@@ -728,17 +728,17 @@ def nlic_probe():
 
 def kwater_probe():
     from urllib.parse import unquote as _unq
-    import ssl as _ssl, urllib.request as _ur
     k = _unq(os.environ.get('DATA_GO_KR_KEY', '').strip())
-    for u, q in (('https://apis.data.go.kr/B500001/qltWtrSvc/MonPurification', {'stDt': '202610', 'edDt': '202610'}), ('https://apis.data.go.kr/B500001/fcltySvc/getItkFclty', {})):
-        prm = {'serviceKey': k, 'numOfRows': '20', 'pageNo': '1'}; prm.update(q)
+    U = 'https://apis.data.go.kr/B500001/qltWtrSvc/MonPurification'
+    for y, m, bsi, sg in (('2026', '10', '강원특별자치도', '동해시'), ('2026', '09', '강원특별자치도', '동해시'), ('2026', '09', '강원도', '동해시'), ('2026', '09', '', '동해시'), ('2026', '09', '강원특별자치도', '')):
+        prm = {'serviceKey': k, 'viewType': 'json', 'pageNo': '1', 'numOfRows': '100', 'year': y, 'month': m}
+        if bsi: prm['BSI'] = bsi
+        if sg: prm['SIGUN'] = sg
         try:
-            print('[KW] %s %r' % (u[-30:], http_get(u, prm, tries=1, timeout=60)[:600]))
+            r = http_get(U, prm, tries=1, timeout=60)
+            print('[KW] %s-%s %s %s 길이 %d %r' % (y, m, bsi, sg, len(r), r[:1500]))
         except Exception as e:  # noqa: BLE001
-            print('[KW] %s 실패 %r' % (u[-30:], str(e)[:400]))
-    ctx = _ssl.create_default_context(); ctx.set_ciphers('DEFAULT:@SECLEVEL=1')
-    h = _ur.urlopen(_ur.Request('https://sudo.dh.go.kr/', headers={'User-Agent': 'Mozilla/5.0'}), timeout=30, context=ctx).read().decode('utf-8', 'ignore')
-    print('[KW] 사업소 %r' % h)
+            print('[KW] %s-%s %s %s 실패 %s' % (y, m, bsi, sg, str(e)[:300]))
 
 
 def main():
