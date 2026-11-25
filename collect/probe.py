@@ -718,16 +718,17 @@ def portapt_probe():
 
 def nlic_probe():
     import re as _re, urllib.request as _ur, urllib.parse as _up
-    u = 'https://www.nlic.go.kr/nlic/harborPrdlstGtqy.action'
-    data = _up.urlencode({'command': 'LIST', 'S_HARBOR_CODE': '200', 'S_YEAR': '2026', 'S_MONTH': '09'}).encode()
-    req = _ur.Request(u, data=data, headers={'User-Agent': 'Mozilla/5.0', 'Content-Type': 'application/x-www-form-urlencoded'})
-    h = _ur.urlopen(req, timeout=60).read().decode('utf-8', 'ignore')
-    print('[NL] 길이', len(h))
-    for kw in ('석회', '시멘트', '유연탄', '광석', 'chart', 'series', 'categories', 'dataProvider', 'excel', 'Excel'):
-        for m in list(_re.finditer(kw, h))[:2]:
-            print('[NL] %s: %s' % (kw, _re.sub(r'\s+', ' ', h[max(0, m.start() - 300):m.start() + 500])))
-    for t in _re.findall(r'<table.*?</table>', h, _re.S)[:4]:
-        print('[NL] TABLE', _re.sub(r'\s+', ' ', _re.sub(r'<[^>]+>', '|', t))[:2500])
+    def post(u, d):
+        req = _ur.Request(u, data=_up.urlencode(d).encode(), headers={'User-Agent': 'Mozilla/5.0', 'Content-Type': 'application/x-www-form-urlencoded'})
+        r = _ur.urlopen(req, timeout=60)
+        return r.headers.get('Content-Type'), r.headers.get('Content-Disposition'), r.read()
+    ct, cd, b = post('https://www.nlic.go.kr/nlic/hbPrdlstGtqyExcel.action', {'srchYear': '2026', 'srchMonth': '09', 'srchHbCode': '200'})
+    print('[NL] 엑셀', ct, cd, len(b), b[:12])
+    t = b.decode('utf-8', 'ignore')
+    print('[NL] 엑셀본문', _re.sub(r'\s+', ' ', _re.sub(r'<[^>]+>', '|', t))[:3000])
+    ct, cd, b = post('https://www.nlic.go.kr/nlic/harborPrdlstGtqy.action', {'command': 'LIST', 'S_HARBOR_CODE': '200', 'S_YEAR': '2026', 'S_MONTH': '09'})
+    h = b.decode('utf-8', 'ignore'); i = h.find('list_sb_4')
+    print('[NL] 목록', _re.sub(r'\s+', ' ', _re.sub(r'<[^>]+>', '|', h[i - 3000:i + 9000]))[:5000])
 
 
 def kwater_probe():
