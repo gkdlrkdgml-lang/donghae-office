@@ -99,4 +99,62 @@ def collect(cache):
     if not vs and not cg:
         raise RuntimeError('항만 통계 없음 · ' + ' / '.join(errs))
     log('항만: 입출항 %s~%s, 연안화물 %s~%s' % (min(vs) if vs else '-', max(vs) if vs else '-', min(cg) if cg else '-', max(cg) if cg else '-'))
-    return {'v': 1, 'me': ME, 'vessel': vs, 'cargo': cg, 'errors': errs[:4], 'fetched': now().strftime('%Y-%m-%d %H:%M')}
+    try:
+        it = items((old or {}).get('items'))
+    except Exception as e:  # noqa: BLE001
+        it = (old or {}).get('items') or {}; errs.append('품목별: %s' % str(e)[:160])
+    return {'v': 1, 'me': ME, 'vessel': vs, 'cargo': cg, 'items': it, 'errors': errs[:4], 'fetched': now().strftime('%Y-%m-%d %H:%M')}
+
+
+NLIC = 'https://www.nlic.go.kr/nlic/hbPrdlstGtqyExcel.action'
+
+
+def _nlic_month(y, m):
+    """국가물류통합정보센터 품목별 물동량(통합 PORT-MIS) 엑셀 한 달치 → {항만: {품목: 톤}}"""
+    import urllib.request as ur
+    import xlrd
+    req = ur.Request(NLIC, data=urllib.parse.urlencode({'srchYear': str(y), 'srchMonth': '%02d' % m, 'srchHbCode': ''}).encode(),
+                     headers={'User-Agent': 'Mozilla/5.0', 'Content-Type': 'application/x-www-form-urlencoded'})
+    b = ur.urlopen(req, timeout=60).read()
+    if b[:4] != b'\xd0\xcf\x11\xe0':
+        return None
+    sh = xlrd.open_workbook(file_contents=b).sheet_by_index(0)
+    head = [re.sub(r'\s+', '', str(sh.cell_value(0, c))) for c in range(sh.ncols)]
+    out = {}
+    for r in range(1, sh.nrows):
+        pt = str(sh.cell_value(r, 0)).strip()
+        if not pt:
+            continue
+        row = {}
+        for c in range(1, sh.ncols):
+            v = _num(str(sh.cell_value(r, c)))
+            if v:
+                row[head[c]] = v
+        out[pt] = row
+    return out if any(out.values()) else None
+
+
+def items(cache):
+    """품목별 물동량: 지난해 1월부터, 받아 둔 달은 건너뛰고 최근 2개월은 다시."""
+    today = now().date()
+    old = cache if isinstance(cache, dict) else {}
+    got = dict(old)
+    y, m = today.year - 1, 1
+    months = []
+    while (y, m) <= (today.year, today.month):
+        months.append((y, m)); m += 1
+        if m > 12:
+            m, y = 1, y + 1
+    have = sorted(got)
+    redo = set(have[-2:])
+    for (y, m) in months:
+        k = '%04d%02d' % (y, m)
+        if k in got and k not in redo:
+            continue
+        try:
+            d = _nlic_month(y, m)
+        except Exception as e:  # noqa: BLE001
+            log('품목별 물동량 %s 실패: %s' % (k, e)); d = None
+        if d:
+            got[k] = d
+    return {k: v for k, v in got.items() if k >= '%04d01' % (today.year - 1)}

@@ -717,14 +717,12 @@ def portapt_probe():
 
 
 def nlic_probe():
-    import urllib.request as _ur, urllib.parse as _up, xlrd
-    req = _ur.Request('https://www.nlic.go.kr/nlic/hbPrdlstGtqyExcel.action', data=_up.urlencode({'srchYear': '2026', 'srchMonth': '09', 'srchHbCode': '200'}).encode(), headers={'User-Agent': 'Mozilla/5.0'})
-    b = _ur.urlopen(req, timeout=60).read()
-    wb = xlrd.open_workbook(file_contents=b)
-    for sh in wb.sheets():
-        print('[NL] 시트', sh.name, sh.nrows, sh.ncols)
-        for r in range(min(sh.nrows, 60)):
-            print('[NL] %02d %s' % (r, ' | '.join(str(sh.cell_value(r, c)) for c in range(sh.ncols))[:400]))
+    import port
+    it = port.items(None)
+    for k in sorted(it):
+        d = it[k].get('동해.묵호') or {}
+        top = sorted(((v, n) for n, v in d.items() if n != '합계'), reverse=True)[:5]
+        print('[NL] %s 합계 %s 상위 %s' % (k, d.get('합계'), top))
 
 
 def kwater_probe():
