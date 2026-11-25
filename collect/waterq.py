@@ -82,3 +82,32 @@ def collect(cache):
         raise RuntimeError('수질검사 자료 없음 · ' + ' / '.join(errs))
     log('수질검사: %s~%s, 최근 달 %d곳' % (keep[0], keep[-1], len(out[keep[-1]])))
     return {'v': 1, 'months': out, 'latest': keep[-1], 'errors': errs, 'fetched': now().strftime('%Y-%m-%d %H:%M')}
+
+
+FEE_URL = 'https://www.dh.go.kr/sudo/waterpay/ncoe/fee/feeCalcStand.do'
+
+
+def fee():
+    """동해시 상하수도사업소 요금 산정기준 페이지의 표(상수도·구경별 정액·하수도)를 그대로 읽음."""
+    import re
+    import ssl
+    import urllib.request as ur
+    ctx = ssl.create_default_context()
+    ctx.set_ciphers('DEFAULT:@SECLEVEL=1')      # 사이트가 예전 암호 방식만 받음
+    h = ur.urlopen(ur.Request(FEE_URL, headers={'User-Agent': 'Mozilla/5.0'}), timeout=40, context=ctx).read().decode('utf-8', 'ignore')
+    tabs = []
+    for t in re.findall(r'<table.*?</table>', h, re.S):
+        cap = re.search(r'<caption>(.*?)</caption>', t, re.S)
+        cap = re.sub(r'\s+', ' ', cap.group(1)).strip() if cap else ''
+        if not any(w in cap for w in ('상수도 요금', '정액요금', '하수도 요금')):
+            continue
+        rows = []
+        for tr in re.findall(r'<tr.*?</tr>', t, re.S):
+            cells = [re.sub(r'\s+', ' ', re.sub(r'<[^>]+>', ' ', c)).strip() for c in re.findall(r'<t[hd][^>]*>(.*?)</t[hd]>', tr, re.S)]
+            if cells:
+                rows.append(cells)
+        kind = 'sewer' if '하수도 요금' in cap else 'base' if '정액' in cap else 'water'
+        tabs.append({'kind': kind, 'cap': cap, 'rows': rows})
+    if not any(x['kind'] == 'water' for x in tabs):
+        raise RuntimeError('요금표를 찾지 못함')
+    return {'url': FEE_URL, 'tables': tabs, 'fetched': now().strftime('%Y-%m-%d')}

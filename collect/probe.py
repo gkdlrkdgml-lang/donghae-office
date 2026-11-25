@@ -729,8 +729,8 @@ def nlic_probe():
 def kwater_probe():
     import base64, gzip
     import waterq
-    o = waterq.collect(None)
-    print('[KW] 달', sorted(o['months']), o['errors'])
+    o = {'waterq': waterq.collect(None), 'waterfee': waterq.fee()}
+    print('[KW] 달', sorted(o['waterq']['months']), len(o['waterfee']['tables']))
     b = base64.b64encode(gzip.compress(json.dumps(o, ensure_ascii=False).encode())).decode()
     for i in range(0, len(b), 3000):
         print('[KQ]%05d %s' % (i // 3000, b[i:i + 3000]))

@@ -348,6 +348,12 @@ def collect(state, S, C):
             ok(state, 'waterq', '최근 %s' % L['waterq']['latest'])
         except Exception as e:  # noqa: BLE001
             fail(state, 'waterq', e)
+    if stale('waterfee', 7) or '--force-all' in sys.argv:
+        try:   # 동해시 상하수도 요금표(사업소 홈페이지, 주 1회)
+            L['waterfee'] = waterq.fee(); L['waterfee']['at'] = now().date().isoformat()
+            ok(state, 'waterfee', '표 %d개' % len(L['waterfee']['tables']))
+        except Exception as e:  # noqa: BLE001
+            fail(state, 'waterfee', e)
     if stale('apt', 1) or '--force-all' in sys.argv:
         try:   # 아파트 매매 실거래(18개 시·군)
             L['apt'] = apt.collect(L.get('apt')); L['apt']['at'] = now().date().isoformat()
