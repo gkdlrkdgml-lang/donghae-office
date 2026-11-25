@@ -2346,7 +2346,7 @@ function startApp() {
   }
   var stoMet = 'shop_new';
   // ---------- 항만(해양수산부 PORT-MIS 월 통계) ----------
-  var portSel = null;
+  var portSel = null, portScope = 'east';
   function screenPort() {
     var P = (D.life || {}).port || {}, V = P.vessel || {}, C = P.cargo || {}, HOME = P.me || '동해.묵호';
     var ME = portSel && Object.keys(V).some(function (m) { return (V[m] || {})[portSel]; }) ? portSel : HOME, isHome = ME === HOME, NM = isHome ? '동해·묵호항' : ME + '항';
@@ -2396,12 +2396,14 @@ function startApp() {
     // 전국 항만 순위(누르면 그 항만으로)
     if (rk.length) {
       var EAST = ['동해.묵호', '삼척', '옥계', '속초', '호산', '포항', '울산'];
-      var I = { name: '입항 선박 톤수', digits: 0, unit: '만 톤', ranking: rk.map(function (x, i) { return { name: x[0], rank: i + 1, value: Math.round(x[1] / 10000) }; }).filter(function (r) { return EAST.indexOf(r.name) >= 0 || r.name === ME; }) };
+      var I = { name: '입항 선박 톤수', digits: 0, unit: '만 톤', ranking: rk.map(function (x, i) { return { name: x[0], rank: i + 1, value: Math.round(x[1] / 10000) }; }).filter(function (r) { return portScope === 'all' || EAST.indexOf(r.name) >= 0 || r.name === ME; }) };
+      var sw = el('div', { class: 'chips', style: 'flex-wrap:nowrap;gap:6px;margin-bottom:6px' }, [['east', '동해안 항만'], ['all', '전국 ' + rk.length + '개 항만']].map(function (m) {
+        return el('button', { type: 'button', class: 'chip', style: 'cursor:pointer;border:0;font-weight:800' + (m[0] === portScope ? ';background:#1B3A6B;color:#fff' : ''), text: m[1], onclick: function () { portScope = m[0]; render(); } }); }));
       var D0 = D.me; D.me = HOME;
       var rl = rankList(I, function (n) { portSel = portSel === n || n === HOME ? null : n; render(); }, isHome ? null : ME);
       D.me = D0;
       Array.prototype.forEach.call(rl.children, function (r) { r.setAttribute('data-fit', '1'); });
-      panel('동해안 항만 · 올해 입항 선박 톤수', lv.slice(0, 4) + '년 1~' + Number(lv.slice(4)) + '월 · 만 톤 · 숫자 = 전국 ' + rk.length + '개 항만 중 순위 · 누르면 그 항만', rl);
+      panel((portScope === 'all' ? '전국' : '동해안') + ' 항만 · 올해 입항 선박 톤수', lv.slice(0, 4) + '년 1~' + Number(lv.slice(4)) + '월 · 만 톤 · 숫자 = 전국 순위 · 누르면 그 항만', [sw, rl]);
     }
   }
 
