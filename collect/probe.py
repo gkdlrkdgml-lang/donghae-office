@@ -728,32 +728,36 @@ def nlic_probe():
 
 def kwater_probe():
     from urllib.parse import unquote as _unq
-    import datetime as _dt
+    import datetime as _dt, re as _re
     k = _unq(os.environ.get('DATA_GO_KR_KEY', '').strip())
     d = (_dt.datetime.utcnow() + _dt.timedelta(hours=9)).date()
-    d1 = (d - _dt.timedelta(days=1)).isoformat(); d0 = d.isoformat()
+    d1 = (d - _dt.timedelta(days=1)).isoformat()
     B = 'https://apis.data.go.kr/B500001/'
     tests = [
-        ('수질', 'rwis/waterQuality/list', {'stDt': d1, 'stTm': '00', 'edDt': d1, 'edTm': '24', 'numOfRows': '999', 'pageNo': '1', '_type': 'json'}),
-        ('수질2', 'rwis/waterQuality/list', {'stDt': d1, 'stTm': '00', 'edDt': d1, 'edTm': '24', 'numOfRows': '999', 'pageNo': '1'}),
-        ('수위', 'rwis/waterLevel/list', {'stDt': d1, 'stTm': '00', 'edDt': d1, 'edTm': '24', 'numOfRows': '999', 'pageNo': '1', '_type': 'json'}),
-        ('유량', 'rwis/waterFlux/waterFlux', {'stDt': d1, 'stTm': '00', 'edDt': d1, 'edTm': '24', 'numOfRows': '999', 'pageNo': '1', '_type': 'json'}),
-        ('취수시설', 'fcltySvc/getItkFclty', {'numOfRows': '999', 'pageNo': '1', '_type': 'json'}),
-        ('정수시설', 'fcltySvc/getPurifcFclty', {'numOfRows': '999', 'pageNo': '1', '_type': 'json'}),
-        ('정수시설2', 'fcltySvc/getPrifcFclty', {'numOfRows': '999', 'pageNo': '1', '_type': 'json'}),
-        ('법정수질', 'qltWtrSvc/MonPurificQlt', {'numOfRows': '50', 'pageNo': '1', '_type': 'json'}),
-        ('법정수질2', 'qltWtrSvc/MonPurific', {'numOfRows': '50', 'pageNo': '1', '_type': 'json'}),
+        ('수질', 'rwis/waterQuality/list', {'stDt': d1, 'stTm': '00', 'edDt': d1, 'edTm': '23', 'numOfRows': '100', 'pageNo': '1', '_type': 'json'}),
+        ('수질b', 'rwis/waterQuality/list', {'stdt': d1, 'sttm': '00', 'eddt': d1, 'edtm': '23', 'numOfRows': '100', 'pageNo': '1', '_type': 'json'}),
+        ('수질c', 'rwis/waterQuality/list', {'stDt': d1.replace('-', ''), 'stTm': '00', 'edDt': d1.replace('-', ''), 'edTm': '23', 'numOfRows': '100', 'pageNo': '1'}),
+        ('수위', 'rwis/waterLevel/list', {'stDt': d1, 'stTm': '00', 'edDt': d1, 'edTm': '23', 'numOfRows': '100', 'pageNo': '1', '_type': 'json'}),
+        ('취수시설', 'fcltySvc/getItkFclty', {'numOfRows': '100', 'pageNo': '1', '_type': 'json'}),
     ]
     for nm, path, q in tests:
         prm = {'serviceKey': k}; prm.update(q)
         try:
-            r = http_get(B + path, prm, tries=1, timeout=60)
-            hits = [m.start() for m in __import__('re').finditer('동해|달방|묵호|강원', r)]
-            print('[KW] %s 길이 %d 동해등 %d 앞 %s' % (nm, len(r), len(hits), r[:500].replace('\n', ' ')))
-            for h in hits[:3]:
-                print('[KW] %s ctx %s' % (nm, r[max(0, h - 300):h + 300].replace('\n', ' ')))
+            r = http_get(B + path, prm, tries=1, timeout=50)
+            hits = [m.start() for m in _re.finditer('동해|달방', r)]
+            print('[KW] %s 길이 %d 동해 %d 앞 %s' % (nm, len(r), len(hits), r[:400].replace('\n', ' ')))
+            for h in hits[:2]:
+                print('[KW] %s ctx %s' % (nm, r[max(0, h - 250):h + 250].replace('\n', ' ')))
         except Exception as e:  # noqa: BLE001
-            print('[KW] %s 실패 %s' % (nm, str(e)[:400]))
+            print('[KW] %s 실패 %s' % (nm, str(e)[:300]))
+    for u in ('https://sudo.dh.go.kr/', 'https://www.dh.go.kr/sudo/'):
+        try:
+            h = http_get(u, {}, tries=1, timeout=30)
+            print('[KW] 사업소 %s 길이 %d' % (u, len(h)))
+            for m in sorted(set(_re.findall(r'href="([^"]+)"[^>]*>[^<]*요금[^<]*<', h)))[:15]:
+                print('[KW] 요금링크', m)
+        except Exception as e:  # noqa: BLE001
+            print('[KW] 사업소 %s 실패 %s' % (u, str(e)[:200]))
 
 
 def main():
