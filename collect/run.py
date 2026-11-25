@@ -15,6 +15,7 @@ import sources  # noqa: E402
 import life
 import tour  # noqa: E402
 import power  # noqa: E402
+import rail  # noqa: E402
 import admin_sync  # noqa: E402
 import landlaw  # noqa: E402
 import agri  # noqa: E402
@@ -325,6 +326,12 @@ def collect(state, S, C):
         lambda v: (sum(x for a, x in v.items() if a[:2].isdigit() and int(a[:2]) >= 65) / sum(v.values()) * 100) if sum(v.values()) else None)
     _ag('eco', '농가수', ('ag_eco', '%s년 친환경농산물 인증 농가(국립농산물품질관리원)'))
     _ag('fish', '해수면 어가', ('fs_hh', '%s년 12월 1일 기준 해수면 어가(2025 농림어업총조사)'))
+    try:   # 철도(동해시 역): 지난 날은 캐시, 최근 2일·오늘 시간표만 새로
+        L['rail'] = rail.collect(L.get('rail'))
+        R0 = L['rail']
+        ok(state, 'rail', '정차 %d일 · 오늘 시간표 %s' % (len(R0['days']), ', '.join('%s %d편' % (k, len(v)) for k, v in ((R0.get('today') or {}).get('dep') or {}).items())))
+    except Exception as e:  # noqa: BLE001
+        fail(state, 'rail', e)
     if os.environ.get('KEPCO_KEY') and (stale('power', 3) or len((L.get('power') or {}).get('months') or {}) < power.KEEP - 1 or '--force-power' in sys.argv):
         try:
             L['power'] = power.collect(C, L.get('power'))
@@ -746,7 +753,7 @@ def build(state, S, C):
     # 분야 화면이 비면 메뉴에서 숨김
     has_fin = any(i['id'] == 'fin_indep' for i in out['indicators'])
     L = out.get('life') or {}
-    need = {'wx_year': L.get('wx_year'), 'stores': L.get('stores'), 'water': L.get('water'), 'social': L.get('social'), 'economy': L.get('economy'), 'welfare': L.get('hospitals'), 'traffic': L.get('ev') or L.get('cars'), 'env': L.get('air'), 'power': L.get('power'), 'land': L.get('ordin'), 'tour': L.get('visit_months'), 'agri': (L.get('agri') or {}).get('tables') or (L.get('wipan') or {}).get('months')}
+    need = {'rail': L.get('rail'), 'wx_year': L.get('wx_year'), 'stores': L.get('stores'), 'water': L.get('water'), 'social': L.get('social'), 'economy': L.get('economy'), 'welfare': L.get('hospitals'), 'traffic': L.get('ev') or L.get('cars'), 'env': L.get('air'), 'power': L.get('power'), 'land': L.get('ordin'), 'tour': L.get('visit_months'), 'agri': (L.get('agri') or {}).get('tables') or (L.get('wipan') or {}).get('months')}
     out['menu'] = [m for m in out['menu'] if not (m['id'] == 'finance' and not has_fin) and not (m['id'] in ('admin', 'compare') and not out['admin'])
                    and not (m['id'] in need and not need[m['id']])]
     return out

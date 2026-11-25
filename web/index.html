@@ -1414,6 +1414,62 @@ function startApp() {
   function skyText(sl) { var p = +sl.PTY || 0, k = +sl.SKY || 1; return p === 1 ? '비' : p === 2 ? '비·눈' : p === 3 ? '눈' : p === 4 ? '소나기' : k === 4 ? '흐림' : k === 3 ? '구름많음' : '맑음'; }
   // 환경: 아래 탭(지금 날씨·대기 / 올해 기상 / 대기 성적표 / 하천 수질)
   var envTab = 'now', envMet = 'wx_rain', airMet = 'air_good';
+  // 철도: 동해시 안의 역(동해·묵호·망상해변·추암) — 오늘 시간표(TAGO) + 지난 3개월 정차 실적(한국철도공사)
+  var railSt = '동해';
+  function screenRail() {
+    var R = (D.life || {}).rail || {}, DY = R.days || {}, PL = R.plan || {}, TD = R.today || {}, DEP = TD.dep || {};
+    var sts = ['동해', '묵호', '망상해변', '추암'].filter(function (s) { return DEP[s] || Object.keys(DY).some(function (d) { return DY[d][s]; }); });
+    if (sts.indexOf(railSt) < 0) railSt = sts[0] || '동해';
+    var days = Object.keys(DY).sort(), last = days[days.length - 1] || '';
+    function dL(d) { return d ? Number(d.slice(4, 6)) + '월 ' + Number(d.slice(6)) + '일' : ''; }
+    function cnt(d, s) { return ((DY[d] || {})[s] || []).length; }
+    var nowHM = (function () { var n = new Date(); return ('0' + n.getHours()).slice(-2) + ':' + ('0' + n.getMinutes()).slice(-2); })();
+    var td = TD.date || '', isToday = td === (function () { var n = new Date(); return n.getFullYear() + ('0' + (n.getMonth() + 1)).slice(-2) + ('0' + n.getDate()).slice(-2); })();
+    lifeTitle('동해시 철도', '오늘 시간표: 국토교통부 TAGO(' + dL(td) + ') · 정차 실적: 한국철도공사 열차운행정보(' + dL(days[0]) + '~' + dL(last) + ')');
+    var tb0 = view.querySelector('.title');
+    if (tb0 && sts.length > 1) tb0.insertBefore(tabsBar(sts.map(function (s) { return [s, s + '역']; }), railSt, function (k) { railSt = k; }), tb0.children[1] || null);
+    view.style.gridTemplateColumns = 'minmax(0, 1.05fr) minmax(0, 1fr)';
+    view.style.gridTemplateRows = '44px auto minmax(0, 1fr) minmax(0, 1fr)';
+    var T = DEP[railSt] || [], nxt = isToday ? T.filter(function (t) { return t.dep >= nowHM; }) : [];
+    function dest(t) { var p = (PL[last] || {})[t.no]; var far = t.to.slice().sort(function (a, b) { return a[1] < b[1] ? 1 : -1; })[0]; return far ? far[0] : ''; }
+    var l7 = days.slice(-7), l30 = days.slice(-30), pre30 = days.slice(-60, -30);
+    function avg(ds, s) { return ds.length ? ds.reduce(function (a, d) { return a + cnt(d, s); }, 0) / ds.length : null; }
+    var a30 = avg(l30, railSt), p30 = avg(pre30, railSt);
+    var grades = {}; T.forEach(function (t) { grades[t.grade] = (grades[t.grade] || 0) + 1; });
+    cardsRow([
+      { l: '다음 열차', sub: railSt + '역 출발 · 지금 ' + nowHM, ic: 'trend', col: '#1B3A6B', bg: '#E8EEF7', v: nxt[0] ? nxt[0].dep : (isToday ? '오늘 끝' : '–'), u: '', chips: nxt[0] ? [[nxt[0].grade + ' ' + nxt[0].no + '호', 'violet'], [dest(nxt[0]) + ' 방면', '']] : [] },
+      { l: '오늘 출발 열차', sub: dL(td) + ' 시간표', ic: 'trend', col: '#1F6FD1', bg: '#E4EEFB', v: fmt(T.length, 0), u: '편', chips: Object.keys(grades).sort(function (a, b) { return grades[b] - grades[a]; }).slice(0, 2).map(function (g) { return [g + ' ' + grades[g], '']; }) },
+      { l: '남은 열차', sub: '오늘 ' + nowHM + ' 이후', ic: 'trend', col: '#2E8B57', bg: '#E2F3E9', v: fmt(nxt.length, 0), u: '편', chips: nxt[1] ? [['그다음 ' + nxt[1].dep, '']] : [] },
+      { l: '어제 정차 열차', sub: dL(last) + ' 실제 정차', ic: 'people', col: '#7A4FC4', bg: '#EFE9FB', v: fmt(cnt(last, railSt), 0), u: '편', chips: [a30 != null ? ['최근 30일 하루 평균 ' + fmt(a30, 1), ''] : null] },
+      { l: '최근 30일 정차', sub: dL(l30[0]) + '~' + dL(last), ic: 'trend', col: '#C0602B', bg: '#FDEBDD', v: fmt(l30.reduce(function (a, d) { return a + cnt(d, railSt); }, 0), 0), u: '편', chips: [p30 ? ['그 전 30일보다 ' + (a30 - p30 >= 0 ? '+' : '') + fmt((a30 - p30) * l30.length, 0) + '편', a30 >= p30 ? 'good' : 'bad'] : null] }
+    ]);
+    // 오늘 시간표
+    var rows = T.map(function (t) {
+      var past = isToday && t.dep < nowHM, isN = nxt[0] && t.no === nxt[0].no;
+      var stops = t.to.slice().sort(function (a, b) { return a[1] < b[1] ? -1 : 1; }).map(function (x) { return x[0] + ' ' + x[1].slice(0, 2) + ':' + x[1].slice(2); }).join(' · ');
+      return el('tr', { style: isN ? 'background:#FFF4D6;font-weight:800' : past ? 'color:#A3ACB9' : '' }, [
+        el('td', { html: '<b style="font-size:18px">' + t.dep + '</b>' + (isN ? ' <span class="chip violet" style="font-size:11px">다음</span>' : '') }),
+        el('td', { text: t.grade }), el('td', { class: 'r', text: t.no + '호' }), el('td', { html: '<b>' + dest(t) + '</b> 방면' }), el('td', { style: 'font-size:12px;color:#6B7686', text: stops }),
+        el('td', { class: 'r', text: t.fare ? fmt(t.fare, 0) + '원~' : '' })]); });
+    var tbl = el('div', { style: 'overflow:auto;height:100%' }, el('table', { class: 'dt big' }, [el('thead', {}, [el('tr', {}, ['출발', '열차', '번호', '방면', '도착 예정(주요 역)', '운임(성인)'].map(function (h, j) { return el('th', { class: j === 2 || j === 5 ? 'r' : '', text: h }); }))]), el('tbody', {}, rows.length ? rows : [el('tr', {}, [el('td', { colspan: 6, text: '오늘 시간표 자료가 아직 없습니다' })])])]));
+    var p1 = panel(railSt + '역 오늘 출발 시간표 · ' + dL(td), '국토교통부 TAGO · 지난 열차는 흐리게 · 노란 줄 = 다음 열차', tbl);
+    p1.style.gridRow = '3 / span 2';
+    setTimeout(function () { var r = p1.querySelector('tr[style*="FFF4D6"]'); if (r) r.scrollIntoView({ block: 'center' }); }, 60);
+    // 하루 정차 열차 수 추이
+    var cols = { '동해': '#1F6FD1', '묵호': '#2E9C6A', '망상해변': '#E08A3C', '추암': '#7A4FC4' };
+    panel('하루 정차 열차 수 · 최근 ' + days.length + '일', '한국철도공사 실제 운행 기록 · 편', lineChart(days.map(function (d) { return Number(d.slice(4, 6)) + '/' + Number(d.slice(6)); }), sts.map(function (s) {
+      return { name: s + '역', color: cols[s] || '#888', width: s === railSt ? 3.5 : 2, labels: s === railSt ? 'last' : false, values: days.map(function (d) { return cnt(d, s); }) }; }), { fit: true }));
+    // 노선·방면(최근 30일)
+    var ln = {}, dn = {};
+    l30.forEach(function (d) { ((DY[d] || {})[railSt] || []).forEach(function (r) { ln[r[3] || '기타'] = (ln[r[3] || '기타'] || 0) + 1; var p = (PL[d] || {})[r[0]]; if (p) { var k = p[0] + ' → ' + p[1]; dn[k] = (dn[k] || 0) + 1; } }); });
+    var top = Object.keys(dn).sort(function (a, b) { return dn[b] - dn[a]; }).slice(0, 8);
+    var body = el('div', { style: 'display:grid;grid-template-columns:1fr 1.4fr;gap:14px;height:100%' }, [
+      el('div', {}, [el('div', { style: 'font-weight:800;color:#1B3A6B;margin-bottom:6px', text: '노선별 정차(편)' })].concat(Object.keys(ln).sort(function (a, b) { return ln[b] - ln[a]; }).map(function (k) {
+        return el('div', { style: 'display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #EEF1F5;font-size:16px', html: '<b>' + k + '</b><span>' + fmt(ln[k], 0) + '</span>' }); }))),
+      el('div', {}, [el('div', { style: 'font-weight:800;color:#1B3A6B;margin-bottom:6px', text: '많이 다닌 열차 구간(출발역 → 종착역)' })].concat(top.map(function (k) {
+        return el('div', { style: 'display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #EEF1F5;font-size:15px', html: '<span>' + k + '</span><b>' + fmt(dn[k], 0) + '편</b>' }); })))]);
+    panel(railSt + '역 최근 30일 정차 · 노선·구간', dL(l30[0]) + '~' + dL(last) + ' · 한국철도공사', body);
+  }
   function screenEnvTabs() {
     var L = D.life || {}, tabs = [['now', '지금 날씨·대기']];
     if (L.wx_year && L.wx_year.regions) tabs.push(['wx', '올해 기상']);
@@ -2811,7 +2867,7 @@ function startApp() {
     panel('날짜별 위판 금액 · ' + short(C.name), ymL + ' · 백만원', dk.length ? lineChart(dk.map(function (d) { return +d.slice(8) + '일'; }), [{ name: '', color: '#1F6FD1', area: true, width: 3, values: dk.map(function (d) { return C.days[d][0] / 1e6; }) }], { fit: true, step: 3 }) : el('div', { class: 'empty', text: isMe ? '자료 없음' : '날짜별은 동해시수협만 봅니다' }));
   }
 
-  var SCREENS = { agri: screenAgriTabs, flow: screenFlow, main: screenMain, admin: screenAdminTabs, welfare: screenWelfareTabs, social: screenSocial, traffic: screenTrafficTabs, env: screenEnvTabs, water: screenWater, power: screenPower, land: function () { window.DHLand.screen({ el: el, panel: panel, view: view, render: render, D: D, baseLayer: baseLayer, rankList: rankList }); }, tour: screenTourTabs, economy: screenEconomyTabs, finance: screenFinance, frame: screenFrame };
+  var SCREENS = { agri: screenAgriTabs, flow: screenFlow, main: screenMain, admin: screenAdminTabs, welfare: screenWelfareTabs, social: screenSocial, traffic: screenTrafficTabs, rail: screenRail, env: screenEnvTabs, water: screenWater, power: screenPower, land: function () { window.DHLand.screen({ el: el, panel: panel, view: view, render: render, D: D, baseLayer: baseLayer, rankList: rankList }); }, tour: screenTourTabs, economy: screenEconomyTabs, finance: screenFinance, frame: screenFrame };
   function render() {
     view.textContent = '';
     view.className = '';

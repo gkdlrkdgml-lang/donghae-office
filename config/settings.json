@@ -54,6 +54,11 @@
       "show": true
     },
     {
+      "id": "rail",
+      "label": "철도",
+      "show": true
+    },
+    {
       "id": "agri",
       "label": "농업 및 수산",
       "show": true
