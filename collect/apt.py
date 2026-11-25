@@ -87,21 +87,28 @@ def collect(cache):
             m, y = 1, y + 1
     fresh = set(months[-REFRESH:])
     errs, calls = [], 0
-    # 최근 달부터(시간이 모자라면 오래된 달은 다음 실행에서)
-    for ym in reversed(months):
-        for reg, code in CODES.items():
-            if ym not in fresh and ym in st.get(reg, {}):
-                continue
-            if time.time() - t0 > BUDGET:
-                break
-            try:
-                rows = _month(k, code, ym); calls += 1
-                st.setdefault(reg, {})[ym] = _stat(rows)
-                if reg == ME and ym in months[-LIST_M:]:
-                    lst[ym] = sorted(rows, key=lambda r: (r['d'].zfill(2), r['amt']), reverse=True)
-            except Exception as e:  # noqa: BLE001
+    jobs = [(ym, reg, code) for ym in reversed(months) for reg, code in CODES.items() if ym in fresh or ym not in st.get(reg, {})]
+    # 한 번 부르는 데 몇 초씩 걸려 6개씩 함께 받음(최근 달부터, 시간이 모자라면 오래된 달은 다음 실행에서)
+    from concurrent.futures import ThreadPoolExecutor
+    def one(j):
+        if time.time() - t0 > BUDGET:
+            return j, None, None
+        try:
+            return j, _month(k, j[2], j[0]), None
+        except Exception as e:  # noqa: BLE001
+            return j, None, e
+    with ThreadPoolExecutor(6) as ex:
+        for (ym, reg, code), rows, e in ex.map(one, jobs):
+            if e is not None:
                 if len(errs) < 6:
                     errs.append('%s %s: %s' % (reg, ym, str(e)[:120]))
+                continue
+            if rows is None:
+                continue
+            calls += 1
+            st.setdefault(reg, {})[ym] = _stat(rows)
+            if reg == ME and ym in months[-LIST_M:]:
+                lst[ym] = sorted(rows, key=lambda r: (r['d'].zfill(2), r['amt']), reverse=True)
     keep = set(months)
     st = {r: {m: v for m, v in d.items() if m in keep} for r, d in st.items()}
     lst = {m: v for m, v in lst.items() if m in months[-LIST_M:]}
