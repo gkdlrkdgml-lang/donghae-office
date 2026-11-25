@@ -4,6 +4,8 @@ window.DHInstall = (function () {
   var ua = navigator.userAgent || '';
   var isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);   // 아이패드(데스크톱 모드 포함)
   var isAndroid = /Android/i.test(ua), isSamsung = /SamsungBrowser/i.test(ua), isEdge = /Edg\//.test(ua);
+  // 네이버·카카오톡 등 앱 안의 브라우저는 설치 기능이 없음 → 크롬·사파리로 열도록 안내
+  var inApp = /NAVER|KAKAOTALK|Instagram|FBAN|FBAV|Line\/|DaumApps|everytimeApp|; wv\)/i.test(ua);
   function installed() {
     return matchMedia('(display-mode: fullscreen), (display-mode: standalone), (display-mode: minimal-ui)').matches || navigator.standalone === true;
   }
@@ -13,6 +15,8 @@ window.DHInstall = (function () {
   window.addEventListener('appinstalled', function () { deferred = null; var b = document.getElementById('pwaBtn'); if (b) b.remove(); close(); });
 
   function steps() {
+    if (inApp && isIOS) return ['지금은 <b>네이버·카카오톡 같은 앱 안의 화면</b>이라 설치가 안 됩니다.', '오른쪽 아래(또는 위) <b>메뉴 → 「Safari로 열기」(다른 브라우저로 열기)</b>를 누릅니다.', 'Safari에서 <b>공유 버튼(□↑) → 「홈 화면에 추가」</b>를 누릅니다.'];
+    if (inApp) return ['지금은 <b>네이버·카카오톡 같은 앱 안의 화면</b>이라 설치가 안 됩니다.', '아래 <b>「크롬으로 열기」</b>를 누릅니다(또는 메뉴 → 「다른 브라우저로 열기」).', '크롬에서 다시 <b>「앱 설치」</b>를 누르거나 <b>점 세 개(⋮) → 「앱 설치」·「홈 화면에 추가」</b>를 누릅니다.'];
     if (isIOS) return ['화면 위(또는 아래) 주소창 옆의 <b>공유 버튼</b>(네모에서 위로 화살표 □↑)을 누릅니다.', '목록을 내려 <b>「홈 화면에 추가」</b>를 누릅니다.', '오른쪽 위 <b>「추가」</b>를 누르면 홈 화면에 동해시 아이콘이 생깁니다.', '<small>※ 아이패드는 <b>Safari</b>에서만 추가할 수 있습니다.</small>'];
     if (isSamsung) return ['아래쪽 <b>메뉴(≡)</b>를 누릅니다.', '<b>「현재 페이지 추가」 → 「홈 화면」</b>을 누릅니다.', '홈 화면에 생긴 동해시 아이콘으로 여시면 됩니다.'];
     if (isAndroid) return ['오른쪽 위 <b>점 세 개(⋮)</b>를 누릅니다.', '<b>「앱 설치」</b> 또는 <b>「홈 화면에 추가」</b>를 누릅니다.', '홈 화면에 생긴 동해시 아이콘으로 여시면 됩니다.'];
@@ -31,15 +35,17 @@ window.DHInstall = (function () {
       '#dhInstall ol{margin:0;padding-left:22px;font-size:17px;line-height:1.7;color:#22324A}#dhInstall b{color:#1B3A6B}' +
       '#dhInstall .r{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}#dhInstall button{font:inherit;font-size:16px;font-weight:800;border:0;border-radius:10px;padding:10px 18px;cursor:pointer}' +
       '#dhInstall .ok{background:#1B3A6B;color:#fff}</style>' +
-      '<div class="c"><h3>바탕화면에 앱으로 설치</h3><p>' + (isIOS || isAndroid ? '태블릿' : 'PC') + '에서는 이렇게 하시면 됩니다. 설치한 아이콘으로 열면 주소창 없이 화면 전체로 보입니다.</p><ol>' +
-      steps().map(function (t) { return '<li>' + t + '</li>'; }).join('') + '</ol><div class="r"><button class="ok" type="button">확인</button></div></div>';
+      '<div class="c"><h3>바탕화면에 앱으로 설치</h3><p>' + (isIOS || isAndroid ? '휴대폰·태블릿' : 'PC') + '에서는 이렇게 하시면 됩니다. 설치한 아이콘으로 열면 주소창 없이 화면 전체로 보입니다.</p><ol>' +
+      steps().map(function (t) { return '<li>' + t + '</li>'; }).join('') + '</ol><div class="r">' + (inApp && isAndroid ? '<button class="ok" type="button" id="dhChrome">크롬으로 열기</button>' : '') + '<button class="ok" type="button" id="dhOk">확인</button></div></div>';
     box.onclick = function (e) { if (e.target === box) close(); };
-    box.querySelector('.ok').onclick = close;
+    box.querySelector('#dhOk').onclick = close;
+    var cb = box.querySelector('#dhChrome');
+    if (cb) cb.onclick = function () { location.href = 'intent://' + location.host + location.pathname + '#Intent;scheme=https;package=com.android.chrome;end'; };
     document.body.appendChild(box);
   }
   function open() {
     if (deferred) { var d = deferred; d.prompt(); d.userChoice.then(function (r) { if (r && r.outcome === 'accepted') { deferred = null; show(); } }); return; }
-    if (isIOS) guide();   // 아이패드·아이폰은 브라우저가 설치 창을 열어 주지 않음(공유 → 홈 화면에 추가만 가능)
+    guide();   // 설치 창을 바로 못 여는 경우(아이폰·아이패드, 앱 안 브라우저, 크롬이 아직 준비 안 됨): 손으로 설치하는 방법 안내
   }
   function button(parent, style) {
     if (installed() || !parent || document.getElementById('pwaBtn')) return;
