@@ -121,6 +121,7 @@
   #newsBox li i { font-style: normal; flex: none; background: #E8F0FC; color: #1F6FD1; font-weight: 800; font-size: 20px; border-radius: 10px; padding: 4px 12px; }
   #newsBox li div b { display: block; font-size: 27px; color: #1B3A6B; font-weight: 800; }
   #newsBox li div small { display: block; font-size: 20px; color: #4A5566; margin-top: 4px; line-height: 1.4; }
+  #newsBox .ngo { flex: none; align-self: center; font: inherit; font-size: 20px; font-weight: 800; color: #fff; background: #1F6FD1; border: 0; border-radius: 10px; padding: 10px 18px; cursor: pointer; white-space: nowrap; }
   #newsBox .nf { display: flex; justify-content: space-between; align-items: center; padding: 14px 32px 24px; font-size: 18px; color: #6B7686; }
   #newsBox .nf button { font: inherit; font-size: 24px; font-weight: 800; color: #fff; background: #1F6FD1; border: 0; border-radius: 12px; padding: 12px 40px; cursor: pointer; }
   #newsBtn { font: inherit; font-size: 15px; font-weight: 800; color: #1F6FD1; background: #E8F0FC; border: 0; border-radius: 999px; padding: 6px 14px; cursor: pointer; }
@@ -3130,10 +3131,10 @@ function startApp() {
 
   // ---------- 최신 업데이트 알림: 탭·내용이 새로 생겼을 때만(이용자 눈으로 쓴 말), 올린 날(id)부터 7일 동안 화면을 켤 때 한 번 ----------
   var NEWS = { id: '2026-11-25c', day: '2026-11-25', at: '2026년 11월 25일(수) 23:55', by: '동해시 관리자', items: [
-    ['새 메뉴', '4번 「항만」', '동해·묵호항 입출항 선박과 연안화물을 달마다 보여 드리고, 전국 항만과 견줍니다.'],
-    ['새 내용', '경제 › 「아파트 거래」', '18개 시·군 아파트 매매 건수와 ㎡당 가격, 동해시 최근 거래 단지·금액을 보여 드립니다.'],
-    ['새 메뉴', '5번 「철도」', '동해역·묵호역 오늘 시간표와 다음 열차, 강원 역별 정차 열차 수(승객 수 아님)를 보여 드립니다.'],
-    ['화면', '메뉴 글자 크게 · 흘러가기 단추', '1~15번 메뉴 글자를 크고 굵게 바꿨고, 「흘러가기」는 오른쪽 위 인쇄 단추 옆으로 옮겼습니다.']
+    ['새 메뉴', '4번 「항만」', '동해·묵호항 입출항 선박과 연안화물을 달마다 보여 드리고, 전국 항만과 견줍니다.', 'port'],
+    ['새 내용', '경제 › 「아파트 거래」', '18개 시·군 아파트 매매 건수와 ㎡당 가격, 동해시 최근 거래 단지·금액을 보여 드립니다.', 'economy:apt'],
+    ['새 메뉴', '5번 「철도」', '동해역·묵호역 오늘 시간표와 다음 열차, 강원 역별 정차 열차 수(승객 수 아님)를 보여 드립니다.', 'rail'],
+    ['화면', '메뉴 글자 크게 · 흘러가기 단추', '1~15번 메뉴 글자를 크고 굵게 바꿨고, 「흘러가기」는 오른쪽 위 인쇄 단추 옆으로 옮겼습니다.', 'flow']
   ] };
   function showNews(force) {
     var seen = ''; try { seen = localStorage.getItem('dh_news_seen') || ''; } catch (e) { /* 저장소 없음 */ }
@@ -3145,7 +3146,14 @@ function startApp() {
     var back = el('div', { id: 'newsBack', onclick: function (ev) { if (ev.target === back) close(); } }, [
       el('div', { id: 'newsBox' }, [
         el('div', { class: 'nh' }, [el('b', { text: '최신 업데이트 알림' }), el('span', { style: 'opacity:1;background:#D9534F;color:#fff;font-weight:800;border-radius:999px;padding:4px 14px', text: '최종 업데이트 ' + NEWS.at + ' · ' + NEWS.items.length + '건' })]),
-        el('ul', {}, NEWS.items.map(function (x) { return el('li', {}, [el('i', { text: x[0] }), el('div', {}, [el('b', { text: x[1] }), el('small', { text: x[2] })])]); })),
+        el('ul', {}, NEWS.items.map(function (x) {
+          var kids = [el('i', { text: x[0] }), el('div', { style: 'flex:1' }, [el('b', { text: x[1] }), el('small', { text: x[2] })])];
+          if (x[3]) kids.push(el('button', { type: 'button', class: 'ngo', text: '바로 가기 ›', onclick: function () {
+            close(); var t = x[3].split(':');
+            if (t[0] === 'economy' && t[1]) ecoTab = t[1];
+            go(t[0]);
+          } }));
+          return el('li', {}, kids); })),
         el('div', { class: 'nf' }, [el('span', { html: '<b style="color:#D9534F">' + NEWS.by + '가 업데이트했습니다</b> · 30초 뒤 저절로 닫힙니다 · 다시 보기: 제목 옆 「새 소식」' }), el('button', { type: 'button', text: '확인', onclick: close })])
       ])
     ]);
