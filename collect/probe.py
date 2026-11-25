@@ -656,9 +656,12 @@ def train_probe():
                 for meth, d in (v.items() if isinstance(v, dict) else []):
                     if not isinstance(d, dict):
                         continue
-                    ps = [(x.get('name'), x.get('required')) if isinstance(x, dict) else x for x in d.get('parameters', [])]
-                    print('[열차] %s %s%s %s | %s' % (pk, base, pth, d.get('summary'), ps))
+                    print('[열차] %s %s%s %s | 인자원문 %s' % (pk, base, pth, d.get('summary'), json.dumps(d.get('parameters'), ensure_ascii=False)[:1500]))
+                    rs = json.dumps(d.get('responses', {}), ensure_ascii=False)
+                    print('[열차]   응답항목 %s' % ','.join(sorted(set(_re.findall(r'"([a-zA-Z_]{3,})": \{"type"', rs))))[:900])
                     q = {'serviceKey': k, '_type': 'json', 'numOfRows': '3', 'pageNo': '1', 'returnType': 'json', 'cityCode': '32', 'cond[run_ymd::EQ]': '20261124', 'run_ymd': '20261124'}
+                    if 'GetStrtpntAlocFndTrainInfo' in pth:
+                        q.update({'depPlaceId': 'NAT601275', 'arrPlaceId': 'NAT010000', 'depPlandTime': '20261125'})
                     try:
                         t = http_get(base + pth, q, tries=1, timeout=40)
                         print('[열차]   → %s' % t[:900].replace(k, '***').replace('\n', ' '))
