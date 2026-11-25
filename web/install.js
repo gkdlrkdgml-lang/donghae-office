@@ -6,6 +6,16 @@ window.DHInstall = (function () {
   var isAndroid = /Android/i.test(ua), isSamsung = /SamsungBrowser/i.test(ua), isEdge = /Edg\//.test(ua);
   // 네이버·카카오톡 등 앱 안의 브라우저는 설치 기능이 없음 → 크롬·사파리로 열도록 안내
   var inApp = /NAVER|KAKAOTALK|Instagram|FBAN|FBAV|Line\/|DaumApps|everytimeApp|; wv\)/i.test(ua);
+  // 네이버·카카오톡 앱 안에서 열리면 자동으로 크롬(카카오톡은 기본 브라우저)으로 다시 엶 — 앱 안에서는 설치가 안 되므로
+  function openExternal() {
+    var url = location.href.split('#')[0];
+    if (/KAKAOTALK/i.test(ua)) { location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(url); return true; }
+    if (isAndroid) { location.href = 'intent://' + url.replace(/^https?:\/\//, '') + '#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=' + encodeURIComponent(url) + ';end'; return true; }
+    return false;   // 아이폰 네이버 앱 등은 밖으로 여는 방법이 없음 → 안내
+  }
+  try {
+    if (inApp && !sessionStorage.getItem('dh_ext_tried')) { sessionStorage.setItem('dh_ext_tried', '1'); openExternal(); }
+  } catch (e) { /* 무시 */ }
   function installed() {
     return matchMedia('(display-mode: fullscreen), (display-mode: standalone), (display-mode: minimal-ui)').matches || navigator.standalone === true;
   }
@@ -36,11 +46,11 @@ window.DHInstall = (function () {
       '#dhInstall .r{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}#dhInstall button{font:inherit;font-size:16px;font-weight:800;border:0;border-radius:10px;padding:10px 18px;cursor:pointer}' +
       '#dhInstall .ok{background:#1B3A6B;color:#fff}</style>' +
       '<div class="c"><h3>바탕화면에 앱으로 설치</h3><p>' + (isIOS || isAndroid ? '휴대폰·태블릿' : 'PC') + '에서는 이렇게 하시면 됩니다. 설치한 아이콘으로 열면 주소창 없이 화면 전체로 보입니다.</p><ol>' +
-      steps().map(function (t) { return '<li>' + t + '</li>'; }).join('') + '</ol><div class="r">' + (inApp && isAndroid ? '<button class="ok" type="button" id="dhChrome">크롬으로 열기</button>' : '') + '<button class="ok" type="button" id="dhOk">확인</button></div></div>';
+      steps().map(function (t) { return '<li>' + t + '</li>'; }).join('') + '</ol><div class="r">' + (inApp && (isAndroid || /KAKAOTALK/i.test(ua)) ? '<button class="ok" type="button" id="dhChrome">' + (isAndroid ? '크롬으로 열기' : 'Safari로 열기') + '</button>' : '') + '<button class="ok" type="button" id="dhOk">확인</button></div></div>';
     box.onclick = function (e) { if (e.target === box) close(); };
     box.querySelector('#dhOk').onclick = close;
     var cb = box.querySelector('#dhChrome');
-    if (cb) cb.onclick = function () { location.href = 'intent://' + location.host + location.pathname + '#Intent;scheme=https;package=com.android.chrome;end'; };
+    if (cb) cb.onclick = openExternal;
     document.body.appendChild(box);
   }
   function open() {
