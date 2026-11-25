@@ -17,7 +17,7 @@
 <script src="install.js"></script>
 <script src="auth.js"></script>
 <script src="land.js"></script>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <style>
   :root {
     --bg: #F4F6F9; --panel: #FFFFFF; --line: #DCE2EA; --ink: #17202C; --sub: #556274; --mute: #8693A4;
@@ -26,6 +26,15 @@
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; background: #E9EDF2; overflow: hidden; }
+  #rotTip { position: fixed; inset: 0; z-index: 999; background: rgba(27,58,107,.96); color: #fff; display: none; align-items: center; justify-content: center; text-align: center; font-family: inherit; }
+  #rotTip .rbox { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 24px; }
+  #rotTip .ricon { font-size: 54px; }
+  #rotTip b { font-size: 22px; }
+  #rotTip span { font-size: 15px; opacity: .85; }
+  #rotTip button { font: inherit; font-size: 17px; font-weight: 800; color: #1B3A6B; background: #fff; border: 0; border-radius: 12px; padding: 12px 22px; margin-top: 8px; }
+  #rotTip a { color: #cfe0ff; font-size: 14px; }
+  html, body { overscroll-behavior: none; touch-action: manipulation; }
+
   body { font-family: 'Noto Sans KR', 'Malgun Gothic', system-ui, sans-serif; color: var(--ink); font-variant-numeric: tabular-nums; }
   #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; background: var(--bg);
            display: grid; grid-template-rows: 112px minmax(0, 1fr); }
@@ -355,11 +364,31 @@ function startApp() {
   var view = document.getElementById('view');
 
   // ---------- 화면 크기에 맞춰 1920×1080을 늘리거나 줄임 ----------
+  // 휴대폰: 주소창이 생기고 사라질 때·가로로 돌릴 때도 실제 보이는 크기(visualViewport)에 딱 맞춤
   function fit() {
-    var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
-    stage.style.transform = 'translate(' + (window.innerWidth - 1920 * s) / 2 + 'px,' + (window.innerHeight - 1080 * s) / 2 + 'px) scale(' + s + ')';
+    var vv = window.visualViewport, W = vv ? vv.width : window.innerWidth, H = vv ? vv.height : window.innerHeight;
+    var s = Math.min(W / 1920, H / 1080);
+    stage.style.transform = 'translate(' + (W - 1920 * s) / 2 + 'px,' + (H - 1080 * s) / 2 + 'px) scale(' + s + ')';
+    var tip = document.getElementById('rotTip');
+    if (tip) tip.style.display = (H > W * 1.1 && W < 900 && !tipOff) ? 'flex' : 'none';
   }
-  window.addEventListener('resize', fit); fit();
+  var tipOff = false;
+  window.addEventListener('resize', fit);
+  window.addEventListener('orientationchange', function () { fit(); setTimeout(fit, 250); setTimeout(fit, 700); });
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', fit);
+  // 세로로 들고 있으면 「가로로 돌려 주세요」(누르면 전체 화면 + 가로 고정 — 안드로이드)
+  (function () {
+    var tip = document.createElement('div'); tip.id = 'rotTip';
+    tip.innerHTML = '<div class="rbox"><div class="ricon">📱↻</div><b>휴대폰을 가로로 돌려 주세요</b><span>화면이 자동으로 꽉 차게 맞춰집니다</span>'
+      + '<button type="button" id="rotFs">가로 전체 화면으로 보기</button><a href="#" id="rotNo">세로로 그냥 보기</a></div>';
+    document.body.appendChild(tip);
+    document.getElementById('rotFs').onclick = function () {
+      var el2 = document.documentElement, rq = el2.requestFullscreen || el2.webkitRequestFullscreen;
+      try { var p = rq && rq.call(el2, { navigationUI: 'hide' }); if (p && p.then) p.then(function () { try { screen.orientation.lock('landscape').catch(function () {}); } catch (e) { /* 아이폰 */ } }).catch(function () {}); } catch (e) { /* 지원 안 함 */ }
+    };
+    document.getElementById('rotNo').onclick = function (e) { e.preventDefault(); tipOff = true; fit(); };
+  })();
+  fit();
 
   // ---------- 작은 도우미 ----------
   function el(tag, attrs, kids) {
@@ -3256,7 +3285,8 @@ function startApp() {
 
 
   // ---------- 최신 업데이트 알림: 탭·내용·최신 자료 교체 때(이용자 눈으로 쓴 말), 올린 날부터 7일 동안 열 때마다(자동 새로 고침 제외) ----------
-  var NEWS = { id: '2026-11-26d', day: '2026-11-26', at: '2026년 11월 26일(목) 01:10', by: '동해시 관리자', items: [
+  var NEWS = { id: '2026-11-26e', day: '2026-11-26', at: '2026년 11월 26일(목) 08:55', by: '동해시 관리자', items: [
+    ['화면', '휴대폰 가로 보기', '휴대폰을 가로로 돌리면 화면 크기에 딱 맞춰집니다', ''],
     ['최신 반영', '상하수도 · 최신 정보 반영', '10월 수돗물 수질검사·2026년 요금표로 교체', 'water:q'],
     ['새 메뉴', '4번 「항만」', '동해·묵호항 입출항 선박·품목별 물동량, 전국 항만 비교', 'port'],
     ['새 내용', '경제 › 「아파트 거래」', '18개 시·군 거래 건수·거래 기준 평당 가격, 최근 거래', 'economy:apt'],
