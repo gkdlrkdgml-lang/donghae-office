@@ -16,6 +16,8 @@ import life
 import tour  # noqa: E402
 import power  # noqa: E402
 import rail  # noqa: E402
+import port  # noqa: E402
+import apt  # noqa: E402
 import admin_sync  # noqa: E402
 import landlaw  # noqa: E402
 import agri  # noqa: E402
@@ -332,6 +334,19 @@ def collect(state, S, C):
         ok(state, 'rail', '정차 %d일 · 오늘 시간표 %s' % (len(R0['days']), ', '.join('%s %d편' % (k, len(v)) for k, v in ((R0.get('today') or {}).get('dep') or {}).items())))
     except Exception as e:  # noqa: BLE001
         fail(state, 'rail', e)
+    if stale('port', 3) or '--force-all' in sys.argv:
+        try:   # 항만물류(해양수산부 PORT-MIS 월 통계)
+            L['port'] = port.collect(L.get('port')); L['port']['at'] = now().date().isoformat()
+            P0 = L['port']
+            ok(state, 'port', '입출항 ~%s · 연안화물 ~%s' % (max(P0['vessel']) if P0['vessel'] else '-', max(P0['cargo']) if P0['cargo'] else '-'))
+        except Exception as e:  # noqa: BLE001
+            fail(state, 'port', e)
+    if stale('apt', 1) or '--force-all' in sys.argv:
+        try:   # 아파트 매매 실거래(18개 시·군)
+            L['apt'] = apt.collect(L.get('apt')); L['apt']['at'] = now().date().isoformat()
+            ok(state, 'apt', '%s까지 · 오류 %d' % (L['apt']['months'][-1], len(L['apt']['errors'])))
+        except Exception as e:  # noqa: BLE001
+            fail(state, 'apt', e)
     if os.environ.get('KEPCO_KEY') and (stale('power', 3) or len((L.get('power') or {}).get('months') or {}) < power.KEEP - 1 or '--force-power' in sys.argv):
         try:
             L['power'] = power.collect(C, L.get('power'))

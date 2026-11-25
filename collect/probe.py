@@ -701,7 +701,24 @@ def econ3_probe():
                 print('[항만] %s/%s 실패 %s' % (svc, op, str(e)[90:200]))
 
 
+def portapt_probe():
+    import base64, gzip
+    import port, apt
+    o = {}
+    for nm, mod in (('port', port), ('apt', apt)):
+        try:
+            o[nm] = mod.collect(None)
+        except Exception as e:  # noqa: BLE001
+            print('[PA] %s 실패 %s' % (nm, e))
+    b = base64.b64encode(gzip.compress(json.dumps(o, ensure_ascii=False).encode())).decode()
+    for i in range(0, len(b), 3000):
+        print('[PA]%05d %s' % (i // 3000, b[i:i + 3000]))
+    print('[PA] 끝 %d' % len(b))
+
+
 def main():
+    if os.environ.get('PROBE_ONLY') == 'portapt':
+        return portapt_probe()
     if os.environ.get('PROBE_ONLY') == 'econ3':
         return econ3_probe()
     if os.environ.get('PROBE_ONLY') == 'railjson':
