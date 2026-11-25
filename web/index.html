@@ -2317,12 +2317,113 @@ function startApp() {
     var L = D.life || {}, tabs = [['biz', '사업자 · 고용']];
     if (L.stores) tabs.push(['store', '상가 신규·폐업 · 18개 시·군']);
     if (L.licenses) tabs.push(['shop', '음식점·숙박 개업·폐업']);
+    if (L.apt && L.apt.stat) tabs.push(['apt', '아파트 거래 · 18개 시·군']);
+    if (L.port && (Object.keys(L.port.vessel || {}).length || Object.keys(L.port.cargo || {}).length)) tabs.push(['port', '항만물류']);
     if (!tabs.some(function (t) { return t[0] === ecoTab; })) ecoTab = 'biz';
-    if (ecoTab === 'shop') screenShop(); else if (ecoTab === 'store') screenStores(); else screenEconomy();
+    if (ecoTab === 'shop') screenShop(); else if (ecoTab === 'store') screenStores(); else if (ecoTab === 'apt') screenApt(); else if (ecoTab === 'port') screenPort(); else screenEconomy();
     var title = view.querySelector('.title');
     if (title && tabs.length > 1) title.insertBefore(tabsBar(tabs, ecoTab, function (k) { ecoTab = k; }), title.children[1] || null);
   }
   var stoMet = 'shop_new';
+  // ---------- 경제 › 항만물류(해양수산부 PORT-MIS 월 통계) ----------
+  function screenPort() {
+    var P = (D.life || {}).port || {}, V = P.vessel || {}, C = P.cargo || {}, ME = P.me || '동해.묵호';
+    function ymL(k) { return k ? k.slice(0, 4) + '년 ' + Number(k.slice(4)) + '월' : ''; }
+    function vin(ym, pt) { var r = (V[ym] || {})[pt || ME]; if (!r) return null; var a = [0, 0, 0, 0]; Object.keys(r).forEach(function (nm) { if (nm.indexOf('계') >= 0) return; r[nm].forEach(function (x, j) { a[j] += x; }); }); return a; }
+    var vm = Object.keys(V).filter(function (m) { return (V[m] || {})[ME]; }).sort(), cm = Object.keys(C).filter(function (m) { return (C[m] || {})[ME] != null; }).sort();
+    var lv = vm[vm.length - 1], lc = cm[cm.length - 1];
+    lifeTitle('동해·묵호항 항만물류', '해양수산부 해운항만물류정보(PORT-MIS) · 입출항 ' + (lv ? '~' + ymL(lv) : '없음') + ' · 연안화물 ' + (lc ? '~' + ymL(lc) : '없음'));
+    view.style.gridTemplateColumns = 'minmax(0, 1.2fr) minmax(0, 1fr)';
+    view.style.gridTemplateRows = '44px auto minmax(0, 1fr) minmax(0, 1fr)';
+    function prevY(k) { return k ? (Number(k.slice(0, 4)) - 1) + k.slice(4) : null; }
+    function ytd(k, f) { if (!k) return null; var y = k.slice(0, 4), t = 0, ok = true; for (var i = 1; i <= Number(k.slice(4)); i++) { var v = f(y + ('0' + i).slice(-2)); if (v == null) ok = false; else t += v; } return ok ? t : null; }
+    function pct(a, b) { return a != null && b ? (a - b) / b * 100 : null; }
+    function sg(v, d) { return v == null ? '' : (v > 0 ? '+' : '') + fmt(v, d == null ? 1 : d); }
+    var cur = lv ? vin(lv) : null, pv = lv ? vin(prevY(lv)) : null;
+    var yIn = ytd(lv, function (m) { var a = vin(m); return a ? a[0] : null; }), yIn0 = lv ? ytd(prevY(lv), function (m) { var a = vin(m); return a ? a[0] : null; }) : null;
+    var cg = lc ? C[lc][ME] : null, cg0 = lc ? (C[prevY(lc)] || {})[ME] : null;
+    var yCg = ytd(lc, function (m) { return (C[m] || {})[ME]; }), yCg0 = lc ? ytd(prevY(lc), function (m) { return (C[m] || {})[ME]; }) : null;
+    // 전국 항만 중 순위(올해 누계 입항 톤수)
+    var ports = lv ? Object.keys(V[lv]).filter(function (pt) { return pt !== '합계' && pt.indexOf('계') < 0; }) : [];
+    var rk = ports.map(function (pt) { return [pt, ytd(lv, function (m) { var a = vin(m, pt); return a ? a[1] : 0; }) || 0]; }).filter(function (x) { return x[1] > 0; }).sort(function (a, b) { return b[1] - a[1]; });
+    var myR = rk.map(function (x) { return x[0]; }).indexOf(ME) + 1;
+    cardsRow([
+      cur ? { l: '입항 선박', sub: ymL(lv), ic: 'trend', col: '#1F6FD1', bg: '#E8F0FC', v: fmt(cur[0], 0), u: '척', chips: [pv ? ['1년 전 같은 달 ' + fmt(pv[0], 0) + '척 · ' + sg(pct(cur[0], pv[0])) + '%', pct(cur[0], pv[0]) >= 0 ? 'good' : 'bad'] : null, ['출항 ' + fmt(cur[2], 0) + '척', '']] } : null,
+      cur ? { l: '입항 선박 톤수', sub: ymL(lv) + ' · 총톤수(GT)', ic: 'house', col: '#1B3A6B', bg: '#E8EEF7', v: fmt(cur[1] / 10000, 1), u: '만 톤', chips: [pv ? ['1년 전 ' + sg(pct(cur[1], pv[1])) + '%', pct(cur[1], pv[1]) >= 0 ? 'good' : 'bad'] : null] } : null,
+      yIn != null ? { l: '올해 입항 누계', sub: lv.slice(0, 4) + '년 1~' + Number(lv.slice(4)) + '월', ic: 'doorIn', col: '#2E8B57', bg: '#E2F3E9', v: fmt(yIn, 0), u: '척', chips: [yIn0 ? ['지난해 같은 기간 ' + sg(pct(yIn, yIn0)) + '%', pct(yIn, yIn0) >= 0 ? 'good' : 'bad'] : null] } : null,
+      cg != null ? { l: '연안화물', sub: ymL(lc) + ' · 동해·묵호항', ic: 'trend', col: '#C0602B', bg: '#FCEBDD', v: fmt(cg / 10000, 1), u: '만 톤', chips: [cg0 ? ['1년 전 같은 달 ' + sg(pct(cg, cg0)) + '%', pct(cg, cg0) >= 0 ? 'good' : 'bad'] : null, yCg != null ? ['올해 누계 ' + fmt(yCg / 10000, 1) + '만 톤' + (yCg0 ? ' (' + sg(pct(yCg, yCg0)) + '%)' : ''), ''] : null] } : null,
+      myR ? { l: '전국 항만 중', sub: '올해 입항 선박 톤수 기준', ic: 'trend', col: '#7A4FC4', bg: '#EFE9FB', v: myR + '위', u: '', chips: [[rk.length + '개 항만', 'violet']] } : null
+    ].filter(Boolean));
+    // 월별 입항 척수(올해·지난해)
+    if (lv) {
+      var Y = lv.slice(0, 4), Y0 = String(Number(Y) - 1), lab = [], a = [], b = [];
+      for (var i = 1; i <= 12; i++) { var mm = ('0' + i).slice(-2), x = vin(Y + mm), z = vin(Y0 + mm); lab.push(i + '월'); a.push(x ? x[0] : null); b.push(z ? z[0] : null); }
+      panel('월별 입항 선박 · 동해·묵호항', Y + '년 실선 · ' + Y0 + '년 점선 · 척', lineChart(lab, [{ name: Y + '년', color: '#1F6FD1', values: a, width: 3.5, labels: true }, { name: Y0 + '년', color: '#9AA7B8', values: b, width: 2.5, dash: '5 4' }], { fit: true, unit: '척' }));
+    }
+    // 선박 구분별(최근 달)
+    if (lv) {
+      var R = V[lv][ME], rows = Object.keys(R).map(function (nm) { var v = R[nm]; return el('tr', {}, [el('td', { html: '<b>' + nm + '</b>' }), el('td', { class: 'r', text: fmt(v[0], 0) }), el('td', { class: 'r', text: fmt(v[1], 0) }), el('td', { class: 'r', text: fmt(v[2], 0) }), el('td', { class: 'r', text: fmt(v[3], 0) })]); });
+      panel('선박 구분별 입출항 · ' + ymL(lv), '척 · 총톤수(GT)', el('table', { class: 'dt big' }, [el('thead', {}, [el('tr', {}, ['구분', '입항 척', '입항 톤', '출항 척', '출항 톤'].map(function (h, j) { return el('th', { class: j ? 'r' : '', text: h }); }))]), el('tbody', {}, rows)]));
+    }
+    // 연안화물 월별
+    if (lc) {
+      var Yc = lc.slice(0, 4), Yc0 = String(Number(Yc) - 1), lb = [], c1 = [], c0 = [];
+      for (var j = 1; j <= 12; j++) { var m2 = ('0' + j).slice(-2), u = (C[Yc + m2] || {})[ME], w = (C[Yc0 + m2] || {})[ME]; lb.push(j + '월'); c1.push(u == null ? null : Math.round(u / 1000) / 10); c0.push(w == null ? null : Math.round(w / 1000) / 10); }
+      panel('월별 연안화물 · 동해·묵호항', Yc + '년 실선 · ' + Yc0 + '년 점선 · 만 톤 · 수출입 화물은 들어 있지 않음', lineChart(lb, [{ name: Yc + '년', color: '#C0602B', values: c1, width: 3.5, labels: true }, { name: Yc0 + '년', color: '#9AA7B8', values: c0, width: 2.5, dash: '5 4' }], { fit: true, unit: '만 톤' }));
+    }
+    // 전국 항만 순위
+    if (rk.length) {
+      var top = rk.slice(0, 14); if (myR > 14) top.push(rk[myR - 1]);
+      var I = { name: '입항 선박 톤수', digits: 0, unit: '만 톤', ranking: top.map(function (x) { return { name: x[0], rank: rk.indexOf(x) + 1, value: Math.round(x[1] / 10000) }; }) };
+      var D0 = D.me; D.me = ME; var rl = rankList(I); D.me = D0;
+      panel('전국 항만 · 올해 입항 선박 톤수', lv.slice(0, 4) + '년 1~' + Number(lv.slice(4)) + '월 · 만 톤 · 파란 막대 = 동해·묵호항', rl);
+    }
+  }
+
+  // ---------- 경제 › 아파트 거래(국토교통부 실거래가, 18개 시·군) ----------
+  var aptMet = 'n';
+  function screenApt() {
+    var A = (D.life || {}).apt || {}, ST = A.stat || {}, Y = A.ytd || {}, to = A.ytd_to || '', ms = A.months || [];
+    var SN = ST[regName()] ? regName() : D.me, isMe = SN === D.me, y = Y[SN] || {}, s = ST[SN] || {};
+    var Yr = to.slice(0, 4), Mo = Number(to.slice(4)), lastM = ms[ms.length - 1];
+    function sg(v) { return v == null ? '' : (v > 0 ? '+' : '') + fmt(v, 1); }
+    function pct(a, b) { return a != null && b ? (a - b) / b * 100 : null; }
+    function won(v) { var e = Math.floor(v / 10000), r = v % 10000; return (e ? e + '억' + (r ? ' ' + fmt(r, 0) + '만' : '') : fmt(v, 0) + '만') + '원'; }
+    lifeTitle(fullName(SN) + ' 아파트 매매', '국토교통부 아파트 매매 실거래가 · ' + Yr + '년 1~' + Mo + '월(해제 거래 뺌) · 신고는 계약 후 30일 안이라 최근 달은 늘어날 수 있음' + selHint());
+    view.style.gridTemplateColumns = 'minmax(0, 1fr) minmax(0, 1.25fr)';
+    view.style.gridTemplateRows = '44px auto minmax(0, 1fr) minmax(0, 1fr)';
+    var rkN = Object.keys(Y).filter(function (r) { return Y[r].n != null; }).sort(function (a, b) { return Y[b].n - Y[a].n; });
+    var rkP = Object.keys(Y).filter(function (r) { return Y[r].per != null; }).sort(function (a, b) { return Y[b].per - Y[a].per; });
+    var cm = (s[lastM] || {}).n;
+    cardsRow([
+      { l: '올해 거래', sub: Yr + '년 1~' + Mo + '월', ic: 'house', col: '#1F6FD1', bg: '#E8F0FC', v: fmt(y.n, 0), u: '건', chips: [y.n_prev ? ['지난해 같은 기간 ' + fmt(y.n_prev, 0) + '건 · ' + sg(pct(y.n, y.n_prev)) + '%', pct(y.n, y.n_prev) >= 0 ? 'good' : 'bad'] : null, ['도내 ' + (rkN.indexOf(SN) + 1) + '위 / ' + rkN.length, 'navy']] },
+      { l: '㎡당 가격', sub: Yr + '년 1~' + Mo + '월 · 전용면적 기준 중앙값', ic: 'trend', col: '#C0602B', bg: '#FCEBDD', v: fmt(y.per, 0), u: '만원', chips: [y.per ? ['3.3㎡(1평)당 ' + fmt(y.per * 3.3058, 0) + '만원', ''] : null, y.per_prev ? ['지난해 ' + sg(pct(y.per, y.per_prev)) + '%', ''] : null] },
+      { l: '도내 가격 순위', sub: '㎡당 가격 높은 순(판정 안 함)', ic: 'trend', col: '#7A4FC4', bg: '#EFE9FB', v: (rkP.indexOf(SN) + 1) + '위', u: '', chips: [['18개 시·군', 'violet']] },
+      { l: '이번 달 신고', sub: (lastM ? Number(lastM.slice(4)) + '월' : '') + ' · 지금까지 신고된 것', ic: 'doorIn', col: '#2E8B57', bg: '#E2F3E9', v: fmt(cm || 0, 0), u: '건', chips: [['달이 끝나고 30일까지 늘어남', '']] }
+    ]);
+    var MET = [['n', '거래 건수'], ['per', '㎡당 가격']];
+    var sw = el('div', { class: 'chips', style: 'flex-wrap:nowrap;gap:6px;margin-bottom:6px' }, MET.map(function (m) {
+      return el('button', { type: 'button', class: 'chip', style: 'cursor:pointer;border:0;font-weight:800' + (m[0] === aptMet ? ';background:#1B3A6B;color:#fff' : ''), text: m[1], onclick: function () { aptMet = m[0]; render(); } }); }));
+    var order = aptMet === 'per' ? rkP : rkN;
+    var I = { name: aptMet === 'per' ? '㎡당 가격' : '거래 건수', digits: 0, unit: aptMet === 'per' ? '만원' : '건', ranking: order.map(function (r, i) { return { name: r, rank: i + 1, value: Y[r][aptMet] }; }) };
+    var p1 = panel(I.name + ' · 강원 18개 시·군', Yr + '년 1~' + Mo + '월 · 많은·높은 순(좋고 나쁨 판정 안 함) · 누르면 그 지역', [sw, rankList(I, regPick, regSel)]);
+    p1.style.gridRow = '3 / span 2';
+    // 월별 거래 건수 · ㎡당 가격
+    var Y1 = lastM ? lastM.slice(0, 4) : Yr, Y0 = String(Number(Y1) - 1), lab = [], a = [], b = [], pa = [], pb = [];
+    for (var i = 1; i <= 12; i++) { var mm = ('0' + i).slice(-2), x = s[Y1 + mm], z = s[Y0 + mm]; lab.push(i + '월'); a.push(x ? x.n : null); b.push(z ? z.n : null); pa.push(x && x.per != null ? x.per : null); pb.push(z && z.per != null ? z.per : null); }
+    panel('월별 거래 건수 · ' + fullName(SN), Y1 + '년 실선 · ' + Y0 + '년 점선 · 건 · 이번 달은 아직 신고 중', lineChart(lab, [{ name: Y1 + '년', color: '#1F6FD1', values: a, width: 3.5, labels: true }, { name: Y0 + '년', color: '#9AA7B8', values: b, width: 2.5, dash: '5 4' }], { fit: true, unit: '건' }));
+    var L6 = A.list || {}, lk = Object.keys(L6).sort().reverse();
+    if (isMe && lk.length) {
+      var rows = [];
+      lk.forEach(function (k) { (L6[k] || []).forEach(function (r) { rows.push([k, r]); }); });
+      panel('동해시 최근 거래', '최근 ' + lk.length + '개월 · 계약일 늦은 순 · 해제 거래 뺌', el('table', { class: 'dt big' }, [
+        el('thead', {}, [el('tr', {}, ['계약일', '단지', '동', '전용', '층', '금액'].map(function (h, j) { return el('th', { class: j >= 3 ? 'r' : '', text: h }); }))]),
+        el('tbody', {}, rows.map(function (q) { var r = q[1]; return el('tr', {}, [el('td', { text: Number(q[0].slice(4)) + '.' + r.d }), el('td', { html: '<b>' + r.nm + '</b>' }), el('td', { text: r.dong }), el('td', { class: 'r', text: fmt(r.ar, 1) + '㎡' }), el('td', { class: 'r', text: r.fl + '층' }), el('td', { class: 'r', html: '<b>' + won(r.amt) + '</b>' })]); }))]));
+    } else {
+      panel('월별 ㎡당 가격 · ' + fullName(SN), Y1 + '년 실선 · ' + Y0 + '년 점선 · 만원 · 달마다 중앙값', lineChart(lab, [{ name: Y1 + '년', color: '#C0602B', values: pa, width: 3.5, labels: true }, { name: Y0 + '년', color: '#9AA7B8', values: pb, width: 2.5, dash: '5 4' }], { fit: true, unit: '만원' }));
+    }
+  }
+
   function screenStores() {
     var S = (D.life || {}).stores || {}, R = S.regions || {}, sy = S.stdrYm || '', Y = sy.slice(0, 4), Mo = Number(sy.slice(4));
     var SN = R[regName()] ? regName() : D.me, isMe = SN === D.me, r = R[SN] || {}, me = R[D.me] || {};
@@ -2978,15 +3079,15 @@ function startApp() {
   setTimeout(function () { location.reload(); }, 30 * 60 * 1000);
 
 
-  // ---------- 최신 업데이트 알림: 새 소식(id)이 바뀌면 화면을 켤 때 한 번 띄움 ----------
+  // ---------- 최신 업데이트 알림: 탭·내용이 새로 생겼을 때만(이용자 눈으로 쓴 말), 올린 날(id)부터 7일 동안 화면을 켤 때 한 번 ----------
   var NEWS = { id: '2026-11-25', date: '11월 25일', items: [
     ['새 메뉴', '4번 「철도」', '동해역·묵호역 오늘 시간표와 다음 열차, 강원 역별 정차 열차 수(승객 수 아님)를 보여 드립니다.'],
-    ['화면', '메뉴 글자 크게', '맨 위 1~15번 메뉴를 둘째 줄로 옮기고 글자를 크고 굵게 바꿨습니다.'],
-    ['준비 중', '경제 「항만물류」·아파트 거래', '동해항 입출항·물동량과 아파트 실거래가를 경제 탭에 넣을 예정입니다.']
+    ['화면', '메뉴 글자 크게', '맨 위 1~15번 메뉴를 둘째 줄로 옮기고 글자를 크고 굵게 바꿨습니다.']
   ] };
   function showNews(force) {
     var seen = ''; try { seen = localStorage.getItem('dh_news_seen') || ''; } catch (e) { /* 저장소 없음 */ }
-    if (!force && seen === NEWS.id) return;
+    var age = (Date.now() - new Date(NEWS.id + 'T00:00:00+09:00').getTime()) / 864e5;   // 올린 날부터 7일만 자동으로
+    if (!force && (seen === NEWS.id || age > 7)) return;
     var old = document.getElementById('newsBack'); if (old) old.remove();
     var timer;
     function close() { clearTimeout(timer); back.remove(); try { localStorage.setItem('dh_news_seen', NEWS.id); } catch (e) { /* 무시 */ } }

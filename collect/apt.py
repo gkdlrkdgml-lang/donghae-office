@@ -68,7 +68,7 @@ def _month(k, code, ym):
 def _stat(rows):
     amts = [r['amt'] for r in rows]
     per = [r['amt'] / r['ar'] for r in rows if r['ar'] > 0]
-    return {'n': len(rows), 'med': _med(amts), 'per': round(_med(per), 1) if per else None}
+    return {'n': len(rows), 'med': _med(amts), 'per': round(_med(per), 1) if per else None, 'pa': sorted(round(x) for x in per)}
 
 
 def collect(cache):
@@ -105,7 +105,22 @@ def collect(cache):
     keep = set(months)
     st = {r: {m: v for m, v in d.items() if m in keep} for r, d in st.items()}
     lst = {m: v for m, v in lst.items() if m in months[-LIST_M:]}
+    # 올해 1월~지난달, 지난해 같은 기간(이번 달은 신고가 덜 들어와 뺌)
+    cy, cm = today.year, today.month - 1
+    if cm < 1:
+        cy, cm = cy - 1, 12
+    ytd = {}
+    for reg, d in st.items():
+        cur = ['%04d%02d' % (cy, i) for i in range(1, cm + 1)]
+        prv = ['%04d%02d' % (cy - 1, i) for i in range(1, cm + 1)]
+        def agg(ms):
+            if not all(m in d for m in ms):
+                return None, None
+            pa = [x for m in ms for x in (d[m].get('pa') or [])]
+            return sum(d[m]['n'] for m in ms), _med(pa)
+        n1, p1 = agg(cur); n0, p0 = agg(prv)
+        ytd[reg] = {'n': n1, 'per': p1, 'n_prev': n0, 'per_prev': p0}
     if not any(st.values()):
         raise RuntimeError('아파트 실거래 없음 · ' + ' / '.join(errs))
     log('아파트 실거래: %d회 호출, 오류 %d' % (calls, len(errs)))
-    return {'v': 1, 'me': ME, 'months': months, 'stat': st, 'list': lst, 'errors': errs, 'fetched': now().strftime('%Y-%m-%d %H:%M')}
+    return {'v': 1, 'me': ME, 'months': months, 'ytd': ytd, 'ytd_to': '%04d%02d' % (cy, cm), 'stat': st, 'list': lst, 'errors': errs, 'fetched': now().strftime('%Y-%m-%d %H:%M')}
