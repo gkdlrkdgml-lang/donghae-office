@@ -331,6 +331,7 @@ def collect(state, S, C):
         lambda v: (sum(x for a, x in v.items() if a[:2].isdigit() and int(a[:2]) >= 65) / sum(v.values()) * 100) if sum(v.values()) else None)
     _ag('eco', '농가수', ('ag_eco', '%s년 친환경농산물 인증 농가(국립농산물품질관리원)'))
     _ag('fish', '해수면 어가', ('fs_hh', '%s년 12월 1일 기준 해수면 어가(2025 농림어업총조사)'))
+    log('철도 시작')
     try:   # 철도(동해시 역): 지난 날은 캐시, 최근 2일·오늘 시간표만 새로
         L['rail'] = rail.collect(L.get('rail'))
         R0 = L['rail']
@@ -338,6 +339,7 @@ def collect(state, S, C):
     except Exception as e:  # noqa: BLE001
         fail(state, 'rail', e)
     if stale('port', 3) or not (L.get('port') or {}).get('items') or '--force-all' in sys.argv:
+        log('항만 시작')
         try:   # 항만물류(해양수산부 PORT-MIS 월 통계)
             L['port'] = port.collect(L.get('port')); L['port']['at'] = now().date().isoformat()
             P0 = L['port']
@@ -345,18 +347,21 @@ def collect(state, S, C):
         except Exception as e:  # noqa: BLE001
             fail(state, 'port', e)
     if stale('waterq', 3) or '--force-all' in sys.argv:
+        log('수질검사 시작')
         try:   # 수돗물 법정 수질검사(K-water, 강원 정수장 월별)
             L['waterq'] = waterq.collect(L.get('waterq')); L['waterq']['at'] = now().date().isoformat()
             ok(state, 'waterq', '최근 %s' % L['waterq']['latest'])
         except Exception as e:  # noqa: BLE001
             fail(state, 'waterq', e)
     if stale('waterfee', 7) or '--force-all' in sys.argv:
+        log('요금표 시작')
         try:   # 동해시 상하수도 요금표(사업소 홈페이지, 주 1회)
             L['waterfee'] = waterq.fee(); L['waterfee']['at'] = now().date().isoformat()
             ok(state, 'waterfee', '표 %d개' % len(L['waterfee']['tables']))
         except Exception as e:  # noqa: BLE001
             fail(state, 'waterfee', e)
     if stale('apt', 1) or '--force-all' in sys.argv:
+        log('아파트 시작')
         try:   # 아파트 매매 실거래(18개 시·군)
             L['apt'] = apt.collect(L.get('apt')); L['apt']['at'] = now().date().isoformat()
             ok(state, 'apt', '%s까지 · 오류 %d' % (L['apt']['months'][-1], len(L['apt']['errors'])))

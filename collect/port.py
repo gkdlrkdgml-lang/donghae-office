@@ -115,7 +115,7 @@ def _nlic_month(y, m):
     import xlrd
     req = ur.Request(NLIC, data=urllib.parse.urlencode({'srchYear': str(y), 'srchMonth': '%02d' % m, 'srchHbCode': ''}).encode(),
                      headers={'User-Agent': 'Mozilla/5.0', 'Content-Type': 'application/x-www-form-urlencoded'})
-    b = ur.urlopen(req, timeout=60).read()
+    b = ur.urlopen(req, timeout=30).read()
     if b[:4] != b'\xd0\xcf\x11\xe0':
         return None
     sh = xlrd.open_workbook(file_contents=b).sheet_by_index(0)
@@ -147,14 +147,18 @@ def items(cache):
             m, y = 1, y + 1
     have = sorted(got)
     redo = set(have[-2:])
-    for (y, m) in months:
+    import time
+    t0 = time.time()
+    for (y, m) in reversed(months):          # 최근 달부터
         k = '%04d%02d' % (y, m)
         if k in got and k not in redo:
             continue
+        if time.time() - t0 > 240:             # 한 번에 4분까지만(나머지는 다음 실행)
+            log('품목별 물동량: 시간 다 써서 %s부터는 다음에' % k); break
         try:
             d = _nlic_month(y, m)
         except Exception as e:  # noqa: BLE001
-            log('품목별 물동량 %s 실패: %s' % (k, e)); d = None
+            log('품목별 물동량 %s 실패: %s → 이번 실행은 그만' % (k, e)); break
         if d:
             got[k] = d
     return {k: v for k, v in got.items() if k >= '%04d01' % (today.year - 1)}

@@ -28,7 +28,7 @@ def _month(k, y, m):
     rows, page = [], 1
     while page <= 5:
         t = http_get(URL, {'serviceKey': k, 'viewType': 'json', 'pageNo': str(page), 'numOfRows': '200',
-                           'year': str(y), 'month': '%02d' % m, 'BSI': BSI}, tries=2, timeout=60)
+                           'year': str(y), 'month': '%02d' % m, 'BSI': BSI}, tries=1, timeout=40)
         j = json.loads(t)
         bd = (j.get('response') or {}).get('body') or {}
         it = bd.get('items') or []
@@ -64,11 +64,15 @@ def collect(cache):
         m -= 1
         if m < 1:
             m, y = 12, y - 1
+    import time
+    t0 = time.time()
     errs = []
     for i, (y, m) in enumerate(ms):
         key = '%04d%02d' % (y, m)
         if key in old and i > 2:       # 최근 3개월(이번 달 포함)만 다시
             continue
+        if time.time() - t0 > 240 or len(errs) >= 2:   # 4분 넘거나 두 번 실패하면 다음 실행에서
+            break
         try:
             rows = _month(k, y, m)
             if rows:
@@ -94,7 +98,7 @@ def fee():
     import urllib.request as ur
     ctx = ssl.create_default_context()
     ctx.set_ciphers('DEFAULT:@SECLEVEL=1')      # 사이트가 예전 암호 방식만 받음
-    h = ur.urlopen(ur.Request(FEE_URL, headers={'User-Agent': 'Mozilla/5.0'}), timeout=40, context=ctx).read().decode('utf-8', 'ignore')
+    h = ur.urlopen(ur.Request(FEE_URL, headers={'User-Agent': 'Mozilla/5.0'}), timeout=30, context=ctx).read().decode('utf-8', 'ignore')
     tabs = []
     for t in re.findall(r'<table.*?</table>', h, re.S):
         cap = re.search(r'<caption>(.*?)</caption>', t, re.S)
