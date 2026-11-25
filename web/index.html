@@ -49,9 +49,9 @@
   #clock { font-size: 18px; color: var(--navy); font-weight: 700; }
   #printBtn { font: inherit; font-size: 17px; line-height: 1; color: var(--navy); background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 6px 7px; cursor: pointer; white-space: nowrap; }
   #moreWrap { position: relative; }
-  #moreBtn { font: inherit; font-size: 16px; font-weight: 800; color: #1B3A6B; background: #fff; border: 1.5px solid #1B3A6B; border-radius: 8px; padding: 6px 12px; cursor: pointer; white-space: nowrap; }
+  nav #moreBtn { color: #1B3A6B; }
   #moreBtn.on { background: var(--blue); border-color: var(--blue); color: #fff; }
-  #moreMenu { position: absolute; right: 0; top: 44px; z-index: 95; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 32px rgba(15,30,60,.25); padding: 8px; min-width: 220px; }
+  #moreMenu { position: absolute; right: 0; top: 52px; z-index: 95; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 32px rgba(15,30,60,.25); padding: 8px; min-width: 220px; }
   #moreMenu button { display: block; width: 100%; text-align: left; font: inherit; font-size: 22px; font-weight: 800; color: #2B3443; background: none; border: 0; border-radius: 8px; padding: 10px 14px; cursor: pointer; }
   #moreMenu button:hover, #moreMenu button.cur { background: #E8F0FC; color: #1F6FD1; }
   #flowBtn { font: inherit; font-size: 16px; font-weight: 800; color: #fff; background: #1B3A6B; border: 0; border-radius: 8px; padding: 7px 12px; cursor: pointer; white-space: nowrap; }
@@ -328,7 +328,7 @@
   <header>
     <div class="brand"><a href="admin.html" class="emblink" aria-label="관리자" tabindex="-1"><img class="emblem" src="img/emblem.png" alt="동해시 상징마크"></a><span id="appTitle" title="새로 고침" style="cursor:pointer" onclick="location.reload()">동해시 AI 시장실</span><span id="appSlogan" class="slogan"></span></div>
     <nav id="nav" aria-label="화면 메뉴"></nav>
-    <div class="hright"><span id="badges"></span><span id="moreWrap"><button id="moreBtn" type="button" title="다른 화면" onclick="dhMore(event)">더보기 ▾</button></span><button id="flowBtn" type="button" title="여러 화면을 정해진 간격으로 돌려 보기" onclick="location.hash='flow'">▶ 흘러가기</button><button id="printBtn" type="button" title="지금 화면 인쇄(PDF 저장 가능)" onclick="dhPrint()" aria-label="인쇄">🖨</button><span id="updated"></span><span id="clock"></span></div>
+    <div class="hright"><span id="badges"></span><button id="flowBtn" type="button" title="여러 화면을 정해진 간격으로 돌려 보기" onclick="location.hash='flow'">▶ 흘러가기</button><button id="printBtn" type="button" title="지금 화면 인쇄(PDF 저장 가능)" onclick="dhPrint()" aria-label="인쇄">🖨</button><span id="updated"></span><span id="clock"></span></div>
   </header>
   <main id="view"></main>
 </div>
@@ -396,6 +396,7 @@ function startApp() {
   D.menu.filter(function (m) { return m.id !== 'flow' && !m.more; }).forEach(function (m, i) {
     nav.appendChild(el('button', { type: 'button', 'data-id': m.id, text: (i + 1) + ' ' + m.label, onclick: function () { go(m.id); } }));
   });
+  if (D.menu.some(function (m) { return m.more; })) nav.appendChild(el('span', { id: 'moreWrap' }, [el('button', { type: 'button', id: 'moreBtn', title: '다른 화면', text: '더보기 ▾', onclick: function (ev) { window.dhMore(ev); } })]));
   // ---------- 더보기: 덜 쓰는 탭(menu.more)은 맨 윗줄 「더보기 ▾」 목록에서 ----------
   window.dhMore = function (ev) {
     if (ev) ev.stopPropagation();
@@ -405,7 +406,6 @@ function startApp() {
     document.getElementById('moreWrap').appendChild(box);
   };
   document.addEventListener('click', function () { var b = document.getElementById('moreMenu'); if (b) b.remove(); });
-  if (!D.menu.some(function (m) { return m.more; })) document.getElementById('moreWrap').style.display = 'none';
   function go(id) { current = id; zoomIdx = null; finDetail = null; admDetail = null; regSel = null; if (location.hash !== '#' + id) location.hash = id; render(); }
   window.addEventListener('hashchange', function () {
     var h = location.hash.slice(1);
