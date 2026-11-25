@@ -2342,13 +2342,15 @@ function startApp() {
   }
   var stoMet = 'shop_new';
   // ---------- 항만(해양수산부 PORT-MIS 월 통계) ----------
+  var portSel = null;
   function screenPort() {
-    var P = (D.life || {}).port || {}, V = P.vessel || {}, C = P.cargo || {}, ME = P.me || '동해.묵호';
+    var P = (D.life || {}).port || {}, V = P.vessel || {}, C = P.cargo || {}, HOME = P.me || '동해.묵호';
+    var ME = portSel && Object.keys(V).some(function (m) { return (V[m] || {})[portSel]; }) ? portSel : HOME, isHome = ME === HOME, NM = isHome ? '동해·묵호항' : ME + '항';
     function ymL(k) { return k ? k.slice(0, 4) + '년 ' + Number(k.slice(4)) + '월' : ''; }
     function vin(ym, pt) { var r = (V[ym] || {})[pt || ME]; if (!r) return null; var a = [0, 0, 0, 0]; Object.keys(r).forEach(function (nm) { if (nm.indexOf('계') >= 0) return; r[nm].forEach(function (x, j) { a[j] += x; }); }); return a; }
     var vm = Object.keys(V).filter(function (m) { return (V[m] || {})[ME]; }).sort(), cm = Object.keys(C).filter(function (m) { return (C[m] || {})[ME] != null; }).sort();
     var lv = vm[vm.length - 1], lc = cm[cm.length - 1];
-    lifeTitle('동해·묵호항 항만물류', '해양수산부 해운항만물류정보(PORT-MIS) · 입출항 ' + (lv ? '~' + ymL(lv) : '없음') + ' · 연안화물 ' + (lc ? '~' + ymL(lc) : '없음'));
+    lifeTitle(NM + ' 항만물류', '해양수산부 PORT-MIS · 입출항 ' + (lv ? '~' + ymL(lv) : '없음') + ' · 연안화물 ' + (lc ? '~' + ymL(lc) : '없음') + (isHome ? ' · 오른쪽 아래 항만을 누르면 그 항만으로' : ' · 다시 누르면 동해·묵호항으로'));
     view.style.gridTemplateColumns = 'minmax(0, 1.2fr) minmax(0, 1fr)';
     view.style.gridTemplateRows = '44px auto minmax(0, 1fr) minmax(0, 1fr)';
     function prevY(k) { return k ? (Number(k.slice(0, 4)) - 1) + k.slice(4) : null; }
@@ -2367,14 +2369,14 @@ function startApp() {
       cur ? { l: '입항 선박', sub: ymL(lv), ic: 'trend', col: '#1F6FD1', bg: '#E8F0FC', v: fmt(cur[0], 0), u: '척', chips: [pv ? ['1년 전 같은 달 ' + fmt(pv[0], 0) + '척 · ' + sg(pct(cur[0], pv[0])) + '%', pct(cur[0], pv[0]) >= 0 ? 'good' : 'bad'] : null, ['출항 ' + fmt(cur[2], 0) + '척', '']] } : null,
       cur ? { l: '입항 선박 톤수', sub: ymL(lv) + ' · 총톤수(GT)', ic: 'house', col: '#1B3A6B', bg: '#E8EEF7', v: fmt(cur[1] / 10000, 1), u: '만 톤', chips: [pv ? ['1년 전 ' + sg(pct(cur[1], pv[1])) + '%', pct(cur[1], pv[1]) >= 0 ? 'good' : 'bad'] : null] } : null,
       yIn != null ? { l: '올해 입항 누계', sub: lv.slice(0, 4) + '년 1~' + Number(lv.slice(4)) + '월', ic: 'doorIn', col: '#2E8B57', bg: '#E2F3E9', v: fmt(yIn, 0), u: '척', chips: [yIn0 ? ['지난해 같은 기간 ' + sg(pct(yIn, yIn0)) + '%', pct(yIn, yIn0) >= 0 ? 'good' : 'bad'] : null] } : null,
-      cg != null ? { l: '연안화물', sub: ymL(lc) + ' · 동해·묵호항', ic: 'trend', col: '#C0602B', bg: '#FCEBDD', v: fmt(cg / 10000, 1), u: '만 톤', chips: [cg0 ? ['1년 전 같은 달 ' + sg(pct(cg, cg0)) + '%', pct(cg, cg0) >= 0 ? 'good' : 'bad'] : null, yCg != null ? ['올해 누계 ' + fmt(yCg / 10000, 1) + '만 톤' + (yCg0 ? ' (' + sg(pct(yCg, yCg0)) + '%)' : ''), ''] : null] } : null,
+      cg != null ? { l: '연안화물', sub: ymL(lc) + ' · ' + NM, ic: 'trend', col: '#C0602B', bg: '#FCEBDD', v: fmt(cg / 10000, 1), u: '만 톤', chips: [cg0 ? ['1년 전 같은 달 ' + sg(pct(cg, cg0)) + '%', pct(cg, cg0) >= 0 ? 'good' : 'bad'] : null, yCg != null ? ['올해 누계 ' + fmt(yCg / 10000, 1) + '만 톤' + (yCg0 ? ' (' + sg(pct(yCg, yCg0)) + '%)' : ''), ''] : null] } : null,
       myR ? { l: '전국 항만 중', sub: '올해 입항 선박 톤수 기준', ic: 'trend', col: '#7A4FC4', bg: '#EFE9FB', v: myR + '위', u: '', chips: [[rk.length + '개 항만', 'violet']] } : null
     ].filter(Boolean));
     // 월별 입항 척수(올해·지난해)
     if (lv) {
       var Y = lv.slice(0, 4), Y0 = String(Number(Y) - 1), lab = [], a = [], b = [];
       for (var i = 1; i <= 12; i++) { var mm = ('0' + i).slice(-2), x = vin(Y + mm), z = vin(Y0 + mm); lab.push(i + '월'); a.push(x ? x[0] : null); b.push(z ? z[0] : null); }
-      panel('월별 입항 선박 · 동해·묵호항', Y + '년 실선 · ' + Y0 + '년 점선 · 척', lineChart(lab, [{ name: Y + '년', color: '#1F6FD1', values: a, width: 3.5, labels: true }, { name: Y0 + '년', color: '#9AA7B8', values: b, width: 2.5, dash: '5 4' }], { fit: true, unit: '척' }));
+      panel('월별 입항 선박 · ' + NM, Y + '년 실선 · ' + Y0 + '년 점선 · 척', lineChart(lab, [{ name: Y + '년', color: '#1F6FD1', values: a, width: 3.5, labels: true }, { name: Y0 + '년', color: '#9AA7B8', values: b, width: 2.5, dash: '5 4' }], { fit: true, unit: '척' }));
     }
     // 선박 구분별(최근 달)
     if (lv) {
@@ -2385,14 +2387,17 @@ function startApp() {
     if (lc) {
       var Yc = lc.slice(0, 4), Yc0 = String(Number(Yc) - 1), lb = [], c1 = [], c0 = [];
       for (var j = 1; j <= 12; j++) { var m2 = ('0' + j).slice(-2), u = (C[Yc + m2] || {})[ME], w = (C[Yc0 + m2] || {})[ME]; lb.push(j + '월'); c1.push(u == null ? null : Math.round(u / 1000) / 10); c0.push(w == null ? null : Math.round(w / 1000) / 10); }
-      panel('월별 연안화물 · 동해·묵호항', Yc + '년 실선 · ' + Yc0 + '년 점선 · 만 톤 · 수출입 화물은 들어 있지 않음', lineChart(lb, [{ name: Yc + '년', color: '#C0602B', values: c1, width: 3.5, labels: true }, { name: Yc0 + '년', color: '#9AA7B8', values: c0, width: 2.5, dash: '5 4' }], { fit: true, unit: '만 톤' }));
+      panel('월별 연안화물 · ' + NM, Yc + '년 실선 · ' + Yc0 + '년 점선 · 만 톤 · 수출입 화물은 들어 있지 않음', lineChart(lb, [{ name: Yc + '년', color: '#C0602B', values: c1, width: 3.5, labels: true }, { name: Yc0 + '년', color: '#9AA7B8', values: c0, width: 2.5, dash: '5 4' }], { fit: true, unit: '만 톤' }));
     }
-    // 전국 항만 순위
+    // 전국 항만 순위(누르면 그 항만으로)
     if (rk.length) {
-      var top = rk.slice(0, 14); if (myR > 14) top.push(rk[myR - 1]);
-      var I = { name: '입항 선박 톤수', digits: 0, unit: '만 톤', ranking: top.map(function (x) { return { name: x[0], rank: rk.indexOf(x) + 1, value: Math.round(x[1] / 10000) }; }) };
-      var D0 = D.me; D.me = ME; var rl = rankList(I); D.me = D0;
-      panel('전국 항만 · 올해 입항 선박 톤수', lv.slice(0, 4) + '년 1~' + Number(lv.slice(4)) + '월 · 만 톤 · 파란 막대 = 동해·묵호항', rl);
+      var EAST = ['동해.묵호', '삼척', '옥계', '속초', '호산', '포항', '울산'];
+      var I = { name: '입항 선박 톤수', digits: 0, unit: '만 톤', ranking: rk.map(function (x, i) { return { name: x[0], rank: i + 1, value: Math.round(x[1] / 10000) }; }).filter(function (r) { return EAST.indexOf(r.name) >= 0 || r.name === ME; }) };
+      var D0 = D.me; D.me = HOME;
+      var rl = rankList(I, function (n) { portSel = portSel === n || n === HOME ? null : n; render(); }, isHome ? null : ME);
+      D.me = D0;
+      Array.prototype.forEach.call(rl.children, function (r) { r.setAttribute('data-fit', '1'); });
+      panel('동해안 항만 · 올해 입항 선박 톤수', lv.slice(0, 4) + '년 1~' + Number(lv.slice(4)) + '월 · 만 톤 · 숫자 = 전국 ' + rk.length + '개 항만 중 순위 · 누르면 그 항만', rl);
     }
   }
 
