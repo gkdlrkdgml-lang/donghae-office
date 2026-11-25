@@ -640,7 +640,22 @@ def annex2_probe():
                 say('[A시행령] ' + ln)
 
 
+def train_probe():
+    from urllib.parse import unquote as _unq
+    k = _unq(os.environ.get('DATA_GO_KR_KEY', '').strip())
+    B = 'https://apis.data.go.kr/1613000/TrainInfoService/'
+    for op, prm in (('getCtyCodeList', {}), ('getVhcleKndList', {}), ('getCtyAcctoTrainSttnList', {'cityCode': '32'})):
+        try:
+            q = {'serviceKey': k, '_type': 'json', 'numOfRows': '200', 'pageNo': '1'}; q.update(prm)
+            t = http_get(B + op, q, tries=1, timeout=40)
+            print('[열차] %s → %s' % (op, t[:2500].replace(k, '***')))
+        except Exception as e:  # noqa: BLE001
+            print('[열차] %s 실패 %s' % (op, str(e)[:300]))
+
+
 def main():
+    if os.environ.get('PROBE_ONLY') == 'train':
+        load_env(); train_probe(); return
     if os.environ.get('PROBE_ONLY') == 'ncpms2':
         ncpms2_probe(); return
     if os.environ.get('PROBE_ONLY') == 'ncpms':
