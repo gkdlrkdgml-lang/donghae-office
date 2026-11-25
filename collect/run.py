@@ -334,7 +334,7 @@ def collect(state, S, C):
         ok(state, 'rail', '정차 %d일 · 오늘 시간표 %s' % (len(R0['days']), ', '.join('%s %d편' % (k, len(v)) for k, v in ((R0.get('today') or {}).get('dep') or {}).items())))
     except Exception as e:  # noqa: BLE001
         fail(state, 'rail', e)
-    if stale('port', 3) or '--force-all' in sys.argv:
+    if stale('port', 3) or not (L.get('port') or {}).get('items') or '--force-all' in sys.argv:
         try:   # 항만물류(해양수산부 PORT-MIS 월 통계)
             L['port'] = port.collect(L.get('port')); L['port']['at'] = now().date().isoformat()
             P0 = L['port']
