@@ -99,6 +99,20 @@
   #flowBadge .fl-dot { width: 9px; height: 9px; border-radius: 50%; background: #5BE38F; animation: pulse 1.6s infinite; }
   #flowBadge .fl-bar { position: absolute; left: 0; bottom: 0; height: 3px; background: #5BE38F; width: 0; animation-name: flbar; animation-timing-function: linear; animation-fill-mode: forwards; }
   @keyframes flbar { from { width: 0; } to { width: 100%; } }
+  #newsBack { position: fixed; inset: 0; background: rgba(23,32,44,.5); z-index: 90; display: flex; align-items: center; justify-content: center; }
+  #newsBox { width: 980px; background: #fff; border-radius: 20px; box-shadow: 0 24px 70px rgba(15,30,60,.4); overflow: hidden; }
+  #newsBox .nh { background: #1B3A6B; color: #fff; padding: 22px 32px; display: flex; align-items: baseline; gap: 16px; }
+  #newsBox .nh b { font-size: 34px; font-weight: 800; }
+  #newsBox .nh span { font-size: 22px; opacity: .85; }
+  #newsBox ul { list-style: none; margin: 0; padding: 18px 32px 6px; }
+  #newsBox li { display: flex; gap: 16px; align-items: flex-start; padding: 14px 0; border-bottom: 1px solid var(--line); }
+  #newsBox li:last-child { border-bottom: 0; }
+  #newsBox li i { font-style: normal; flex: none; background: #E8F0FC; color: #1F6FD1; font-weight: 800; font-size: 20px; border-radius: 10px; padding: 4px 12px; }
+  #newsBox li div b { display: block; font-size: 27px; color: #1B3A6B; font-weight: 800; }
+  #newsBox li div small { display: block; font-size: 20px; color: #4A5566; margin-top: 4px; line-height: 1.4; }
+  #newsBox .nf { display: flex; justify-content: space-between; align-items: center; padding: 14px 32px 24px; font-size: 18px; color: #6B7686; }
+  #newsBox .nf button { font: inherit; font-size: 24px; font-weight: 800; color: #fff; background: #1F6FD1; border: 0; border-radius: 12px; padding: 12px 40px; cursor: pointer; }
+  #newsBtn { font: inherit; font-size: 15px; font-weight: 800; color: #1F6FD1; background: #E8F0FC; border: 0; border-radius: 999px; padding: 6px 14px; cursor: pointer; }
   #zoomBack { position: fixed; inset: 0; background: rgba(23,32,44,.45); z-index: 50; }
   .donut { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 12px; min-height: 0; }
   .dsvg { min-height: 0; display: flex; justify-content: center; }
@@ -2962,6 +2976,32 @@ function startApp() {
   setInterval(tick, 10000); tick();
   // 30분마다 새 데이터 파일을 다시 읽습니다(지금 보고 있던 화면 유지).
   setTimeout(function () { location.reload(); }, 30 * 60 * 1000);
+
+
+  // ---------- 최신 업데이트 알림: 새 소식(id)이 바뀌면 화면을 켤 때 한 번 띄움 ----------
+  var NEWS = { id: '2026-11-25', date: '11월 25일', items: [
+    ['새 메뉴', '4번 「철도」', '동해역·묵호역 오늘 시간표와 다음 열차, 강원 역별 정차 열차 수(승객 수 아님)를 보여 드립니다.'],
+    ['화면', '메뉴 글자 크게', '맨 위 1~15번 메뉴를 둘째 줄로 옮기고 글자를 크고 굵게 바꿨습니다.'],
+    ['준비 중', '경제 「항만물류」·아파트 거래', '동해항 입출항·물동량과 아파트 실거래가를 경제 탭에 넣을 예정입니다.']
+  ] };
+  function showNews(force) {
+    var seen = ''; try { seen = localStorage.getItem('dh_news_seen') || ''; } catch (e) { /* 저장소 없음 */ }
+    if (!force && seen === NEWS.id) return;
+    var old = document.getElementById('newsBack'); if (old) old.remove();
+    var timer;
+    function close() { clearTimeout(timer); back.remove(); try { localStorage.setItem('dh_news_seen', NEWS.id); } catch (e) { /* 무시 */ } }
+    var back = el('div', { id: 'newsBack', onclick: function (ev) { if (ev.target === back) close(); } }, [
+      el('div', { id: 'newsBox' }, [
+        el('div', { class: 'nh' }, [el('b', { text: '최신 업데이트 알림' }), el('span', { text: NEWS.date + ' 바뀐 내용' })]),
+        el('ul', {}, NEWS.items.map(function (x) { return el('li', {}, [el('i', { text: x[0] }), el('div', {}, [el('b', { text: x[1] }), el('small', { text: x[2] })])]); })),
+        el('div', { class: 'nf' }, [el('span', { text: '30초 뒤 저절로 닫힙니다 · 다시 보기: 제목 옆 「새 소식」' }), el('button', { type: 'button', text: '확인', onclick: close })])
+      ])
+    ]);
+    stage.appendChild(back);
+    timer = setTimeout(close, 30000);
+  }
+  document.getElementById('appSlogan').insertAdjacentElement('afterend', el('button', { type: 'button', id: 'newsBtn', text: '새 소식', title: '최신 업데이트 알림 다시 보기', onclick: function () { showNews(true); } }));
+  setTimeout(function () { showNews(false); }, 1500);
 
   render();
   (function () {   // 새로 고침(30분마다) 뒤에도 흘러가기를 이어서 돌림
