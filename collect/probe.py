@@ -674,7 +674,28 @@ def railjson_probe():
     print('[RJ] 끝 %d' % len(b))
 
 
+def econ3_probe():
+    from urllib.parse import unquote as _unq
+    k = _unq(os.environ.get('DATA_GO_KR_KEY', '').strip())
+    def t(name, url, q):
+        prm = {'serviceKey': k}; prm.update(q)
+        try:
+            r = http_get(url, prm, tries=1, timeout=40)
+            print('[%s] %s' % (name, r[:700].replace('\n', ' ')))
+        except Exception as e:  # noqa: BLE001
+            print('[%s] 실패 %s' % (name, str(e)[:300]))
+    t('아파트', 'https://apis.data.go.kr/1613000/RTMSDataSvcAptTrade/getRTMSDataSvcAptTrade', {'LAWD_CD': '51170', 'DEAL_YMD': '202610', 'numOfRows': '5', 'pageNo': '1'})
+    t('아파트전월세', 'https://apis.data.go.kr/1613000/RTMSDataSvcAptRent/getRTMSDataSvcAptRent', {'LAWD_CD': '51170', 'DEAL_YMD': '202610', 'numOfRows': '3', 'pageNo': '1'})
+    B = 'https://apis.data.go.kr/1192000/'
+    for path in ('SsopVsslEtryndHarbor2/Info', 'SsopVsslEtryndHarbor2/InfoYm', 'SsopVsslEtryndHarbor2/getInfo', 'SsopVsslEtryndHarbor2'):
+        t('입출항 ' + path, B + path, {'sym': '202609', 'eym': '202610', 'numOfRows': '100', 'pageNo': '1'})
+    for path in ('SsopCargFrghtCoa2/Info', 'SsopCargFrghtCoa/Info', 'SsopCargFrghtCoa2'):
+        t('연안화물 ' + path, B + path, {'sym': '202609', 'eym': '202610', 'numOfRows': '100', 'pageNo': '1'})
+
+
 def main():
+    if os.environ.get('PROBE_ONLY') == 'econ3':
+        return econ3_probe()
     if os.environ.get('PROBE_ONLY') == 'railjson':
         load_env(); railjson_probe(); return
     if os.environ.get('PROBE_ONLY') == 'train':
