@@ -24,6 +24,11 @@
       "show": true
     },
     {
+      "id": "rail",
+      "label": "철도",
+      "show": true
+    },
+    {
       "id": "welfare",
       "label": "보건 및 의료",
       "show": true
@@ -51,11 +56,6 @@
     {
       "id": "traffic",
       "label": "교통",
-      "show": true
-    },
-    {
-      "id": "rail",
-      "label": "철도",
       "show": true
     },
     {
