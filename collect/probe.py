@@ -728,33 +728,38 @@ def nlic_probe():
 
 def kwater_probe():
     from urllib.parse import unquote as _unq
-    import datetime as _dt, re as _re
+    import datetime as _dt, re as _re, ssl as _ssl, urllib.request as _ur
     k = _unq(os.environ.get('DATA_GO_KR_KEY', '').strip())
     d = (_dt.datetime.utcnow() + _dt.timedelta(hours=9)).date()
     d1 = (d - _dt.timedelta(days=1)).isoformat()
     B = 'https://apis.data.go.kr/B500001/'
-    tests = [
-        ('수질', 'rwis/waterQuality/list', {'stDt': d1, 'stTm': '00', 'edDt': d1, 'edTm': '23', 'numOfRows': '100', 'pageNo': '1', '_type': 'json'}),
-        ('수질b', 'rwis/waterQuality/list', {'stdt': d1, 'sttm': '00', 'eddt': d1, 'edtm': '23', 'numOfRows': '100', 'pageNo': '1', '_type': 'json'}),
-        ('수질c', 'rwis/waterQuality/list', {'stDt': d1.replace('-', ''), 'stTm': '00', 'edDt': d1.replace('-', ''), 'edTm': '23', 'numOfRows': '100', 'pageNo': '1'}),
-        ('수위', 'rwis/waterLevel/list', {'stDt': d1, 'stTm': '00', 'edDt': d1, 'edTm': '23', 'numOfRows': '100', 'pageNo': '1', '_type': 'json'}),
-        ('취수시설', 'fcltySvc/getItkFclty', {'numOfRows': '100', 'pageNo': '1', '_type': 'json'}),
-    ]
-    for nm, path, q in tests:
-        prm = {'serviceKey': k}; prm.update(q)
+    for nm, path, key in (('수질', 'rwis/waterQuality/list', 'fcltyMngNm'), ('수위', 'rwis/waterLevel/list', 'fcltyNm'), ('유량', 'rwis/waterFlux/waterFlux', 'fcltyNm')):
+        names, addrs, tot = {}, {}, None
+        for pg in range(1, 30):
+            try:
+                r = json.loads(http_get(B + path, {'serviceKey': k, 'stDt': d1, 'stTm': '12', 'edDt': d1, 'edTm': '12', 'numOfRows': '1000', 'pageNo': str(pg), '_type': 'json'}, tries=1, timeout=60))
+            except Exception as e:  # noqa: BLE001
+                print('[KW] %s %d 실패 %s' % (nm, pg, str(e)[:200])); break
+            bd = r['response']['body']; it = (bd.get('items') or {}) or {}
+            it = it.get('item') if isinstance(it, dict) else []
+            it = it if isinstance(it, list) else [it]
+            tot = bd.get('totalCount')
+            for x in it:
+                n = x.get(key) or x.get('fcltyMngNm') or x.get('fcltyNm'); names[n] = names.get(n, 0) + 1
+                if x.get('fcltyAddr'): addrs[n] = x['fcltyAddr']
+            if not it or pg * 1000 >= int(tot or 0):
+                break
+        gw = sorted(n for n in names if '강원' in addrs.get(n, '') or any(w in str(n) for w in ('동해', '달방', '묵호', '삼척', '강릉', '광동', '원주', '횡성', '춘천')))
+        print('[KW] %s 총 %s 시설 %d 강원관련 %s' % (nm, tot, len(names), gw))
+        print('[KW] %s 시설들 %s' % (nm, sorted(names)[:200]))
+    ctx = _ssl.create_default_context(); ctx.set_ciphers('DEFAULT:@SECLEVEL=1')
+    try: ctx.minimum_version = _ssl.TLSVersion.TLSv1
+    except Exception: pass
+    for u in ('https://sudo.dh.go.kr/', 'http://sudo.dh.go.kr/'):
         try:
-            r = http_get(B + path, prm, tries=1, timeout=50)
-            hits = [m.start() for m in _re.finditer('동해|달방', r)]
-            print('[KW] %s 길이 %d 동해 %d 앞 %s' % (nm, len(r), len(hits), r[:400].replace('\n', ' ')))
-            for h in hits[:2]:
-                print('[KW] %s ctx %s' % (nm, r[max(0, h - 250):h + 250].replace('\n', ' ')))
-        except Exception as e:  # noqa: BLE001
-            print('[KW] %s 실패 %s' % (nm, str(e)[:300]))
-    for u in ('https://sudo.dh.go.kr/', 'https://www.dh.go.kr/sudo/'):
-        try:
-            h = http_get(u, {}, tries=1, timeout=30)
+            h = _ur.urlopen(_ur.Request(u, headers={'User-Agent': 'Mozilla/5.0'}), timeout=30, context=ctx if u.startswith('https') else None).read().decode('utf-8', 'ignore')
             print('[KW] 사업소 %s 길이 %d' % (u, len(h)))
-            for m in sorted(set(_re.findall(r'href="([^"]+)"[^>]*>[^<]*요금[^<]*<', h)))[:15]:
+            for m in sorted(set(_re.findall(r'href="([^"]+)"[^>]*>\s*([^<]*요금[^<]*)<', h)))[:15]:
                 print('[KW] 요금링크', m)
         except Exception as e:  # noqa: BLE001
             print('[KW] 사업소 %s 실패 %s' % (u, str(e)[:200]))
