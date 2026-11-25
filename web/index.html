@@ -1449,8 +1449,8 @@ function startApp() {
       { l: '다음 열차', sub: railSt + '역 출발 · 지금 ' + nowHM, ic: 'trend', col: '#1B3A6B', bg: '#E8EEF7', v: nxt[0] ? nxt[0].dep : (T.length ? (isToday ? '오늘 끝' : '–') : '–'), u: '', chips: nxt[0] ? [[nxt[0].grade + ' ' + nxt[0].no + '호', 'violet'], [dest(nxt[0]) + ' 방면', '']] : (T.length ? [] : [['오늘 시간표는 주요 역만', '']]) },
       { l: '오늘 출발 열차', sub: dL(td) + ' 시간표', ic: 'trend', col: '#1F6FD1', bg: '#E4EEFB', v: T.length ? fmt(T.length, 0) : '–', u: T.length ? '편' : '', chips: Object.keys(grades).sort(function (a, b) { return grades[b] - grades[a]; }).slice(0, 2).map(function (g) { return [g + ' ' + grades[g], '']; }) },
       { l: '어제 정차 열차', sub: dL(last) + ' 실제 정차', ic: 'people', col: '#7A4FC4', bg: '#EFE9FB', v: fmt(cnt(last, railSt), 0), u: '편', chips: [a30 != null ? ['최근 30일 하루 평균 ' + fmt(a30, 1), ''] : null] },
-      { l: '최근 30일 정차', sub: dL(l30[0]) + '~' + dL(last), ic: 'trend', col: '#C0602B', bg: '#FDEBDD', v: fmt(l30.reduce(function (a, d) { return a + cnt(d, railSt); }, 0), 0), u: '편', chips: [p30 ? ['그 전 30일보다 ' + (a30 - p30 >= 0 ? '+' : '') + fmt((a30 - p30) * l30.length, 0) + '편', a30 >= p30 ? 'good' : 'bad'] : null] },
-      { l: '강원 역 중', sub: '최근 30일 하루 평균 정차', ic: 'trend', col: '#2E8B57', bg: '#E2F3E9', v: myRk ? myRk + '위' : '–', u: '', chips: [['강원 ' + rk.length + '개 역', '']] }
+      { l: '최근 30일 정차 열차', sub: dL(l30[0]) + '~' + dL(last), ic: 'trend', col: '#C0602B', bg: '#FDEBDD', v: fmt(l30.reduce(function (a, d) { return a + cnt(d, railSt); }, 0), 0), u: '편', chips: [p30 ? ['그 전 30일보다 ' + (a30 - p30 >= 0 ? '+' : '') + fmt((a30 - p30) * l30.length, 0) + '편', a30 >= p30 ? 'good' : 'bad'] : null] },
+      { l: '강원 역 중', sub: '하루 평균 정차 열차 수 기준 · 승객 수 아님', ic: 'trend', col: '#2E8B57', bg: '#E2F3E9', v: myRk ? myRk + '위' : '–', u: '', chips: [['강원 ' + rk.length + '개 역 · 정차 수 순위', '']] }
     ]);
     // 오늘 시간표
     var st0 = nxt[0] ? Math.max(0, T.indexOf(nxt[0]) - 2) : (isToday && T.length ? Math.max(0, T.length - 3) : 0);
@@ -1468,7 +1468,7 @@ function startApp() {
     // 하루 정차 열차 수 추이(선택 역 + 동해·묵호)
     var cols = ['#1F6FD1', '#2E9C6A', '#E08A3C', '#7A4FC4'];
     var show = [railSt].concat(['동해', '묵호'].filter(function (s) { return s !== railSt && all[s]; })).slice(0, 3);
-    panel('하루 정차 열차 수 · 최근 ' + cdays.length + '일', '한국철도공사 실제 운행 기록 · 편', lineChart(cdays.map(function (d) { return Number(d.slice(4, 6)) + '/' + Number(d.slice(6)); }), show.map(function (s, i) {
+    panel('하루 정차 열차 수 · 최근 ' + cdays.length + '일', '한국철도공사 실제 운행 기록 · 정차 열차 수(승객 수 아님)', lineChart(cdays.map(function (d) { return Number(d.slice(4, 6)) + '/' + Number(d.slice(6)); }), show.map(function (s, i) {
       return { name: s + '역', color: cols[i], width: i === 0 ? 3.5 : 2, dash: i ? '5 4' : null, labels: i === 0 ? 'last' : false, values: cdays.map(function (d) { return cnt(d, s); }) }; }), { fit: true }));
     // 아래: 강원 역 순위 + 선택 역 노선·구간
     var ln = {}, dn = {}, rdays = Object.keys(DY).sort();
@@ -1476,7 +1476,7 @@ function startApp() {
     var top = Object.keys(dn).sort(function (a, b) { return dn[b] - dn[a]; }).slice(0, 7);
     var mx = avg(l30, rk[0]) || 1;
     var body = el('div', { style: 'display:grid;grid-template-columns:1fr 1.25fr;gap:16px;height:100%;overflow:hidden' }, [
-      el('div', { style: 'overflow:auto' }, [el('div', { style: 'font-weight:800;color:#1B3A6B;margin-bottom:4px', text: '강원 역 하루 평균 정차(최근 30일) · 누르면 그 역' })].concat(rk.slice(0, 14).map(function (s, i) {
+      el('div', { style: 'overflow:auto' }, [el('div', { style: 'font-weight:800;color:#1B3A6B;margin-bottom:4px', text: '강원 역 하루 평균 정차 열차 수(승객 수 아님) · 누르면 그 역' })].concat(rk.slice(0, 14).map(function (s, i) {
         var v = avg(l30, s), me = s === railSt, dh = mine.indexOf(s) >= 0;
         return el('div', { style: 'display:grid;grid-template-columns:22px 70px 1fr 44px;gap:6px;align-items:center;padding:3px 0;cursor:pointer;font-size:14px' + (me ? ';font-weight:800' : ''), onclick: function () { railSt = s; render(); } }, [
           el('span', { style: 'color:#8A94A3', text: i + 1 }), el('span', { style: 'color:' + (dh ? '#1F6FD1' : '#38475A'), text: s }),
