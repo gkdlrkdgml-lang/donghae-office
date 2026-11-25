@@ -2691,8 +2691,8 @@ function startApp() {
     view.style.gridTemplateRows = '44px auto minmax(0, 1fr) minmax(0, 1fr)';
     var tons = 15, ex = (b13 || 0) + tons * (wNow || 0) + tons * (sNow || 0);
     cardsRow([
-      { l: '가정용 상수도', sub: pl(ci) + ' · 1톤당(사용량 구간 없이 같은 단가)', ic: 'trend', col: '#1F6FD1', bg: '#E8F0FC', v: fmt(wNow, 0), u: '원', chips: [wPrev ? ['이전 ' + fmt(wPrev, 0) + '원 · +' + fmt(pct(wNow, wPrev), 0) + '%', 'bad'] : null, wNext ? [pl(ci + 1) + ' ' + fmt(wNext, 0) + '원', ''] : null] },
-      { l: '가정용 하수도', sub: pl(ci) + ' · 합류식 · 1톤당', ic: 'trend', col: '#2AAFB8', bg: '#E1F5F6', v: fmt(sNow, 0), u: '원', chips: [sNowS ? ['분류식 ' + fmt(sNowS, 0) + '원', ''] : null, sPrev ? ['이전 ' + fmt(sPrev, 0) + '원', ''] : null, sNext ? [pl(ci + 1) + ' ' + fmt(sNext, 0) + '원', ''] : null] },
+      { l: '가정용 상수도', sub: '상수도 요금표 · ' + pl(ci) + ' · 1톤당(구간 없이 같은 단가)', ic: 'trend', col: '#1F6FD1', bg: '#E8F0FC', v: fmt(wNow, 0), u: '원', chips: [wPrev ? ['이전 ' + fmt(wPrev, 0) + '원 · +' + fmt(pct(wNow, wPrev), 0) + '%', 'bad'] : null, wNext ? [pl(ci + 1) + ' ' + fmt(wNext, 0) + '원', ''] : null] },
+      { l: '가정용 하수도', sub: '하수도 요금표 · ' + pl(ci) + ' · 합류식 · 1톤당', ic: 'trend', col: '#2AAFB8', bg: '#E1F5F6', v: fmt(sNow, 0), u: '원', chips: [sNowS ? ['분류식 ' + fmt(sNowS, 0) + '원', ''] : null, sPrev ? ['이전 ' + fmt(sPrev, 0) + '원', ''] : null, sNext ? [pl(ci + 1) + ' ' + fmt(sNext, 0) + '원', ''] : null] },
       { l: '한 달 15톤 쓰면', sub: '가정용 · 계량기 13mm · 합류식 · 계산값', ic: 'house', col: '#1B3A6B', bg: '#E8EEF7', v: fmt(ex, 0), u: '원', chips: [['정액 ' + fmt(b13, 0) + ' + 상수도 ' + fmt(tons * wNow, 0) + ' + 하수도 ' + fmt(tons * sNow, 0), ''], ['실제 고지서와 다를 수 있음', '']] }
     ]);
     // 표를 「업종 · 구간 · 시기별 단가」로 다시 정리(가로·세로 합친 칸 풀기). 지금 적용 중인 시기는 파랗게.
