@@ -717,18 +717,14 @@ def portapt_probe():
 
 
 def nlic_probe():
-    import re as _re, urllib.request as _ur, urllib.parse as _up
-    def post(u, d):
-        req = _ur.Request(u, data=_up.urlencode(d).encode(), headers={'User-Agent': 'Mozilla/5.0', 'Content-Type': 'application/x-www-form-urlencoded'})
-        r = _ur.urlopen(req, timeout=60)
-        return r.headers.get('Content-Type'), r.headers.get('Content-Disposition'), r.read()
-    ct, cd, b = post('https://www.nlic.go.kr/nlic/hbPrdlstGtqyExcel.action', {'srchYear': '2026', 'srchMonth': '09', 'srchHbCode': '200'})
-    print('[NL] 엑셀', ct, cd, len(b), b[:12])
-    t = b.decode('utf-8', 'ignore')
-    print('[NL] 엑셀본문', _re.sub(r'\s+', ' ', _re.sub(r'<[^>]+>', '|', t))[:3000])
-    ct, cd, b = post('https://www.nlic.go.kr/nlic/harborPrdlstGtqy.action', {'command': 'LIST', 'S_HARBOR_CODE': '200', 'S_YEAR': '2026', 'S_MONTH': '09'})
-    h = b.decode('utf-8', 'ignore'); i = h.find('list_sb_4')
-    print('[NL] 목록', _re.sub(r'\s+', ' ', _re.sub(r'<[^>]+>', '|', h[i - 3000:i + 9000]))[:5000])
+    import urllib.request as _ur, urllib.parse as _up, xlrd
+    req = _ur.Request('https://www.nlic.go.kr/nlic/hbPrdlstGtqyExcel.action', data=_up.urlencode({'srchYear': '2026', 'srchMonth': '09', 'srchHbCode': '200'}).encode(), headers={'User-Agent': 'Mozilla/5.0'})
+    b = _ur.urlopen(req, timeout=60).read()
+    wb = xlrd.open_workbook(file_contents=b)
+    for sh in wb.sheets():
+        print('[NL] 시트', sh.name, sh.nrows, sh.ncols)
+        for r in range(min(sh.nrows, 60)):
+            print('[NL] %02d %s' % (r, ' | '.join(str(sh.cell_value(r, c)) for c in range(sh.ncols))[:400]))
 
 
 def kwater_probe():
