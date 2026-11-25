@@ -641,16 +641,31 @@ def annex2_probe():
 
 
 def train_probe():
+    import re as _re
     from urllib.parse import unquote as _unq
     k = _unq(os.environ.get('DATA_GO_KR_KEY', '').strip())
-    B = 'https://apis.data.go.kr/1613000/TrainInfoService/'
-    for op, prm in (('getCtyCodeList', {}), ('getVhcleKndList', {}), ('getCtyAcctoTrainSttnList', {'cityCode': '32'})):
+    for pk in ('15098552', '15125762'):
         try:
-            q = {'serviceKey': k, '_type': 'json', 'numOfRows': '200', 'pageNo': '1'}; q.update(prm)
-            t = http_get(B + op, q, tries=1, timeout=40)
-            print('[열차] %s → %s' % (op, t[:2500].replace(k, '***')))
+            h = http_get('https://www.data.go.kr/data/%s/openapi.do' % pk, {}, tries=1)
+            mj = _re.search(r'swaggerJson = `(.*?)`', h, _re.S)
+            if not mj:
+                print('[열차] %s 스웨거 없음' % pk); continue
+            sj = json.loads(mj.group(1))
+            base = 'https://' + str(sj.get('host', '')) + str(sj.get('basePath', ''))
+            for pth, v in (sj.get('paths') or {}).items():
+                for meth, d in (v.items() if isinstance(v, dict) else []):
+                    if not isinstance(d, dict):
+                        continue
+                    ps = [(x.get('name'), x.get('required')) if isinstance(x, dict) else x for x in d.get('parameters', [])]
+                    print('[열차] %s %s%s %s | %s' % (pk, base, pth, d.get('summary'), ps))
+                    q = {'serviceKey': k, '_type': 'json', 'numOfRows': '3', 'pageNo': '1', 'returnType': 'json', 'cityCode': '32', 'cond[run_ymd::EQ]': '20261124', 'run_ymd': '20261124'}
+                    try:
+                        t = http_get(base + pth, q, tries=1, timeout=40)
+                        print('[열차]   → %s' % t[:900].replace(k, '***').replace('\n', ' '))
+                    except Exception as e:  # noqa: BLE001
+                        print('[열차]   실패 %s' % str(e)[:250])
         except Exception as e:  # noqa: BLE001
-            print('[열차] %s 실패 %s' % (op, str(e)[:300]))
+            print('[열차] %s 실패 %s' % (pk, str(e)[:200]))
 
 
 def main():
