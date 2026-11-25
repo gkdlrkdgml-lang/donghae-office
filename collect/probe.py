@@ -717,17 +717,17 @@ def portapt_probe():
 
 
 def nlic_probe():
-    import re as _re
+    import re as _re, urllib.request as _ur, urllib.parse as _up
     u = 'https://www.nlic.go.kr/nlic/harborPrdlstGtqy.action'
-    h = http_get(u, {}, tries=1, timeout=40)
-    i = h.find("S_HARBOR_CODE' name")
-    print('[NL] harbor', h[i:i + 2500].replace('\n', ' '))
-    for kw in ('S_HARBOR_CODE', 'ajax', 'json', 'tbody'):
-        for m in _re.finditer(kw, h):
-            print('[NL] ctx %s: %s' % (kw, h[max(0, m.start() - 150):m.start() + 250].replace('\n', ' ')))
-            break
-    j = h.find('<table')
-    print('[NL] table', _re.sub(r'\s+', ' ', h[j:j + 3000]))
+    data = _up.urlencode({'command': 'LIST', 'S_HARBOR_CODE': '200', 'S_YEAR': '2026', 'S_MONTH': '09'}).encode()
+    req = _ur.Request(u, data=data, headers={'User-Agent': 'Mozilla/5.0', 'Content-Type': 'application/x-www-form-urlencoded'})
+    h = _ur.urlopen(req, timeout=60).read().decode('utf-8', 'ignore')
+    print('[NL] 길이', len(h))
+    for kw in ('석회', '시멘트', '유연탄', '광석', 'chart', 'series', 'categories', 'dataProvider', 'excel', 'Excel'):
+        for m in list(_re.finditer(kw, h))[:2]:
+            print('[NL] %s: %s' % (kw, _re.sub(r'\s+', ' ', h[max(0, m.start() - 300):m.start() + 500])))
+    for t in _re.findall(r'<table.*?</table>', h, _re.S)[:4]:
+        print('[NL] TABLE', _re.sub(r'\s+', ' ', _re.sub(r'<[^>]+>', '|', t))[:2500])
 
 
 def main():
