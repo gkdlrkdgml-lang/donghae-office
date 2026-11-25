@@ -17,7 +17,7 @@
 <script src="install.js"></script>
 <script src="auth.js"></script>
 <script src="land.js"></script>
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover">
 <style>
   :root {
     --bg: #F4F6F9; --panel: #FFFFFF; --line: #DCE2EA; --ink: #17202C; --sub: #556274; --mute: #8693A4;
@@ -369,7 +369,10 @@ function startApp() {
   // ---------- 화면 크기에 맞춰 1920×1080을 늘리거나 줄임 ----------
   // 휴대폰: 주소창이 생기고 사라질 때·가로로 돌릴 때도 실제 보이는 크기(visualViewport)에 딱 맞춤
   function fit() {
-    var vv = window.visualViewport, W = vv ? vv.width : window.innerWidth, H = vv ? vv.height : window.innerHeight;
+    // 손가락으로 확대 중이면(scale > 1) 그대로 두고, 화면 틀 크기(확대와 상관없는 값)로 맞춤
+    var vv = window.visualViewport;
+    if (vv && vv.scale > 1.01) return;
+    var W = document.documentElement.clientWidth || window.innerWidth, H = document.documentElement.clientHeight || window.innerHeight;
     var s = Math.min(W / 1920, H / 1080);
     stage.style.transform = 'translate(' + (W - 1920 * s) / 2 + 'px,' + (H - 1080 * s) / 2 + 'px) scale(' + s + ')';
     var tip = document.getElementById('rotTip');
