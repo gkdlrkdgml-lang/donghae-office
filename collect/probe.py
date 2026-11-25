@@ -662,7 +662,21 @@ def train_probe():
             print('[역목록] %s 실패 %s' % (cc, str(e)[:200]))
 
 
+def railjson_probe():
+    import base64, gzip
+    import rail
+    rail.KEEP_DAYS, rail.ROW_DAYS, rail.BUDGET = 21, 21, 300
+    rail.TT_EXTRA = ['강릉', '삼척']
+    o = rail.collect(None)
+    b = base64.b64encode(gzip.compress(json.dumps(o, ensure_ascii=False).encode())).decode()
+    for i in range(0, len(b), 3000):
+        print('[RJ]%05d %s' % (i // 3000, b[i:i + 3000]))
+    print('[RJ] 끝 %d' % len(b))
+
+
 def main():
+    if os.environ.get('PROBE_ONLY') == 'railjson':
+        load_env(); railjson_probe(); return
     if os.environ.get('PROBE_ONLY') == 'train':
         load_env(); train_probe(); return
     if os.environ.get('PROBE_ONLY') == 'ncpms2':
