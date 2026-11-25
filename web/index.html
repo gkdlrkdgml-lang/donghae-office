@@ -2354,7 +2354,9 @@ function startApp() {
     function vin(ym, pt) { var r = (V[ym] || {})[pt || ME]; if (!r) return null; var a = [0, 0, 0, 0]; Object.keys(r).forEach(function (nm) { if (nm.indexOf('계') >= 0) return; r[nm].forEach(function (x, j) { a[j] += x; }); }); return a; }
     var vm = Object.keys(V).filter(function (m) { return (V[m] || {})[ME]; }).sort(), cm = Object.keys(C).filter(function (m) { return (C[m] || {})[ME] != null; }).sort();
     var lv = vm[vm.length - 1], lc = cm[cm.length - 1];
-    lifeTitle(NM + ' 항만물류', '해양수산부 PORT-MIS · 입출항 ' + (lv ? '~' + ymL(lv) : '없음') + ' · 연안화물 ' + (lc ? '~' + ymL(lc) : '없음') + (isHome ? ' · 오른쪽 아래 항만을 누르면 그 항만으로' : ' · 다시 누르면 동해·묵호항으로'));
+    var IT = P.items || {}, im = Object.keys(IT).filter(function (m) { return ((IT[m] || {})[ME] || {})['합계']; }).sort(), li = im[im.length - 1];
+    function itot(m) { var r = (IT[m] || {})[ME]; return r && r['합계'] != null ? r['합계'] : null; }
+    lifeTitle(NM + ' 항만물류', 'PORT-MIS · 입출항 ' + (lv ? '~' + ymL(lv) : '없음') + ' · 물동량 ' + (li ? '~' + ymL(li) : '없음') + (isHome ? ' · 오른쪽 아래 항만을 누르면 그 항만으로' : ' · 다시 누르면 동해·묵호항으로'));
     view.style.gridTemplateColumns = 'minmax(0, 1.2fr) minmax(0, 1fr)';
     view.style.gridTemplateRows = '44px auto minmax(0, 1fr) minmax(0, 1fr)';
     function prevY(k) { return k ? (Number(k.slice(0, 4)) - 1) + k.slice(4) : null; }
@@ -2373,6 +2375,7 @@ function startApp() {
       cur ? { l: '입항 선박', sub: ymL(lv), ic: 'trend', col: '#1F6FD1', bg: '#E8F0FC', v: fmt(cur[0], 0), u: '척', chips: [pv ? ['1년 전 같은 달 ' + fmt(pv[0], 0) + '척 · ' + sg(pct(cur[0], pv[0])) + '%', pct(cur[0], pv[0]) >= 0 ? 'good' : 'bad'] : null, ['출항 ' + fmt(cur[2], 0) + '척', '']] } : null,
       cur ? { l: '입항 선박 톤수', sub: ymL(lv) + ' · 총톤수(GT)', ic: 'house', col: '#1B3A6B', bg: '#E8EEF7', v: fmt(cur[1] / 10000, 1), u: '만 톤', chips: [pv ? ['1년 전 ' + sg(pct(cur[1], pv[1])) + '%', pct(cur[1], pv[1]) >= 0 ? 'good' : 'bad'] : null] } : null,
       yIn != null ? { l: '올해 입항 누계', sub: lv.slice(0, 4) + '년 1~' + Number(lv.slice(4)) + '월', ic: 'doorIn', col: '#2E8B57', bg: '#E2F3E9', v: fmt(yIn, 0), u: '척', chips: [yIn0 ? ['지난해 같은 기간 ' + sg(pct(yIn, yIn0)) + '%', pct(yIn, yIn0) >= 0 ? 'good' : 'bad'] : null] } : null,
+      li ? (function () { var t = itot(li), t0 = itot(prevY(li)), yt = ytd(li, itot), yt0 = ytd(prevY(li), itot); return { l: '물동량', sub: ymL(li) + ' · 수출입+연안', ic: 'trend', col: '#C0602B', bg: '#FCEBDD', v: fmt(t / 10000, 1), u: '만 톤', chips: [t0 ? ['1년 전 같은 달 ' + sg(pct(t, t0)) + '%', pct(t, t0) >= 0 ? 'good' : 'bad'] : null, yt != null ? ['올해 누계 ' + fmt(yt / 10000, 0) + '만 톤' + (yt0 ? ' (' + sg(pct(yt, yt0)) + '%)' : ''), ''] : null] }; })() :
       cg != null ? { l: '연안화물', sub: ymL(lc) + ' · ' + NM, ic: 'trend', col: '#C0602B', bg: '#FCEBDD', v: fmt(cg / 10000, 1), u: '만 톤', chips: [cg0 ? ['1년 전 같은 달 ' + sg(pct(cg, cg0)) + '%', pct(cg, cg0) >= 0 ? 'good' : 'bad'] : null, yCg != null ? ['올해 누계 ' + fmt(yCg / 10000, 1) + '만 톤' + (yCg0 ? ' (' + sg(pct(yCg, yCg0)) + '%)' : ''), ''] : null] } : null,
       myR ? { l: '전국 항만 중', sub: '올해 입항 선박 톤수 기준', ic: 'trend', col: '#7A4FC4', bg: '#EFE9FB', v: myR + '위', u: '', chips: [[rk.length + '개 항만', 'violet']] } : null
     ].filter(Boolean));
@@ -2382,12 +2385,22 @@ function startApp() {
       for (var i = 1; i <= 12; i++) { var mm = ('0' + i).slice(-2), x = vin(Y + mm), z = vin(Y0 + mm); lab.push(i + '월'); a.push(x ? x[0] : null); b.push(z ? z[0] : null); }
       panel('월별 입항 선박 · ' + NM, Y + '년 실선 · ' + Y0 + '년 점선 · 척', lineChart(lab, [{ name: Y + '년', color: '#1F6FD1', values: a, width: 3.5, labels: true }, { name: Y0 + '년', color: '#9AA7B8', values: b, width: 2.5, dash: '5 4' }], { fit: true, unit: '척' }));
     }
-    // 선박 구분별(최근 달)
-    if (lv) {
+    // 품목별 물동량(최근 달) — 없으면 선박 구분별
+    if (li) {
+      var IR = IT[li][ME], IR0 = (IT[prevY(li)] || {})[ME] || {}, tot = IR['합계'] || 1;
+      var names = Object.keys(IR).filter(function (n) { return n !== '합계'; }).sort(function (x, y) { return IR[y] - IR[x]; });
+      var trs = names.map(function (n) { var c = pct(IR[n], IR0[n]); return el('tr', {}, [el('td', { html: '<b>' + n + '</b>' }), el('td', { class: 'r', html: '<b>' + fmt(IR[n], 0) + '</b>' }), el('td', { class: 'r', text: fmt(IR[n] / tot * 100, 1) + '%' }), el('td', { class: 'r', html: c == null ? '–' : '<span style="color:' + (c >= 0 ? '#2E8B57' : '#D9534F') + '">' + sg(c) + '%</span>' })]); });
+      panel('품목별 물동량 · ' + ymL(li), '톤 · 수출입+연안 · 국가물류통합정보센터(통합 PORT-MIS)', el('table', { class: 'dt big' }, [el('thead', {}, [el('tr', {}, ['품목', '톤', '비중', '1년 전 같은 달'].map(function (h, j) { return el('th', { class: j ? 'r' : '', text: h }); }))]), el('tbody', {}, trs)]));
+    } else if (lv) {
       var R = V[lv][ME], rows = Object.keys(R).map(function (nm) { var v = R[nm]; return el('tr', {}, [el('td', { html: '<b>' + nm + '</b>' }), el('td', { class: 'r', text: fmt(v[0], 0) }), el('td', { class: 'r', text: fmt(v[1], 0) }), el('td', { class: 'r', text: fmt(v[2], 0) }), el('td', { class: 'r', text: fmt(v[3], 0) })]); });
       panel('선박 구분별 입출항 · ' + ymL(lv), '척 · 총톤수(GT)', el('table', { class: 'dt big' }, [el('thead', {}, [el('tr', {}, ['구분', '입항 척', '입항 톤', '출항 척', '출항 톤'].map(function (h, j) { return el('th', { class: j ? 'r' : '', text: h }); }))]), el('tbody', {}, rows)]));
     }
-    // 연안화물 월별
+    // 월별 물동량(품목별 합계, 없으면 연안화물)
+    if (li) {
+      var Yi = li.slice(0, 4), Yi0 = String(Number(Yi) - 1), lbi = [], s1 = [], s0 = [];
+      for (var q = 1; q <= 12; q++) { var mq = ('0' + q).slice(-2), u1 = itot(Yi + mq), u0 = itot(Yi0 + mq); lbi.push(q + '월'); s1.push(u1 == null ? null : Math.round(u1 / 1000) / 10); s0.push(u0 == null ? null : Math.round(u0 / 1000) / 10); }
+      panel('월별 물동량 · ' + NM, Yi + '년 실선 · ' + Yi0 + '년 점선 · 만 톤 · 수출입+연안', lineChart(lbi, [{ name: Yi + '년', color: '#C0602B', values: s1, width: 3.5, labels: true }, { name: Yi0 + '년', color: '#9AA7B8', values: s0, width: 2.5, dash: '5 4' }], { fit: true, unit: '만 톤' }));
+    } else
     if (lc) {
       var Yc = lc.slice(0, 4), Yc0 = String(Number(Yc) - 1), lb = [], c1 = [], c0 = [];
       for (var j = 1; j <= 12; j++) { var m2 = ('0' + j).slice(-2), u = (C[Yc + m2] || {})[ME], w = (C[Yc0 + m2] || {})[ME]; lb.push(j + '월'); c1.push(u == null ? null : Math.round(u / 1000) / 10); c0.push(w == null ? null : Math.round(w / 1000) / 10); }

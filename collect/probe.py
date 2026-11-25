@@ -717,12 +717,13 @@ def portapt_probe():
 
 
 def nlic_probe():
+    import base64, gzip
     import port
     it = port.items(None)
-    for k in sorted(it):
-        d = it[k].get('동해.묵호') or {}
-        top = sorted(((v, n) for n, v in d.items() if n != '합계'), reverse=True)[:5]
-        print('[NL] %s 합계 %s 상위 %s' % (k, d.get('합계'), top))
+    print('[NL] 달', sorted(it))
+    b = base64.b64encode(gzip.compress(json.dumps(it, ensure_ascii=False).encode())).decode()
+    for i in range(0, len(b), 3000):
+        print('[NJ]%05d %s' % (i // 3000, b[i:i + 3000]))
 
 
 def kwater_probe():
