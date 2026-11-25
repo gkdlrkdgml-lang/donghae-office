@@ -74,7 +74,8 @@
     {
       "id": "water",
       "label": "상하수도",
-      "show": true
+      "show": true,
+      "more": true
     },
     {
       "id": "power",
