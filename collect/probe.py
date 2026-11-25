@@ -728,28 +728,17 @@ def nlic_probe():
 
 def kwater_probe():
     from urllib.parse import unquote as _unq
-    import re as _re, ssl as _ssl, urllib.request as _ur
+    import ssl as _ssl, urllib.request as _ur
     k = _unq(os.environ.get('DATA_GO_KR_KEY', '').strip())
-    U = 'https://apis.data.go.kr/B500001/qltWtrSvc/MonPurification'
-    for q in ({}, {'stDt': '202610', 'edDt': '202610'}, {'stDt': '2026-10-01', 'edDt': '2026-10-31'}, {'sgcnm': '동해시'}, {'stdt': '202610', 'eddt': '202610'}):
-        prm = {'serviceKey': k, 'numOfRows': '50', 'pageNo': '1', '_type': 'json'}; prm.update(q)
+    for u, q in (('https://apis.data.go.kr/B500001/qltWtrSvc/MonPurification', {'stDt': '202610', 'edDt': '202610'}), ('https://apis.data.go.kr/B500001/fcltySvc/getItkFclty', {})):
+        prm = {'serviceKey': k, 'numOfRows': '20', 'pageNo': '1'}; prm.update(q)
         try:
-            r = http_get(U, prm, tries=1, timeout=60)
-            print('[KW] 법정 %s 길이 %d %s' % (q, len(r), r[:900].replace('\n', ' ')))
-            h = r.find('동해'); print('[KW] 법정 동해', r[max(0, h - 200):h + 400] if h >= 0 else '-')
+            print('[KW] %s %r' % (u[-30:], http_get(u, prm, tries=1, timeout=60)[:600]))
         except Exception as e:  # noqa: BLE001
-            print('[KW] 법정 %s 실패 %s' % (q, str(e)[:300]))
-    r = http_get('https://apis.data.go.kr/B500001/fcltySvc/getItkFclty', {'serviceKey': k, 'numOfRows': '5', 'pageNo': '1'}, tries=1, timeout=60)
-    print('[KW] 취수시설 원문', r[:400])
-    for nm in ('tn_pubr_public_wtrsply_chrge_api', 'tn_pubr_public_wtrsply_charge_api', 'tn_pubr_public_wtr_chrge_api', 'tn_pubr_public_sewer_chrge_api', 'tn_pubr_public_water_fee_api'):
-        try:
-            r = http_get('https://api.data.go.kr/openapi/' + nm, {'serviceKey': k, 'type': 'json', 'numOfRows': '3', 'pageNo': '1'}, tries=1, timeout=40)
-            print('[KW] 요금표준 %s %s' % (nm, r[:300]))
-        except Exception as e:  # noqa: BLE001
-            print('[KW] 요금표준 %s 실패 %s' % (nm, str(e)[:150]))
+            print('[KW] %s 실패 %r' % (u[-30:], str(e)[:400]))
     ctx = _ssl.create_default_context(); ctx.set_ciphers('DEFAULT:@SECLEVEL=1')
     h = _ur.urlopen(_ur.Request('https://sudo.dh.go.kr/', headers={'User-Agent': 'Mozilla/5.0'}), timeout=30, context=ctx).read().decode('utf-8', 'ignore')
-    print('[KW] 사업소 원문', h)
+    print('[KW] 사업소 %r' % h)
 
 
 def main():
