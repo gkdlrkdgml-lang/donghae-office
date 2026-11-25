@@ -120,7 +120,8 @@
   #newsBox li:last-child { border-bottom: 0; }
   #newsBox li i { font-style: normal; flex: none; background: #E8F0FC; color: #1F6FD1; font-weight: 800; font-size: 20px; border-radius: 10px; padding: 4px 12px; }
   #newsBox li div b { display: block; font-size: 27px; color: #1B3A6B; font-weight: 800; }
-  #newsBox li div small { display: block; font-size: 20px; color: #4A5566; margin-top: 4px; line-height: 1.4; }
+  #newsBox li div small { display: block; font-size: 20px; color: #4A5566; margin-top: 4px; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #newsBox li > div { min-width: 0; }
   #newsBox .ngo { flex: none; align-self: center; font: inherit; font-size: 20px; font-weight: 800; color: #fff; background: #1F6FD1; border: 0; border-radius: 10px; padding: 10px 18px; cursor: pointer; white-space: nowrap; }
   #newsBox .nf { display: flex; justify-content: space-between; align-items: center; padding: 14px 32px 24px; font-size: 18px; color: #6B7686; }
   #newsBox .nf button { font: inherit; font-size: 24px; font-weight: 800; color: #fff; background: #1F6FD1; border: 0; border-radius: 12px; padding: 12px 40px; cursor: pointer; }
@@ -3131,10 +3132,10 @@ function startApp() {
 
   // ---------- 최신 업데이트 알림: 탭·내용·최신 자료 교체 때(이용자 눈으로 쓴 말), 올린 날부터 7일 동안 열 때마다(자동 새로 고침 제외) ----------
   var NEWS = { id: '2026-11-26a', day: '2026-11-26', at: '2026년 11월 26일(목) 00:30', by: '동해시 관리자', items: [
-    ['새 메뉴', '4번 「항만」', '동해·묵호항 입출항 선박과 품목별 물동량(석회석·유연탄·시멘트 등, 수출입+연안)을 달마다 보여 드리고, 전국 항만과 견줍니다.', 'port'],
-    ['새 내용', '경제 › 「아파트 거래」', '18개 시·군 아파트 매매 건수와 ㎡당 가격, 동해시 최근 거래 단지·금액을 보여 드립니다.', 'economy:apt'],
-    ['새 메뉴', '5번 「철도」', '동해역·묵호역 오늘 시간표와 다음 열차, 강원 역별 정차 열차 수(승객 수 아님)를 보여 드립니다.', 'rail'],
-    ['화면', '메뉴 글자 크게 · 흘러가기 단추', '1~15번 메뉴 글자를 크고 굵게 바꿨고, 「흘러가기」는 오른쪽 위 인쇄 단추 옆으로 옮겼습니다.', 'flow']
+    ['새 메뉴', '4번 「항만」', '동해·묵호항 입출항 선박·품목별 물동량, 전국 항만 비교', 'port'],
+    ['새 내용', '경제 › 「아파트 거래」', '18개 시·군 매매 건수·㎡당 가격, 동해시 최근 거래', 'economy:apt'],
+    ['새 메뉴', '5번 「철도」', '동해역·묵호역 오늘 시간표·다음 열차, 강원 역별 정차 수', 'rail'],
+    ['화면', '메뉴 글자 크게 · 흘러가기 단추', '메뉴 글자를 키우고, 흘러가기는 오른쪽 위 인쇄 옆으로', 'flow']
   ] };
   function showNews(force) {
     var seen = ''; try { seen = localStorage.getItem('dh_news_seen') || ''; } catch (e) { /* 저장소 없음 */ }
