@@ -18,6 +18,7 @@ import power  # noqa: E402
 import rail  # noqa: E402
 import port  # noqa: E402
 import apt  # noqa: E402
+import waterq  # noqa: E402
 import admin_sync  # noqa: E402
 import landlaw  # noqa: E402
 import agri  # noqa: E402
@@ -341,6 +342,12 @@ def collect(state, S, C):
             ok(state, 'port', '입출항 ~%s · 연안화물 ~%s' % (max(P0['vessel']) if P0['vessel'] else '-', max(P0['cargo']) if P0['cargo'] else '-'))
         except Exception as e:  # noqa: BLE001
             fail(state, 'port', e)
+    if stale('waterq', 3) or '--force-all' in sys.argv:
+        try:   # 수돗물 법정 수질검사(K-water, 강원 정수장 월별)
+            L['waterq'] = waterq.collect(L.get('waterq')); L['waterq']['at'] = now().date().isoformat()
+            ok(state, 'waterq', '최근 %s' % L['waterq']['latest'])
+        except Exception as e:  # noqa: BLE001
+            fail(state, 'waterq', e)
     if stale('apt', 1) or '--force-all' in sys.argv:
         try:   # 아파트 매매 실거래(18개 시·군)
             L['apt'] = apt.collect(L.get('apt')); L['apt']['at'] = now().date().isoformat()
@@ -768,7 +775,7 @@ def build(state, S, C):
     # 분야 화면이 비면 메뉴에서 숨김
     has_fin = any(i['id'] == 'fin_indep' for i in out['indicators'])
     L = out.get('life') or {}
-    need = {'port': (L.get('port') or {}).get('vessel') or (L.get('port') or {}).get('cargo'), 'rail': L.get('rail'), 'wx_year': L.get('wx_year'), 'stores': L.get('stores'), 'water': L.get('water'), 'social': L.get('social'), 'economy': L.get('economy'), 'welfare': L.get('hospitals'), 'traffic': L.get('ev') or L.get('cars'), 'env': L.get('air'), 'power': L.get('power'), 'land': L.get('ordin'), 'tour': L.get('visit_months'), 'agri': (L.get('agri') or {}).get('tables') or (L.get('wipan') or {}).get('months')}
+    need = {'water': L.get('water') or L.get('waterq'), 'port': (L.get('port') or {}).get('vessel') or (L.get('port') or {}).get('cargo'), 'rail': L.get('rail'), 'wx_year': L.get('wx_year'), 'stores': L.get('stores'), 'water': L.get('water'), 'social': L.get('social'), 'economy': L.get('economy'), 'welfare': L.get('hospitals'), 'traffic': L.get('ev') or L.get('cars'), 'env': L.get('air'), 'power': L.get('power'), 'land': L.get('ordin'), 'tour': L.get('visit_months'), 'agri': (L.get('agri') or {}).get('tables') or (L.get('wipan') or {}).get('months')}
     out['menu'] = [m for m in out['menu'] if not (m['id'] == 'finance' and not has_fin) and not (m['id'] in ('admin', 'compare') and not out['admin'])
                    and not (m['id'] in need and not need[m['id']])]
     return out

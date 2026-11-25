@@ -727,18 +727,13 @@ def nlic_probe():
 
 
 def kwater_probe():
-    from urllib.parse import unquote as _unq
-    k = _unq(os.environ.get('DATA_GO_KR_KEY', '').strip())
-    U = 'https://apis.data.go.kr/B500001/qltWtrSvc/MonPurification'
-    for y, m, bsi, sg in (('2026', '10', '강원특별자치도', '동해시'), ('2026', '09', '강원특별자치도', '동해시'), ('2026', '09', '강원도', '동해시'), ('2026', '09', '', '동해시'), ('2026', '09', '강원특별자치도', '')):
-        prm = {'serviceKey': k, 'viewType': 'json', 'pageNo': '1', 'numOfRows': '100', 'year': y, 'month': m}
-        if bsi: prm['BSI'] = bsi
-        if sg: prm['SIGUN'] = sg
-        try:
-            r = http_get(U, prm, tries=1, timeout=60)
-            print('[KW] %s-%s %s %s 길이 %d %r' % (y, m, bsi, sg, len(r), r[:1500]))
-        except Exception as e:  # noqa: BLE001
-            print('[KW] %s-%s %s %s 실패 %s' % (y, m, bsi, sg, str(e)[:300]))
+    import base64, gzip
+    import waterq
+    o = waterq.collect(None)
+    print('[KW] 달', sorted(o['months']), o['errors'])
+    b = base64.b64encode(gzip.compress(json.dumps(o, ensure_ascii=False).encode())).decode()
+    for i in range(0, len(b), 3000):
+        print('[KQ]%05d %s' % (i // 3000, b[i:i + 3000]))
 
 
 def main():
