@@ -684,12 +684,12 @@ def econ3_probe():
             print('[%s] %s' % (name, r[:700].replace('\n', ' ')))
         except Exception as e:  # noqa: BLE001
             print('[%s] 실패 %s' % (name, str(e)[:300]))
-    #t('아파트', 'https://apis.data.go.kr/1613000/RTMSDataSvcAptTrade/getRTMSDataSvcAptTrade', {'LAWD_CD': '51170', 'DEAL_YMD': '202610', 'numOfRows': '5', 'pageNo': '1'})
+    t('아파트', 'https://apis.data.go.kr/1613000/RTMSDataSvcAptTrade/getRTMSDataSvcAptTrade', {'LAWD_CD': '51170', 'DEAL_YMD': '202610', 'numOfRows': '5', 'pageNo': '1'})
     #t('아파트전월세', 'https://apis.data.go.kr/1613000/RTMSDataSvcAptRent/getRTMSDataSvcAptRent', {'LAWD_CD': '51170', 'DEAL_YMD': '202610', 'numOfRows': '3', 'pageNo': '1'})
     B = 'https://apis.data.go.kr/1192000/'
     import re as _re
-    for svc in ('SsopVsslEtryndHarbor2', 'SsopCargFrghtCoa2', 'SsopCargFrghtCoa', 'SsopCargFrghtHarbor2', 'SsopCargTrnsHarbor2', 'SsopCargHarbor2', 'SsopContnHarbor2'):
-        for op, q in (('YM', {'sym': '202606', 'eym': '202612'}), ('Y', {'syear': '2026', 'eyear': '2026'})):
+    for svc, op in (('SsopVsslEtryndHarbor2', 'YM'), ('SsopCargFrghtCoastal2', 'Ym')):
+        for q in ({'sym': '202601', 'eym': '202612'},):
             prm = {'serviceKey': k, 'numOfRows': '999', 'pageNo': '1'}; prm.update(q)
             try:
                 r = http_get(B + svc + '/' + op, prm, tries=1, timeout=40)
