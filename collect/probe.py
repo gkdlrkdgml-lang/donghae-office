@@ -736,7 +736,25 @@ def kwater_probe():
         print('[KQ]%05d %s' % (i // 3000, b[i:i + 3000]))
 
 
+def fee_probe():
+    import ssl as _ssl, urllib.request as _ur, re as _re
+    ctx = _ssl.create_default_context(); ctx.set_ciphers('DEFAULT:@SECLEVEL=1')
+    h = _ur.urlopen(_ur.Request('https://www.dh.go.kr/sudo/waterpay/ncoe/fee/feeCalcStand.do', headers={'User-Agent': 'Mozilla/5.0'}), timeout=40, context=ctx).read().decode('utf-8', 'ignore')
+    print('[FE] 길이', len(h))
+    for t in _re.findall(r'<table.*?</table>', h, _re.S):
+        cap = _re.search(r'<caption>(.*?)</caption>', t, _re.S)
+        print('[FE] TABLE', _re.sub(r'\s+', ' ', cap.group(1)) if cap else '')
+        for tr in _re.findall(r'<tr.*?</tr>', t, _re.S):
+            cells = [_re.sub(r'\s+', ' ', _re.sub(r'<[^>]+>', ' ', c)).strip() for c in _re.findall(r'<t[hd][^>]*>(.*?)</t[hd]>', tr, _re.S)]
+            print('[FE] |', ' | '.join(cells))
+    for m in _re.findall(r'<(h[2-5]|p|li)[^>]*>([^<]{4,120})</', h)[:60]:
+        if any(w in m[1] for w in ('요금', '사용료', '부담금', '시행', '년', '적용')):
+            print('[FE] txt', m[1].strip())
+
+
 def main():
+    if os.environ.get('PROBE_ONLY') == 'fee':
+        return fee_probe()
     if os.environ.get('PROBE_ONLY') == 'kwater':
         return kwater_probe()
     if os.environ.get('PROBE_ONLY') == 'nlic':
