@@ -15,6 +15,8 @@ import sources  # noqa: E402
 import life
 import tour  # noqa: E402
 import power  # noqa: E402
+import socket  # noqa: E402
+socket.setdefaulttimeout(120)   # 응답 없는 서버에 무한정 매달리지 않게
 import rail  # noqa: E402
 import port  # noqa: E402
 import apt  # noqa: E402
