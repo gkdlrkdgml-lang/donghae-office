@@ -76,6 +76,15 @@ def digest():
     body = '### %s 아침 · 대시보드에서 바뀐 자료\n\n' % d['date'] + ('\n'.join(lines) if lines else '어제 아침 이후 새로 바뀐 자료는 없습니다.') + \
         '\n\n<sub>날씨·대기·주차 등 실시간 항목은 뺐습니다 · https://gkdlrkdgml-lang.github.io/donghae-office/</sub>'
     print(body)
+    try:   # 카카오톡 나에게 보내기(설정돼 있으면)
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        import kakao
+        d8 = d['date'][5:].replace('-', '/')
+        kt = '📬 %s 대시보드 갱신\n' % d8 + ('\n'.join('· %s → %s' % (NAME.get(k, k), b) for k, a, b in items) if items else '어제 이후 바뀐 자료 없음')
+        if kakao.send(kt):
+            print('카카오 보냄')
+    except Exception as e:  # noqa: BLE001
+        print('카카오 실패: %s' % e)
     if not os.environ.get('GH_TOKEN'):
         return
     num = gh('issue', 'list', '--state', 'open', '--search', DIGEST + ' in:title', '--json', 'number', '-q', '.[0].number').stdout.strip()

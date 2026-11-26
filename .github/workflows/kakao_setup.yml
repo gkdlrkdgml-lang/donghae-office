@@ -1,0 +1,24 @@
+name: 카카오 알림 연결(처음 한 번)
+
+on:
+  workflow_dispatch:
+    inputs:
+      code:
+        description: 'kakao.html 화면의 인증 코드'
+        required: true
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: 토큰 받고 시험 메시지 보내기
+        env:
+          KAKAO_REST_KEY: ${{ secrets.KAKAO_REST_KEY }}
+          KAKAO_CLIENT_SECRET: ${{ secrets.KAKAO_CLIENT_SECRET }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          CODE: ${{ inputs.code }}
+        run: cd collect && python kakao.py setup "$CODE"

@@ -85,6 +85,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TZ: Asia/Seoul
+          KAKAO_REST_KEY: ${{ secrets.KAKAO_REST_KEY }}
+          KAKAO_CLIENT_SECRET: ${{ secrets.KAKAO_CLIENT_SECRET }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: python3 collect/health.py || true
       - name: 결과 저장(지도 타일만 커밋)
         run: |
