@@ -2522,7 +2522,7 @@ function startApp() {
     function won(v) { var e = Math.floor(v / 10000), r = v % 10000; return (e ? e + '억' + (r ? ' ' + fmt(r, 0) + '만' : '') : fmt(v, 0) + '만') + '원'; }
     lifeTitle(fullName(SN) + ' 아파트', '국토교통부 실거래가 · ' + Yr + '년 1~' + Mo + '월 · 해제 거래 뺌' + (isMe ? '' : ' · 다시 누르면 동해시로'));
     view.style.gridTemplateColumns = 'minmax(0, 1fr) minmax(0, 1.25fr)';
-    view.style.gridTemplateRows = '44px auto minmax(0, 1fr) minmax(0, 1fr)';
+    view.style.gridTemplateRows = '44px auto minmax(0, 0.62fr) minmax(0, 1.38fr)';   // 아래 칸(최근 거래 표)을 더 크게
     var rkN = Object.keys(Y).filter(function (r) { return Y[r].n != null; }).sort(function (a, b) { return Y[b].n - Y[a].n; });
     var rkP = Object.keys(Y).filter(function (r) { return Y[r].per != null; }).sort(function (a, b) { return Y[b].per - Y[a].per; });
     var cm = (s[lastM] || {}).n;
@@ -2547,7 +2547,7 @@ function startApp() {
     if (isMe && lk.length) {
       var rows = [];
       lk.forEach(function (k) { (L6[k] || []).forEach(function (r) { rows.push([k, r]); }); });
-      panel('동해시 최근 거래', '최근 ' + lk.length + '개월 · 계약일 늦은 순 · 해제 거래 뺌', el('table', { class: 'dt big' }, [
+      panel('동해시 최근 거래', '최근 ' + lk.length + '개월 · 계약일 늦은 순 · 해제 거래 뺌', el('table', { class: 'dt' }, [
         el('thead', {}, [el('tr', {}, ['계약일', '단지', '동', '전용', '층', '금액', '평당'].map(function (h, j) { return el('th', { class: j >= 3 ? 'r' : '', text: h }); }))]),
         el('tbody', {}, rows.map(function (q) { var r = q[1]; return el('tr', {}, [el('td', { text: Number(q[0].slice(4)) + '.' + r.d }), el('td', { html: '<b>' + r.nm + '</b>' }), el('td', { text: r.dong }), el('td', { class: 'r', text: fmt(r.ar, 1) + '㎡' }), el('td', { class: 'r', text: r.fl + '층' }), el('td', { class: 'r', html: '<b>' + won(r.amt) + '</b>' }), el('td', { class: 'r', text: r.ar ? fmt(r.amt / r.ar * 3.3058, 0) + '만' : '' })]); }))]));
     } else {
