@@ -8,6 +8,7 @@ on:
 permissions:
   contents: read
   actions: write
+  issues: write
 
 jobs:
   watch:
@@ -19,6 +20,19 @@ jobs:
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           GH_TOKEN: ${{ github.token }}
         run: |
+          # 수집 감시: 예약 실행이 밀려 정상 수집이 8시간 넘게 없으면 바로 다시 돌림
+          busy=$(gh run list -w collect.yml --json status -q '[.[] | select(.status=="queued" or .status=="in_progress" or .status=="waiting" or .status=="pending")] | length')
+          # 관리자 반영(1~2분짜리)은 빼고, 6분 넘게 돈 정상 수집만 셈
+          last=$(gh run list -w collect.yml -L 40 --json conclusion,createdAt,updatedAt -q '[.[] | select(.conclusion=="success" and ((.updatedAt|fromdate)-(.createdAt|fromdate)) > 360)] | map(.createdAt) | .[0]')
+          if [ "$busy" = "0" ] && [ -n "$last" ]; then
+            age=$(( ( $(date +%s) - $(date -d "$last" +%s) ) / 3600 ))
+            echo "마지막 성공 수집: $last ($age 시간 전)"
+            if [ "$age" -ge 8 ]; then
+              gh workflow run collect.yml --ref main -f mode=full
+              [ "$age" -ge 24 ] && python3 collect/health.py --stale "$age" || true
+              exit 0
+            fi
+          fi
           python3 collect/store.py pull >/dev/null 2>&1 || true
           r=$(python3 collect/admin_sync.py --check || echo error)
           echo "확인 결과: $r"

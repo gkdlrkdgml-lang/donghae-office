@@ -14,6 +14,7 @@ on:
 
 permissions:
   contents: write
+  issues: write
   pages: write
   id-token: write
 
@@ -60,6 +61,12 @@ jobs:
           if [ "${{ inputs.mode }}" != "admin" ]; then python collect/tiles.py || true; fi
           # 수집 캐시·화면 자료는 Supabase 비공개 저장소에만 올림(GitHub에는 올리지 않음)
           python collect/store.py push
+      - name: 자동 갱신 점검(오래 실패한 자료가 있으면 이슈로 알림)
+        if: ${{ inputs.mode != 'admin' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TZ: Asia/Seoul
+        run: python3 collect/health.py || true
       - name: 결과 저장(지도 타일만 커밋)
         run: |
           git config user.name "donghae-office-bot"
@@ -67,6 +74,8 @@ jobs:
           git checkout -- web/data 2>/dev/null || true   # 자료는 이미 Supabase에 올림(GitHub에는 안 올림)
           git add web/img/tiles
           git diff --cached --quiet || git commit -m "데이터 갱신 $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M')"
+          # GitHub은 60일 동안 커밋이 없으면 예약 실행을 멈춤 → 30일 넘으면 표시 파일 하나 갱신
+          if [ $(( $(date +%s) - $(git log -1 --format=%ct) )) -gt 2592000 ]; then date -u +%FT%TZ > .keepalive; git add .keepalive; git commit -m "예약 실행 유지"; fi
           for i in 1 2 3; do git push && break; git pull --rebase -X theirs || true; sleep 5; done
       - name: 공개 사이트에서 자료 파일 빼기(자료는 로그인 후 Supabase에서 받음)
         run: rm -rf web/data web/landtest.html
