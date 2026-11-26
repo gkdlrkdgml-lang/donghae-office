@@ -752,7 +752,29 @@ def fee_probe():
             print('[FE] txt', m[1].strip())
 
 
+def death_probe():
+    import sources as _s9
+    kk = os.environ.get('KOSIS_KEY', '').strip()
+    t = http_get('https://kosis.kr/openapi/statisticsSearch.do', {'method': 'getList', 'apiKey': kk, 'searchNm': '시군구 사망원인 50항목', 'format': 'json', 'jsonVD': 'Y', 'resultCount': '20'})
+    hits = json.loads(t)
+    for x in hits:
+        print('[DT] 검색 %s/%s %s (%s~%s)' % (x.get('ORG_ID'), x.get('TBL_ID'), x.get('TBL_NM'), x.get('STRT_PRD_DE'), x.get('END_PRD_DE')))
+    tb = next((x['TBL_ID'] for x in hits if '시군구' in x.get('TBL_NM', '') and '50' in x.get('TBL_NM', '')), 'DT_1B34E13')
+    meta = _s9.kosis_meta({'key_env': 'KOSIS_KEY', 'meta_url': 'https://kosis.kr/openapi/statisticsData.do', 'params': {'orgId': '101', 'tblId': tb}})
+    objs = {}
+    for m in meta:
+        objs.setdefault(m.get('OBJ_ID'), []).append(m)
+    for k, v in objs.items():
+        print('[DT] 메타 %s %s %d개: %s' % (k, v[0].get('OBJ_NM'), len(v), ', '.join('%s=%s' % (x.get('ITM_ID'), x.get('ITM_NM')) for x in v[:60])))
+    print('[DT] 동해', [(x.get('OBJ_ID'), x.get('ITM_ID'), x.get('ITM_NM'), x.get('UP_ITM_ID')) for x in meta if '동해' in str(x.get('ITM_NM'))])
+    print('[DT] 강원', [(x.get('OBJ_ID'), x.get('ITM_ID'), x.get('ITM_NM')) for x in meta if '강원' in str(x.get('ITM_NM'))][:5])
+    print('[DT] 주기', http_get('https://kosis.kr/openapi/statisticsData.do', {'method': 'getMeta', 'type': 'PRD', 'orgId': '101', 'tblId': tb, 'format': 'json', 'jsonVD': 'Y', 'apiKey': kk})[:300])
+    print('[DT] TBL', tb)
+
+
 def main():
+    if os.environ.get('PROBE_ONLY') == 'death':
+        return death_probe()
     if os.environ.get('PROBE_ONLY') == 'fee':
         return fee_probe()
     if os.environ.get('PROBE_ONLY') == 'kwater':
