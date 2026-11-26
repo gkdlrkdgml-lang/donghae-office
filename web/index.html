@@ -577,12 +577,12 @@ function startApp() {
       var chips = el('div', { style: 'display:flex;flex-wrap:wrap;gap:7px;margin-top:12px' }, ['인구', '예산', '부지 검토', '관광객', '미세먼지', '병원'].map(function (q) {
         return el('button', { type: 'button', style: 'border:1.5px solid #C9D8EE;background:#fff;color:#1B3A6B;font:inherit;font-size:15px;font-weight:800;padding:5px 13px;border-radius:999px;cursor:pointer', text: q, onclick: function (e) { e.stopPropagation(); ask(q); } });
       }));
-      return el('section', { class: 'nozoom', style: 'cursor:pointer;overflow:hidden', onclick: function () { ask(); } }, [
-        el('div', { class: 'sh' }, [el('h2', { text: 'AI 비서실장 이정후' }), el('small', { style: 'font-weight:800;color:#2F6DB5', text: '누르면 안내 창이 열립니다' })]),
+      return el('section', { class: 'nozoom', style: 'overflow:hidden' }, [
+        el('div', { class: 'sh' }, [el('h2', { text: 'AI 비서실장 이정후' }), el('small', { style: 'font-weight:800;color:#2F6DB5', text: '비서실장을 누르면 안내 창이 열립니다' })]),
         el('div', { style: 'display:flex;gap:16px;align-items:flex-end;flex:1;min-height:0' }, [
-          el('img', { src: 'img/aide.webp', alt: 'AI 비서실장', style: 'height:100%;max-height:210px;min-height:0;flex:none;object-fit:contain;filter:drop-shadow(0 6px 10px rgba(27,58,107,.2))' }),
+          el('img', { src: 'img/aide.webp', alt: 'AI 비서실장', style: 'height:100%;max-height:210px;min-height:0;flex:none;object-fit:contain;cursor:pointer;filter:drop-shadow(0 6px 10px rgba(27,58,107,.2))', onclick: function () { ask(); } }),
           el('div', { style: 'flex:1;min-width:0;align-self:center' }, [
-            el('div', { style: 'position:relative;background:#F1F5FB;border-radius:16px;padding:14px 16px;font-size:18px;line-height:1.5;color:#22324A' }, [
+            el('div', { style: 'position:relative;background:#F1F5FB;border-radius:16px;padding:14px 16px;font-size:18px;line-height:1.5;color:#22324A;cursor:pointer', onclick: function () { ask(); } }, [
               el('b', { style: 'color:#1B3A6B', text: '시장님, 어떤 화면을 보시겠습니까?' }),
               el('div', { style: 'font-size:15.5px;color:#556274;margin-top:2px', text: '저를 누르시거나 아래에서 고르시면 원하시는 화면으로 바로 모시겠습니다.' })
             ]),

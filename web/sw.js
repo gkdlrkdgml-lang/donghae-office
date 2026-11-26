@@ -1,6 +1,6 @@
 // 인터넷이 잠깐 끊겨도 마지막으로 받은 화면과 데이터를 계속 보여 주기 위한 캐시.
 // 항상 새 파일을 먼저 받아 보고, 실패할 때만 저장해 둔 것을 씁니다.
-var CACHE = 'donghae-office-v8';
+var CACHE = 'donghae-office-v9';
 self.addEventListener('activate', function (e) { e.waitUntil(Promise.all([caches.delete('donghae-office-v1'), caches.delete('donghae-office-v2'), caches.delete('donghae-office-v3')])); });
 self.addEventListener('install', function (e) { self.skipWaiting(); });
 self.addEventListener('activate', function (e) { e.waitUntil(self.clients.claim()); });

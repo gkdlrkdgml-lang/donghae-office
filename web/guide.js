@@ -86,6 +86,8 @@
     '#dhAideBtn .say:after{content:"";position:absolute;right:-8px;bottom:14px;border:8px solid transparent;border-left-color:#fff;border-right:0}' +
     '#dhAideBtn .say b{display:block;font-size:13px;color:#2F6DB5;letter-spacing:.5px}' +
     '#dhAideBtn .say span{font-size:15px;font-weight:700;color:#1B3A6B;line-height:1.45}#dhAideBtn .say u{text-decoration:none;color:#D9443F}' +
+    '#dhAideBtn{pointer-events:none}#dhAideBtn img{pointer-events:auto}' +
+    '@media (max-height:600px){#dhAideBtn img{height:84px}#dhAideBtn .say{margin-bottom:40px}}' +
     '#dhAideBtn .say{opacity:0;pointer-events:none}#dhAideBtn.talk .say,#dhAideBtn:hover .say{opacity:1}#dhAideBtn:hover .say{border-color:#2F6DB5}body.dh-noaide #dhAideBtn{display:none}body:not(.dh-noaide) .help{right:100px!important}' +
     '#dhAide{position:fixed;inset:0;z-index:900;display:none;align-items:center;justify-content:center;background:rgba(20,35,60,.35);font-family:"Pretendard","Malgun Gothic",system-ui,sans-serif}' +
     '#dhAide.open{display:flex}' +
