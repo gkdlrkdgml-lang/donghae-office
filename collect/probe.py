@@ -764,15 +764,22 @@ def death_probe():
 
 
 def death2_probe():
-    import sources as _s9
     kk = os.environ.get('KOSIS_KEY', '').strip()
-    for q in ['시군구 월별 사망자수', '시군구 사망자수 월', '월별 사망 시군구']:
+    for tb in ['DT_1B82A01', 'DT_1B8000F', 'DT_1B8000G', 'DT_1B8000H']:
         try:
-            hits = json.loads(http_get('https://kosis.kr/openapi/statisticsSearch.do', {'method': 'getList', 'apiKey': kk, 'searchNm': q, 'format': 'json', 'jsonVD': 'Y', 'resultCount': '15'}))
+            print('[D2] PRD', tb, http_get('https://kosis.kr/openapi/statisticsData.do', {'method': 'getMeta', 'type': 'PRD', 'orgId': '101', 'tblId': tb, 'format': 'json', 'jsonVD': 'Y', 'apiKey': kk})[:300])
         except Exception as e:
-            print('[D2] err', e); continue
+            print('[D2] PRD err', tb, e)
+    for prd in ['M', 'Y']:
+        try:
+            t = http_get('https://kosis.kr/openapi/Param/statisticsParameterData.do', {'method': 'getList', 'format': 'json', 'jsonVD': 'Y', 'orgId': '101', 'tblId': 'DT_1B82A01', 'prdSe': prd, 'newEstPrdCnt': '3', 'itmId': 'ALL', 'objL1': '32040+32+', 'objL2': 'ALL', 'apiKey': kk})
+            print('[D2] DATA', prd, t[:900])
+        except Exception as e:
+            print('[D2] DATA err', prd, e)
+    for q in ['월별 사망자수 시도', '인구동향 사망 월']:
+        hits = json.loads(http_get('https://kosis.kr/openapi/statisticsSearch.do', {'method': 'getList', 'apiKey': kk, 'searchNm': q, 'format': 'json', 'jsonVD': 'Y', 'resultCount': '10'}))
         for x in hits:
-            print('[D2] %s | %s/%s %s (%s~%s %s)' % (q, x.get('ORG_ID'), x.get('TBL_ID'), x.get('TBL_NM'), x.get('STRT_PRD_DE'), x.get('END_PRD_DE'), x.get('PRD_SE', '')))
+            print('[D2] %s | %s/%s %s (%s~%s)' % (q, x.get('ORG_ID'), x.get('TBL_ID'), x.get('TBL_NM'), x.get('STRT_PRD_DE'), x.get('END_PRD_DE')))
 
 
 def main():
