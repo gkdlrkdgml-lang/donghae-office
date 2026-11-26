@@ -782,7 +782,22 @@ def death2_probe():
             print('[D2] %s | %s/%s %s (%s~%s)' % (q, x.get('ORG_ID'), x.get('TBL_ID'), x.get('TBL_NM'), x.get('STRT_PRD_DE'), x.get('END_PRD_DE')))
 
 
+def visit_probe():
+    import datetime as _dt
+    import life
+    t = _dt.date.today()
+    for b in range(0, 12):
+        d = (t - _dt.timedelta(days=b)).strftime('%Y%m%d')
+        try:
+            r = life._visit_rows(d, d)
+            print('[VS]', d, len(r) if r else 0)
+        except Exception as e:
+            print('[VS]', d, 'err', e)
+
+
 def main():
+    if os.environ.get('PROBE_ONLY') == 'visit':
+        return visit_probe()
     if os.environ.get('PROBE_ONLY') == 'death2':
         return death2_probe()
     if os.environ.get('PROBE_ONLY') == 'death':
