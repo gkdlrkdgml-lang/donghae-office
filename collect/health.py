@@ -57,7 +57,36 @@ def report(items, extra=''):
         gh('issue', 'close', num, '--comment', '모두 정상으로 돌아와 닫습니다 (%s)' % dt.datetime.now().strftime('%Y-%m-%d %H:%M'))
 
 
+DIGEST = '📬 대시보드 매일 아침 갱신 소식'
+SKIP = {'weather', 'air', 'cnctr', 'wq', 'wx_year', 'air_year', 'bus', 'parking', 'ev', 'taxi', 'events', 'festivals', 'places', 'licenses'}   # 실시간·매일 조금씩 바뀌는 것은 뺌
+NAME = {'population': '인구 현황', 'vital': '출생·사망 신고', 'youth': '청년·고령 인구', 'migration': '전입·전출', 'dong_population': '행정동 인구', 'age': '연령별 인구',
+        'stores': '상가 신규·폐업', 'cars': '자동차 등록', 'power': '전력 사용', 'demand': '전력 수요', 'tasis': '교통 통계', 'employ': '고용', 'economy': '지역 경제(GRDP)',
+        'eco_ind': '경제 지표', 'finance': '예산', 'finance_final': '결산', 'bokjiro': '복지 서비스', 'social': '복지 시설·수급', 'visitors': '관광 방문자', 'attr': '관광지 방문',
+        'water': '상하수도 통계', 'ordin': '조례', 'hospitals': '의료기관', 'tsafe': '교통안전', 'death': '사망 분석', 'apt': '아파트 거래', 'port': '항만', 'rail': '철도',
+        'waterq': '수돗물 수질검사', 'waterfee': '상하수도 요금'}
+
+
+def digest():
+    p = '/tmp/digest.json'
+    if not os.path.exists(p):
+        return
+    d = json.load(open(p, encoding='utf-8'))
+    items = [x for x in d['items'] if x[0] not in SKIP]
+    lines = ['- **%s**: %s → %s' % (NAME.get(k, k), a or '-', b) for k, a, b in items]
+    body = '### %s 아침 · 대시보드에서 바뀐 자료\n\n' % d['date'] + ('\n'.join(lines) if lines else '어제 아침 이후 새로 바뀐 자료는 없습니다.') + \
+        '\n\n<sub>날씨·대기·주차 등 실시간 항목은 뺐습니다 · https://gkdlrkdgml-lang.github.io/donghae-office/</sub>'
+    print(body)
+    if not os.environ.get('GH_TOKEN'):
+        return
+    num = gh('issue', 'list', '--state', 'open', '--search', DIGEST + ' in:title', '--json', 'number', '-q', '.[0].number').stdout.strip()
+    if not num:
+        r = gh('issue', 'create', '--title', DIGEST, '--body', '매일 아침 첫 수집이 끝나면, 대시보드에서 새 기간·값으로 바뀐 자료만 이 이슈에 댓글로 남깁니다. 이 이슈를 닫지 마세요.')
+        num = r.stdout.strip().rsplit('/', 1)[-1]
+    gh('issue', 'comment', num, '--body', body)
+
+
 if __name__ == '__main__':
+    digest()
     if '--stale' in sys.argv:   # 감시: 수집이 오래 안 돌았을 때
         report(['정상 수집이 %s시간째 없습니다. GitHub 예약 실행이 밀린 것으로 보여 감시가 수집을 다시 시작했습니다.' % sys.argv[-1]])
     else:

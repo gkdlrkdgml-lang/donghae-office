@@ -855,6 +855,18 @@ def main():
             log('관리자 입력 받음 · ' + sig)
     except Exception as e:  # noqa: BLE001
         log('관리자 입력(Supabase) 받기 실패 · 지난 값 사용 · %s' % e)
+    # 매일 아침 소식: 하루 첫 정상 수집(05시 이후)에서, 어제 소식 이후 「기간·값이 바뀐」 자료만 모아 /tmp/digest.json 에 둠(health.py가 이슈 댓글로 알림)
+    try:
+        dg = state.setdefault('digest', {})
+        if now().hour >= 5 and dg.get('date') != now().date().isoformat():
+            snap = {k: v.get('msg', '') for k, v in state['status'].items() if v.get('ok')}
+            old = dg.get('snap') or {}
+            ch = [[k, old.get(k, ''), m] for k, m in sorted(snap.items()) if old and k in old and old[k] != m]
+            if old:
+                save_json('/tmp/digest.json', {'date': now().date().isoformat(), 'since': dg.get('date'), 'items': ch})
+            dg.update({'date': now().date().isoformat(), 'snap': snap})
+    except Exception as e:  # noqa: BLE001
+        log('아침 소식 실패: %s' % e)
     save_json(STATE, state)
     data = build(state, S, C)
     os.makedirs(WEB_DATA, exist_ok=True)
