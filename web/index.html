@@ -2889,8 +2889,64 @@ function startApp() {
     var fr = el('iframe', { src: 'https://medi.dhits.kr/', title: '동해시 실시간 의료기관', style: 'flex:1;width:100%;border:0;border-radius:10px;background:#EEF3F8', allow: '' });
     view.appendChild(el('section', { class: 'nozoom', style: 'grid-row:2;grid-column:1;display:flex;flex-direction:column;padding:8px' }, [fr]));
   }
+  var welTab = 'med', dthMet = 2;
   function screenWelfareTabs() {
-    screenWelfare();
+    var L = D.life || {}, tabs = [['med', '보건·의료 현황']];
+    if (L.death && L.death.regions) tabs.push(['death', '사망 분석 · ' + L.death.years[L.death.years.length - 1] + '년']);
+    if (!tabs.some(function (t) { return t[0] === welTab; })) welTab = 'med';
+    if (welTab === 'death') screenDeath(); else screenWelfare();
+    var title = view.querySelector('.title');
+    if (title && tabs.length > 1) title.insertBefore(tabsBar(tabs, welTab, function (k) { welTab = k; }), title.children[1] || null);
+  }
+  // ---------- 보건 및 의료 › 사망 분석(국가데이터처 사망원인통계, 시·군 연 1회) ----------
+  function screenDeath() {
+    var T = (D.life || {}).death || {}, R = T.regions || {}, C = T.causes || {}, ys = T.years || [], y = ys[ys.length - 1], y0 = ys[ys.length - 2];
+    var SN = R[regName()] ? regName() : D.me, isMe = SN === D.me;
+    function g(rn, yr, cc, i) { var a = ((R[rn] || {})[yr] || {})[cc]; return a ? a[i] : null; }
+    function nm(cc) { return (C[cc] || '').replace(/\s*\([^)]*\)\s*$/, ''); }
+    function sg(v, d) { return v == null ? '' : (v > 0 ? '+' : '') + fmt(v, d == null ? 1 : d); }
+    lifeTitle(fullName(SN) + ' 사망 분석', '국가데이터처 사망원인통계 · ' + y + '년 · 사망률은 인구 10만 명당' + (isMe ? '' : ' · 다시 누르면 동해시로'));
+    view.style.gridTemplateColumns = 'minmax(0, 1fr) minmax(0, 1.35fr)';
+    view.style.gridTemplateRows = '44px auto minmax(0, 1fr) minmax(0, 1fr)';
+    // 주요 사망원인: 하위 항목이 없는 원인(암·심장 질환은 묶음으로)
+    var codes = Object.keys(C).filter(function (c) { return c !== '0'; });
+    function hasKid(c) { return codes.some(function (x) { return x !== c && x.indexOf(c) === 0 && x.length === c.length + 1; }); }
+    var main = codes.filter(function (c) {
+      if (c === '20' || c === '92') return true;
+      if (/^2./.test(c) || c === '93' || c === '94') return false;
+      return !hasKid(c);
+    });
+    var rank = main.map(function (c) { return [c, g(SN, y, c, 0)]; }).filter(function (x) { return x[1] > 0; }).sort(function (a, b) { return b[1] - a[1]; });
+    var n = g(SN, y, '0', 0), n0 = g(SN, y0, '0', 0), cr = g(SN, y, '0', 1), asr = g(SN, y, '0', 2), asr0 = g(SN, y0, '0', 2);
+    var gw = g('강원', y, '0', 2), kr = g('전국', y, '0', 2);
+    var regs = Object.keys(R).filter(function (r) { return r !== '전국' && r !== '강원'; });
+    var byAsr = regs.filter(function (r) { return g(r, y, '0', 2) != null; }).sort(function (a, b) { return g(a, y, '0', 2) - g(b, y, '0', 2); });
+    var top = rank[0];
+    cardsRow([
+      { l: '연령표준화 사망률', sub: y + '년 · 나이 구조를 맞춘 값(지역 비교용)', ic: 'trend', col: '#1F6FD1', bg: '#E8F0FC', v: fmt(asr, 1), u: '명', chips: [gw != null ? ['강원 ' + fmt(gw, 1) + ' · 전국 ' + fmt(kr, 1), asr <= gw ? 'good' : 'bad'] : null, ['도내 ' + (byAsr.indexOf(SN) + 1) + '위 / ' + byAsr.length + ' (낮을수록 1위)', 'navy']] },
+      { l: '사망자 수', sub: y + '년 · 주소지 기준', ic: 'grave', col: '#1B3A6B', bg: '#E8EEF7', v: fmt(n, 0), u: '명', chips: [n0 ? [y0 + '년 ' + fmt(n0, 0) + '명 · ' + sg(n - n0, 0) + '명', ''] : null] },
+      { l: '조사망률', sub: y + '년 · 인구 10만 명당(나이 구조 미반영)', ic: 'trend', col: '#7A4FC4', bg: '#EFE9FB', v: fmt(cr, 1), u: '명', chips: [g('강원', y, '0', 1) != null ? ['강원 ' + fmt(g('강원', y, '0', 1), 1), ''] : null] },
+      top ? { l: '사망원인 1위', sub: y + '년 · 사망자 수 기준', ic: 'hospital', col: '#D9534F', bg: '#FDE7E4', v: nm(top[0]), u: '', chips: [[fmt(top[1], 0) + '명 · 전체의 ' + fmt(top[1] / n * 100, 1) + '%', '']] } : null
+    ].filter(Boolean));
+    // 18개 시·군(낮을수록 1위)
+    var MET = [[2, '연령표준화 사망률'], [1, '조사망률']];
+    var sw = el('div', { class: 'chips', style: 'flex-wrap:nowrap;gap:6px;margin-bottom:6px' }, MET.map(function (m) {
+      return el('button', { type: 'button', class: 'chip', style: 'cursor:pointer;border:0;font-weight:800' + (m[0] === dthMet ? ';background:#1B3A6B;color:#fff' : ''), text: m[1], onclick: function () { dthMet = m[0]; render(); } }); }));
+    var ord = regs.filter(function (r) { return g(r, y, '0', dthMet) != null; }).sort(function (a, b) { return g(a, y, '0', dthMet) - g(b, y, '0', dthMet); });
+    var I = { name: MET.filter(function (m) { return m[0] === dthMet; })[0][1], digits: 1, unit: '명', ranking: ord.map(function (r, i) { return { name: r, rank: i + 1, value: g(r, y, '0', dthMet) }; }) };
+    var p1 = panel(I.name + ' · 강원 ' + ord.length + '개 시·군', y + '년 · 10만 명당 · 낮을수록 1위' + (dthMet === 2 ? ' · 군 지역은 연령표준화 미공표 → 조사망률로 18개 비교' : ' · 고령 인구 많으면 높게 나옴'), [sw, rankList(I, regPick, regSel)]);
+    p1.style.gridRow = '3 / span 2';
+    // 사망원인 순위
+    panel('사망원인 순위 · ' + fullName(SN) + ' ' + y + '년', '사망자 수 많은 순 · 사망률·연령표준화는 10만 명당 · 강원 = 연령표준화 사망률', el('table', { class: 'dt big' }, [
+      el('thead', {}, [el('tr', {}, ['순위', '사망원인', '사망자', '비중', '사망률', '연령표준화', '강원'].map(function (h, j) { return el('th', { class: j >= 2 ? 'r' : '', text: h }); }))]),
+      el('tbody', {}, rank.slice(0, 12).map(function (x, i) { var a = g(SN, y, x[0], 2), b = g('강원', y, x[0], 2);
+        return el('tr', {}, [el('td', { text: i + 1 }), el('td', { html: '<b>' + nm(x[0]) + '</b>' }), el('td', { class: 'r', html: '<b>' + fmt(x[1], 0) + '</b>' }), el('td', { class: 'r', text: fmt(x[1] / n * 100, 1) + '%' }),
+          el('td', { class: 'r', text: fmt(g(SN, y, x[0], 1), 1) }), el('td', { class: 'r', html: a != null && b != null ? '<b style="color:' + (a <= b ? '#2E8B57' : '#D9534F') + '">' + fmt(a, 1) + '</b>' : fmt(a, 1) }), el('td', { class: 'r', text: fmt(b, 1) })]); }))]));
+    // 5년 추이
+    panel('연령표준화 사망률 추이', ys[0] + '~' + y + '년 · 인구 10만 명당 · 낮을수록 좋음', lineChart(ys.map(function (v) { return v + '년'; }), [
+      { name: fullName(SN), color: '#1F6FD1', values: ys.map(function (v) { return g(SN, v, '0', 2); }), width: 3.5, labels: true },
+      { name: '강원', color: '#C0602B', values: ys.map(function (v) { return g('강원', v, '0', 2); }), width: 2.5 },
+      { name: '전국', color: '#9AA7B8', values: ys.map(function (v) { return g('전국', v, '0', 2); }), width: 2.5, dash: '5 4' }], { fit: true, unit: '명', d: 1 }));
   }
 
   // ---------- 흘러가기: 고른 화면만 정해진 간격으로 계속 돌려 보여 줌(새로 고침 뒤에도 이어서) ----------
@@ -3298,7 +3354,8 @@ function startApp() {
 
 
   // ---------- 최신 업데이트 알림: 탭·내용·최신 자료 교체 때(이용자 눈으로 쓴 말), 올린 날부터 7일 동안 열 때마다(자동 새로 고침 제외) ----------
-  var NEWS = { id: '2026-11-26e', day: '2026-11-26', at: '2026년 11월 26일(목) 08:55', by: '동해시 관리자', items: [
+  var NEWS = { id: '2026-11-26f', day: '2026-11-26', at: '2026년 11월 26일(목) 11:00', by: '동해시 관리자', items: [
+    ['새 내용', '보건 및 의료 › 「사망 분석」', '2025년 사망자 수·사망률·사망원인 순위, 강원 시·군 비교', 'welfare:death'],
     ['화면', '휴대폰 가로 보기', '휴대폰을 가로로 돌리면 화면 크기에 딱 맞춰집니다', ''],
     ['최신 반영', '상하수도 · 최신 정보 반영', '10월 수돗물 수질검사·2026년 요금표로 교체', 'water:q'],
     ['새 메뉴', '4번 「항만」', '동해·묵호항 입출항 선박·품목별 물동량, 전국 항만 비교', 'port'],
@@ -3323,6 +3380,7 @@ function startApp() {
             close(); var t = x[3].split(':');
             if (t[0] === 'economy' && t[1]) ecoTab = t[1];
             if (t[0] === 'water' && t[1]) wtrTab = t[1];
+            if (t[0] === 'welfare' && t[1]) welTab = t[1];
             go(t[0]);
           } }));
           return el('li', {}, kids); })),

@@ -10,7 +10,7 @@ from common import http_get, log, now
 
 URL = 'https://kosis.kr/openapi/Param/statisticsParameterData.do'
 TBL = 'DT_1B34E13'
-GW = ['32'] + ['32%03d' % i for i in range(10, 400, 10)]   # 강원 + 시·군 코드(없는 코드는 응답에 안 나옴)
+GW = ['32'] + ['32%03d' % i for i in range(10, 450, 10)]   # 강원 + 시·군 코드(없는 코드는 응답에 안 나옴)
 
 
 def collect(cache):
