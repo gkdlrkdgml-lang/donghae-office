@@ -786,7 +786,7 @@ def visit_probe():
     import datetime as _dt
     import life
     t = _dt.date.today()
-    for b in range(0, 12):
+    for b in range(12, 45, 2):
         d = (t - _dt.timedelta(days=b)).strftime('%Y%m%d')
         try:
             r = life._visit_rows(d, d)
