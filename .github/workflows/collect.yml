@@ -23,7 +23,26 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  gate:   # GitHub 예약이 늦게 와서, Supabase 예약으로 이미 돈 직후라면 한 번 건너뜀
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+    outputs:
+      go: ${{ steps.g.outputs.go }}
+    steps:
+      - id: g
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          go=yes
+          if [ "${{ github.event_name }}" = "schedule" ] && [ "${{ github.event.schedule }}" != "17 18 * * 0" ]; then
+            n=$(gh run list -R ${{ github.repository }} -w collect.yml -L 20 --json conclusion,status,createdAt,updatedAt,databaseId -q "[.[] | select(.databaseId != ${{ github.run_id }}) | select(.status==\"in_progress\" or .status==\"queued\" or (.conclusion==\"success\" and ((.updatedAt|fromdate)-(.createdAt|fromdate)) > 360 and (now - (.createdAt|fromdate)) < 9000))] | length")
+            [ "$n" != "0" ] && go=no && echo "최근 2시간 반 안에 수집이 이미 돌았거나 도는 중이라 건너뜁니다"
+          fi
+          echo "go=$go" >> $GITHUB_OUTPUT
   collect:
+    needs: gate
+    if: ${{ needs.gate.outputs.go == 'yes' }}
     runs-on: ubuntu-latest
     timeout-minutes: 110
     env:
