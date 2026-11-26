@@ -763,7 +763,21 @@ def death_probe():
         print('[DJ]%05d %s' % (i // 3000, b[i:i + 3000]))
 
 
+def death2_probe():
+    import sources as _s9
+    kk = os.environ.get('KOSIS_KEY', '').strip()
+    for q in ['시군구 월별 사망자수', '시군구 사망자수 월', '월별 사망 시군구']:
+        try:
+            hits = json.loads(http_get('https://kosis.kr/openapi/statisticsSearch.do', {'method': 'getList', 'apiKey': kk, 'searchNm': q, 'format': 'json', 'jsonVD': 'Y', 'resultCount': '15'}))
+        except Exception as e:
+            print('[D2] err', e); continue
+        for x in hits:
+            print('[D2] %s | %s/%s %s (%s~%s %s)' % (q, x.get('ORG_ID'), x.get('TBL_ID'), x.get('TBL_NM'), x.get('STRT_PRD_DE'), x.get('END_PRD_DE'), x.get('PRD_SE', '')))
+
+
 def main():
+    if os.environ.get('PROBE_ONLY') == 'death2':
+        return death2_probe()
     if os.environ.get('PROBE_ONLY') == 'death':
         return death_probe()
     if os.environ.get('PROBE_ONLY') == 'fee':
