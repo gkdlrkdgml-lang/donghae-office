@@ -795,7 +795,20 @@ def visit_probe():
             print('[VS]', d, 'err', e)
 
 
+def status_probe():
+    import subprocess
+    subprocess.run([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'store.py'), 'pull'], capture_output=True)
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    st = json.load(open(os.path.join(root, 'web', 'data', 'state.json'), encoding='utf-8'))
+    for k, v in sorted(st.get('status', {}).items(), key=lambda x: (x[1].get('ok', False), x[0])):
+        print('[ST] %s %s | %s | 마지막성공 %s | %s' % ('OK ' if v.get('ok') else 'BAD', k, v.get('at'), v.get('last_ok', '-'), str(v.get('msg', ''))[:150]))
+    L = st.get('life', {})
+    print('[ST] visit_last', L.get('visit_last'), '| vitalm', (L.get('vitalm') or {}).get('ym'), '| death', (L.get('death') or {}).get('years', [None])[-1:])
+
+
 def main():
+    if os.environ.get('PROBE_ONLY') == 'status':
+        return status_probe()
     if os.environ.get('PROBE_ONLY') == 'visit':
         return visit_probe()
     if os.environ.get('PROBE_ONLY') == 'death2':
