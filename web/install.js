@@ -17,6 +17,7 @@ window.DHInstall = (function () {
     if (inApp && !sessionStorage.getItem('dh_ext_tried')) { sessionStorage.setItem('dh_ext_tried', '1'); openExternal(); }
   } catch (e) { /* 무시 */ }
   function installed() {
+    if (document.fullscreenElement || document.webkitFullscreenElement) return false;   // 「가로 전체 화면」은 설치가 아님
     return matchMedia('(display-mode: fullscreen), (display-mode: standalone), (display-mode: minimal-ui)').matches || navigator.standalone === true;
   }
   var btns = [];

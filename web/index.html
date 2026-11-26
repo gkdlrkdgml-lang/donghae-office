@@ -3326,9 +3326,12 @@ function startApp() {
             go(t[0]);
           } }));
           return el('li', {}, kids); })),
-        (window.DHInstall && !DHInstall.installed()) ? el('div', { class: 'ninst' }, [
-          el('span', { html: '<b>📲 시장실을 앱처럼 쓰기</b> · 바탕화면·홈 화면에 설치하면 주소창 없이 한 번에 열립니다' }),
-          el('button', { type: 'button', text: '바탕화면에 설치', onclick: function () { close(); DHInstall.open(); } })]) : null,
+        // 앱 설치 줄은 늘 보임(사용자 요청). 이미 설치된 앱으로 보고 있으면 그렇다고 알려 줌
+        window.DHInstall ? (DHInstall.installed()
+          ? el('div', { class: 'ninst' }, [el('span', { html: '<b>✅ 설치된 앱으로 보고 계십니다</b> · 다른 기기에서도 「📲 앱 설치」로 바탕화면·홈 화면에 설치할 수 있습니다' })])
+          : el('div', { class: 'ninst' }, [
+            el('span', { html: '<b>📲 시장실을 앱처럼 쓰기</b> · 바탕화면·홈 화면에 설치하면 주소창 없이 한 번에 열립니다' }),
+            el('button', { type: 'button', text: '바탕화면에 설치', onclick: function () { close(); DHInstall.open(); } })])) : null,
         el('div', { class: 'nf' }, [el('span', { html: '<b style="color:#D9534F">' + NEWS.by + '가 업데이트했습니다</b> · 30초 뒤 저절로 닫힙니다 · 다시 보기: 제목 옆 「새 소식」' }), el('button', { type: 'button', text: '확인', onclick: close })])
       ])
     ]);
