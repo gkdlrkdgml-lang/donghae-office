@@ -466,7 +466,7 @@ def collect(state, S, C):
             ok(state, 'tasis', L['tasis']['ym'])
         except Exception as e:  # noqa: BLE001
             fail(state, 'tasis', e)
-    if stale('licenses', 1) or any(v.get('total') == 100 for v in ((L.get('licenses') or {}).get('kinds') or {}).values()) or '--force-life' in sys.argv:
+    if stale('licenses', 1) or (L.get('licenses') or {}).get('stale') or any(v.get('total') == 100 for v in ((L.get('licenses') or {}).get('kinds') or {}).values()) or '--force-life' in sys.argv:
         try:
             L['licenses'] = sources.licenses(C, prev=L.get('licenses'))
             ok(state, 'licenses', ', '.join('%s %d' % (k, v['active']) for k, v in L['licenses']['kinds'].items()) + (' · 지난 값 유지: ' + ', '.join('%s(%s)' % kv for kv in L['licenses']['stale'].items()) if L['licenses'].get('stale') else ''))
