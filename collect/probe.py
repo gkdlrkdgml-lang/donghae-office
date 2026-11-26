@@ -757,7 +757,7 @@ def death_probe():
     import death
     o = death.collect(None)
     d = o['regions']['동해'][o['years'][-1]]
-    print('[DT] 해', o['years'], '지역', sorted(o['regions']), '동해 계', d.get('0'))
+    print('[DT] 해', o['years'], sorted(o['mon'])[-3:], {k: sorted(v)[-2:] for k, v in o['pre'].items()})
     b = base64.b64encode(gzip.compress(json.dumps(o, ensure_ascii=False).encode())).decode()
     for i in range(0, len(b), 3000):
         print('[DJ]%05d %s' % (i // 3000, b[i:i + 3000]))

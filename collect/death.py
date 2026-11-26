@@ -45,4 +45,26 @@ def collect(cache):
     if '동해' not in regs or not years:
         raise RuntimeError('동해 사망원인 자료 없음')
     log('사망원인: %s~%s, 지역 %d, 원인 %d' % (years[0], years[-1], len(regs), len(causes)))
-    return {'v': 1, 'table': TBL, 'years': years, 'causes': causes, 'regions': regs, 'fetched': now().strftime('%Y-%m-%d')}
+    mon = {}
+    try:   # 동해·강원 시·군 월별 사망자 수(확정, 지난해 12월까지)
+        t = http_get(URL, {'method': 'getList', 'format': 'json', 'jsonVD': 'Y', 'orgId': '101', 'tblId': 'DT_1B82A01', 'prdSe': 'M', 'newEstPrdCnt': '24',
+                           'itmId': 'ALL', 'objL1': '32040+', 'objL2': '0', 'apiKey': k}, tries=2, timeout=120)
+        for r in json.loads(t):
+            mon[r['PRD_DE']] = float(r['DT'])
+    except Exception as e:  # noqa: BLE001
+        log('월별 사망자(동해) 실패: %s' % e)
+    pre = {}
+    try:   # 올해 잠정: 시도 월별 인구동향(강원·전국)
+        t = http_get(URL, {'method': 'getList', 'format': 'json', 'jsonVD': 'Y', 'orgId': '101', 'tblId': 'DT_1B8000G', 'prdSe': 'M', 'newEstPrdCnt': '24',
+                           'itmId': 'ALL', 'objL1': 'ALL', 'apiKey': k}, tries=2, timeout=120)
+        for r in json.loads(t):
+            nm, it = (r.get('C1_NM') or ''), (r.get('ITM_NM') or '')
+            if it.replace(' ', '') != '사망건수' and it.replace(' ', '') != '사망자수':
+                continue
+            key = '전국' if nm.startswith('전국') else '강원' if nm.startswith('강원') else None
+            if key:
+                pre.setdefault(key, {})[r['PRD_DE']] = float(r['DT'])
+        log('인구동향 월별 사망: %s' % {k2: max(v) for k2, v in pre.items()})
+    except Exception as e:  # noqa: BLE001
+        log('인구동향 월별 사망 실패: %s' % e)
+    return {'v': 1, 'table': TBL, 'mon': mon, 'pre': pre, 'years': years, 'causes': causes, 'regions': regs, 'fetched': now().strftime('%Y-%m-%d')}
