@@ -152,7 +152,7 @@ def collect(state, S, C):
                         r = sources.mois_monthly(S, C, kind, m, '2')
                         if len(r) >= 15:
                             vm[kind][m] = {k: v['total'] for k, v in r.items()}
-                for kind in vm:
+                for kind in ('birth', 'death'):
                     for m in [m for m in vm[kind] if m < yms[0]]:
                         vm[kind].pop(m)
                 vm['ym'] = last

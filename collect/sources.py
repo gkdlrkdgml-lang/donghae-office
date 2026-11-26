@@ -1085,7 +1085,7 @@ def licenses(C, code='4211000', prev=None):
         if failed is not None:
             if nm in pk:
                 res['kinds'][nm] = pk[nm]
-                res['stale'][nm] = (prev or {}).get('at') or ''
+                res['stale'][nm] = ((prev or {}).get('stale') or {}).get(nm) or (prev or {}).get('at') or ''   # 처음 실패하기 전 날짜를 그대로 둠
                 res['recent'] += [x for x in ((prev or {}).get('recent') or []) if x[1] == nm]
                 log('  인허가 %s 실패(%s) → 지난 값(%s) 유지' % (nm, str(failed)[:80], res['stale'][nm]))
                 continue
