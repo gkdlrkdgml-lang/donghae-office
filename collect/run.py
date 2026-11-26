@@ -21,6 +21,7 @@ import rail  # noqa: E402
 import port  # noqa: E402
 import apt  # noqa: E402
 import waterq  # noqa: E402
+import death  # noqa: E402
 import admin_sync  # noqa: E402
 import landlaw  # noqa: E402
 import agri  # noqa: E402
@@ -352,6 +353,12 @@ def collect(state, S, C):
             ok(state, 'port', '입출항 ~%s · 연안화물 ~%s' % (max(P0['vessel']) if P0['vessel'] else '-', max(P0['cargo']) if P0['cargo'] else '-'))
         except Exception as e:  # noqa: BLE001
             fail(state, 'port', e)
+    if stale('death', 7) or '--force-all' in sys.argv:
+        try:   # 사망원인통계(강원 18개 시·군, 최근 5년)
+            L['death'] = death.collect(L.get('death')); L['death']['at'] = now().date().isoformat()
+            ok(state, 'death', '%s년까지' % L['death']['years'][-1])
+        except Exception as e:  # noqa: BLE001
+            fail(state, 'death', e)
     if stale('waterq', 3) or '--force-all' in sys.argv:
         log('수질검사 시작')
         try:   # 수돗물 법정 수질검사(K-water, 강원 정수장 월별)
