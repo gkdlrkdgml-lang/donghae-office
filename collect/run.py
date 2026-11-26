@@ -7,6 +7,7 @@
 import json
 import os
 import sys
+import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -134,6 +135,30 @@ def collect(state, S, C):
                 break
             except Exception as e:  # noqa: BLE001
                 fail(state, 'vital', e)
+        try:   # 월별 출생·사망 신고(행안부 주민등록, 18개 시·군) 지난해 1월부터 쌓음 — 지난 달은 다시 안 받음
+            vm = state.setdefault('life', {}).setdefault('vitalm', {'birth': {}, 'death': {}})
+            last = (state['admin'].get('vital') or {}).get('ym')
+            if last:
+                yms, y0 = [], '%d01' % (int(last[:4]) - 1)
+                while y0 <= last:
+                    yms.append(y0); y0 = ym_shift(y0, 1)
+                t0 = time.time()
+                for kind in ('birth', 'death'):
+                    for m in yms:
+                        if m in vm[kind] and m < ym_shift(last, -1):
+                            continue
+                        if time.time() - t0 > 240:
+                            break
+                        r = sources.mois_monthly(S, C, kind, m, '2')
+                        if len(r) >= 15:
+                            vm[kind][m] = {k: v['total'] for k, v in r.items()}
+                for kind in vm:
+                    for m in [m for m in vm[kind] if m < yms[0]]:
+                        vm[kind].pop(m)
+                vm['ym'] = last
+                log('월별 출생·사망: %s' % {k: len(vm[k]) for k in ('birth', 'death')})
+        except Exception as e:  # noqa: BLE001
+            log('월별 출생·사망 실패: %s' % e)
         try:
             state['admin']['youth'] = sources.youth_elderly(S, C)
             ok(state, 'youth', state['admin']['youth']['ym'])

@@ -664,7 +664,7 @@ function startApp() {
   // ---------- 2. 행정: 아래 탭(인구 현황 / 인구 비교) ----------
   var admTab = 'now', admDetail = null;
   function subTabs() {
-    return tabsBar([['now', '인구 현황'], ['compare', '인구 비교 · 18개 시·군'], ['map', '행정동 3D 지도']], admTab, function (k) { admTab = k; admDetail = null; });
+    return tabsBar([['now', '인구 현황'], ['compare', '인구 비교 · 18개 시·군']].concat(((D.life || {}).vitalm || {}).ym ? [['vital', '출생·사망 · 월별']] : []).concat([['map', '행정동 3D 지도']]), admTab, function (k) { admTab = k; admDetail = null; });
   }
   function tabsBar(list, cur, set) {
     var t = el('div', { class: 'subtabs' });
@@ -673,8 +673,53 @@ function startApp() {
     });
     return t;
   }
+  // ---------- 행정 › 출생·사망 월별(행안부 주민등록 신고, 18개 시·군) ----------
+  var vitMet = 'nat';
+  function screenVital() {
+    var VM = (D.life || {}).vitalm || {}, ym = VM.ym, y = ym.slice(0, 4), py = String(+y - 1), mo = +ym.slice(4);
+    var SN = regName(), isMe = SN === D.me;
+    function v(kind, m, r) { var x = (VM[kind] || {})[m]; return x && x[r || SN] != null ? x[r || SN] : null; }
+    function sum(kind, yr, r) { var n = 0, k = 0; for (var i = 1; i <= mo; i++) { var x = v(kind, yr + (i < 10 ? '0' : '') + i, r); if (x != null) { n += x; k++; } } return k ? n : null; }
+    function sg(x) { return x == null ? '' : (x > 0 ? '+' : '') + fmt(x, 0); }
+    lifeTitle(fullName(SN) + ' 출생·사망 월별', y + '년 ' + mo + '월까지 · 행안부 주민등록 신고 기준' + (isMe ? ' · 왼쪽 시·군을 누르면 그 지역' : ' · 다시 누르면 동해시로'));
+    view.style.gridTemplateColumns = 'minmax(0, 1fr) minmax(0, 1.35fr)';
+    view.style.gridTemplateRows = '44px auto minmax(0, 1fr) minmax(0, 1fr)';
+    var b = sum('birth', y), d = sum('death', y), pb = sum('birth', py), pd = sum('death', py);
+    var cb = v('birth', ym), cd = v('death', ym);
+    cardsRow([
+      { l: '자연증감', sub: y + '년 1~' + mo + '월 누계 · 출생 − 사망', ic: 'heart', col: '#D6457A', bg: '#FCE6EE', v: sg(b - d), u: '명', chips: [pb != null ? ['작년 같은 기간 ' + sg(pb - pd) + '명', ''] : null] },
+      { l: '출생 신고', sub: y + '년 1~' + mo + '월 누계', ic: 'baby', col: '#2E8B57', bg: '#E2F3E9', v: fmt(b, 0), u: '명', chips: [pb != null ? ['작년 같은 기간 ' + fmt(pb, 0) + '명 · ' + sg(b - pb) + '명', b >= pb ? 'good' : 'bad'] : null] },
+      { l: '사망 신고', sub: y + '년 1~' + mo + '월 누계', ic: 'grave', col: '#5F6B7A', bg: '#EEF2F7', v: fmt(d, 0), u: '명', chips: [pd != null ? ['작년 같은 기간 ' + fmt(pd, 0) + '명 · ' + sg(d - pd) + '명', d <= pd ? 'good' : 'bad'] : null] },
+      { l: mo + '월 한 달', sub: y + '년 ' + mo + '월 신고', ic: 'cycle', col: '#1F6FD1', bg: '#E4EEFB', v: sg(cb - cd), u: '명', chips: [['출생 ' + fmt(cb, 0) + ' · 사망 ' + fmt(cd, 0), '']] }
+    ]);
+    // 18개 시·군 순위
+    var MET = [['nat', '자연증감', true], ['birth', '출생', true], ['death', '사망', false]];
+    var sw = el('div', { class: 'chips', style: 'flex-wrap:nowrap;gap:6px;margin-bottom:6px' }, MET.map(function (m) {
+      return el('button', { type: 'button', class: 'chip', style: 'cursor:pointer;border:0;font-weight:800' + (m[0] === vitMet ? ';background:#1B3A6B;color:#fff' : ''), text: m[1], onclick: function () { vitMet = m[0]; render(); } }); }));
+    var me = MET.filter(function (m) { return m[0] === vitMet; })[0];
+    var regs = Object.keys((VM.death || {})[ym] || {});
+    function val(r) { return vitMet === 'nat' ? sum('birth', y, r) - sum('death', y, r) : sum(vitMet, y, r); }
+    var ord = regs.sort(function (a2, b2) { return me[2] ? val(b2) - val(a2) : val(a2) - val(b2); });
+    var I = { name: me[1], digits: 0, unit: '명', ranking: ord.map(function (r, i) { return { name: r, rank: i + 1, value: val(r) }; }) };
+    var p1 = panel(me[1] + ' · 강원 ' + ord.length + '개 시·군', y + '년 1~' + mo + '월 누계 · ' + (me[2] ? '많을수록' : '적을수록') + ' 1위 · 누르면 그 지역', [sw, rankList(I, regPick, regSel)]);
+    p1.style.gridRow = '3 / span 2';
+    var mm = []; for (var i = 1; i <= 12; i++) mm.push((i < 10 ? '0' : '') + i);
+    function line(kind, yr) { return mm.map(function (m) { return yr + m <= ym ? v(kind, yr + m) : null; }); }
+    panel('월별 출생·사망 · ' + fullName(SN), py + '년 1월~' + y + '년 ' + mo + '월 · 명', lineChart(mm.map(function (m) { return (+m) + '월'; }), [
+      { name: y + '년 사망', color: '#D9534F', values: line('death', y), width: 3.5, labels: true },
+      { name: py + '년 사망', color: '#E8A39F', values: line('death', py), width: 2.5, dash: '5 4' },
+      { name: y + '년 출생', color: '#2E8B57', values: line('birth', y), width: 3.5, labels: true },
+      { name: py + '년 출생', color: '#9BD3B2', values: line('birth', py), width: 2.5, dash: '5 4' }], { fit: true, unit: '명', d: 0 }));
+    var rows = []; for (var j = mo; j >= 1; j--) { var m2 = y + (j < 10 ? '0' : '') + j, p2 = py + (j < 10 ? '0' : '') + j; rows.push([j + '월', v('birth', m2), v('death', m2), v('birth', p2), v('death', p2)]); }
+    panel('월별 표 · ' + fullName(SN), y + '년과 ' + py + '년 같은 달 비교 · 명', el('table', { class: 'dt big' }, [
+      el('thead', {}, [el('tr', {}, ['월', y + ' 출생', y + ' 사망', '자연증감', py + ' 출생', py + ' 사망'].map(function (h, k) { return el('th', { class: k ? 'r' : '', text: h }); }))]),
+      el('tbody', {}, rows.map(function (r) { var n = r[1] != null && r[2] != null ? r[1] - r[2] : null;
+        return el('tr', {}, [el('td', { html: '<b>' + r[0] + '</b>' }), el('td', { class: 'r', html: '<b>' + fmt(r[1], 0) + '</b>' }), el('td', { class: 'r', html: '<b>' + fmt(r[2], 0) + '</b>' }),
+          el('td', { class: 'r', html: n == null ? '–' : '<b style="color:' + (n < 0 ? '#D9534F' : '#2E8B57') + '">' + sg(n) + '</b>' }), el('td', { class: 'r', text: fmt(r[3], 0) }), el('td', { class: 'r', text: fmt(r[4], 0) })]); }))]));
+  }
   function screenAdminTabs() {
-    if (admTab === 'compare') screenCompare(); else if (admTab === 'map') screenMap3D(); else screenAdmin();
+    if (admTab === 'vital' && !((D.life || {}).vitalm || {}).ym) admTab = 'now';
+    if (admTab === 'compare') screenCompare(); else if (admTab === 'map') screenMap3D(); else if (admTab === 'vital') screenVital(); else screenAdmin();
     var title = view.querySelector('.title');
     if (title) title.insertBefore(subTabs(), title.children[1] || null);
     if (admTab === 'now' && admDetail) admPopup(admDetail);
@@ -799,8 +844,10 @@ function startApp() {
           el('div', { class: 'pd' }, [el('span', { text: cmpL }), delta(d)])].filter(Boolean)));
       }
       if (bc && dc) {
-        mc('출생', '출생 신고', 'baby', '#2E8B57', '#E2F3E9', bc.total, bp ? bc.total - bp.total : null);
-        mc('사망', '사망 신고', 'grave', '#5F6B7A', '#EEF2F7', dc.total, dp ? dc.total - dp.total : null);
+        var VM = (D.life || {}).vitalm || {};
+        function ytd(kind) { var y = String(V.ym || '').slice(0, 4), n = 0, k = 0; Object.keys(VM[kind] || {}).forEach(function (m) { if (m.slice(0, 4) === y && m <= V.ym && VM[kind][m][D.me] != null) { n += VM[kind][m][D.me]; k++; } }); return k ? ' · 올해 누계 ' + fmt(n, 0) + '명' : ''; }
+        mc('출생', '출생 신고' + ytd('birth'), 'baby', '#2E8B57', '#E2F3E9', bc.total, bp ? bc.total - bp.total : null);
+        mc('사망', '사망 신고' + ytd('death'), 'grave', '#5F6B7A', '#EEF2F7', dc.total, dp ? dc.total - dp.total : null);
         var nat = bc.total - dc.total, natp = bp && dp ? bp.total - dp.total : null;
         mc('자연증감', '출생 - 사망', 'heart', nat < 0 ? '#D6457A' : '#1B7A4B', nat < 0 ? '#FCE6EE' : '#E2F3E9', nat, natp != null ? nat - natp : null, true);
       }
@@ -2901,11 +2948,11 @@ function startApp() {
   // ---------- 보건 및 의료 › 사망 분석(국가데이터처 사망원인통계, 시·군 연 1회) ----------
   function screenDeath() {
     var T = (D.life || {}).death || {}, R = T.regions || {}, C = T.causes || {}, ys = T.years || [], y = ys[ys.length - 1], y0 = ys[ys.length - 2];
-    var SN = R[regName()] ? regName() : D.me, isMe = SN === D.me;
+    var SN = R[regName()] ? regName() : D.me, isMe = SN === D.me, vym0 = ((D.life || {}).vitalm || {}).ym || '';
     function g(rn, yr, cc, i) { var a = ((R[rn] || {})[yr] || {})[cc]; return a ? a[i] : null; }
     function nm(cc) { return (C[cc] || '').replace(/\s*\([^)]*\)\s*$/, ''); }
     function sg(v, d) { return v == null ? '' : (v > 0 ? '+' : '') + fmt(v, d == null ? 1 : d); }
-    lifeTitle(fullName(SN) + ' 사망 분석', '국가데이터처 사망원인통계 · ' + y + '년 · 사망률은 인구 10만 명당' + (isMe ? '' : ' · 다시 누르면 동해시로'));
+    lifeTitle(fullName(SN) + ' 사망 분석', '사망원인 ' + y + '년 국가데이터처 확정' + (vym0 ? ' · 사망 신고 ' + vym0.slice(0, 4) + '년 ' + (+vym0.slice(4)) + '월까지 행안부' : '') + ' · 사망률은 10만 명당' + (isMe ? '' : ' · 다시 누르면 동해시로'));
     view.style.gridTemplateColumns = 'minmax(0, 1fr) minmax(0, 1.35fr)';
     view.style.gridTemplateRows = '44px auto minmax(0, 1fr) minmax(0, 1fr)';
     // 주요 사망원인: 하위 항목이 없는 원인(암·심장 질환은 묶음으로)
@@ -2922,10 +2969,14 @@ function startApp() {
     var regs = Object.keys(R).filter(function (r) { return r !== '전국' && r !== '강원'; });
     var byAsr = regs.filter(function (r) { return g(r, y, '0', 2) != null; }).sort(function (a, b) { return g(a, y, '0', 2) - g(b, y, '0', 2); });
     var top = rank[0];
+    var VM = (D.life || {}).vitalm || {}, vym = VM.ym || '', vy = vym.slice(0, 4), pvy = String(+vy - 1);
+    function vsum(kind, yr, upto) { var n = 0, k = 0; Object.keys(VM[kind] || {}).forEach(function (m) { if (m.slice(0, 4) === yr && m.slice(4) <= upto && (VM[kind][m] || {})[SN] != null) { n += VM[kind][m][SN]; k++; } }); return k ? n : null; }
+    var nowD = vym ? vsum('death', vy, vym.slice(4)) : null, prvD = vym ? vsum('death', pvy, vym.slice(4)) : null;
     cardsRow([
       { l: '연령표준화 사망률', sub: y + '년 · 나이 구조를 맞춘 값(지역 비교용)', ic: 'trend', col: '#1F6FD1', bg: '#E8F0FC', v: fmt(asr, 1), u: '명', chips: [gw != null ? ['강원 ' + fmt(gw, 1) + ' · 전국 ' + fmt(kr, 1), asr <= gw ? 'good' : 'bad'] : null, ['도내 ' + (byAsr.indexOf(SN) + 1) + '위 / ' + byAsr.length + ' (낮을수록 1위)', 'navy']] },
       { l: '사망자 수', sub: y + '년 · 주소지 기준', ic: 'grave', col: '#1B3A6B', bg: '#E8EEF7', v: fmt(n, 0), u: '명', chips: [n0 ? [y0 + '년 ' + fmt(n0, 0) + '명 · ' + sg(n - n0, 0) + '명', ''] : null] },
       { l: '조사망률', sub: y + '년 · 인구 10만 명당(나이 구조 미반영)', ic: 'trend', col: '#7A4FC4', bg: '#EFE9FB', v: fmt(cr, 1), u: '명', chips: [g('강원', y, '0', 1) != null ? ['강원 ' + fmt(g('강원', y, '0', 1), 1), ''] : null] },
+      nowD != null ? { l: vy + '년 사망 신고', sub: '1~' + (+vym.slice(4)) + '월 누계 · 행안부 주민등록(최신)', ic: 'grave', col: '#5F6B7A', bg: '#EEF2F7', v: fmt(nowD, 0), u: '명', chips: [prvD != null ? ['작년 같은 기간 ' + fmt(prvD, 0) + '명 · ' + sg(nowD - prvD, 0) + '명', nowD <= prvD ? 'good' : 'bad'] : null] } : null,
       top ? { l: '사망원인 1위', sub: y + '년 · 사망자 수 기준', ic: 'hospital', col: '#D9534F', bg: '#FDE7E4', v: nm(top[0]), u: '', chips: [[fmt(top[1], 0) + '명 · 전체의 ' + fmt(top[1] / n * 100, 1) + '%', '']] } : null
     ].filter(Boolean));
     // 18개 시·군(낮을수록 1위)
@@ -2942,11 +2993,10 @@ function startApp() {
       el('tbody', {}, rank.slice(0, 12).map(function (x, i) { var a = g(SN, y, x[0], 2), b = g('강원', y, x[0], 2);
         return el('tr', {}, [el('td', { text: i + 1 }), el('td', { html: '<b>' + nm(x[0]) + '</b>' }), el('td', { class: 'r', html: '<b>' + fmt(x[1], 0) + '</b>' }), el('td', { class: 'r', text: fmt(x[1] / n * 100, 1) + '%' }),
           el('td', { class: 'r', text: fmt(g(SN, y, x[0], 1), 1) }), el('td', { class: 'r', html: a != null && b != null ? '<b style="color:' + (a <= b ? '#2E8B57' : '#D9534F') + '">' + fmt(a, 1) + '</b>' : fmt(a, 1) }), el('td', { class: 'r', text: fmt(b, 1) })]); }))]));
-    // 5년 추이
-    panel('연령표준화 사망률 추이', ys[0] + '~' + y + '년 · 인구 10만 명당 · 낮을수록 좋음', lineChart(ys.map(function (v) { return v + '년'; }), [
+    panel('연령표준화 사망률 추이', ys[0] + '~' + y + '년 · 인구 10만 명당 · 낮을수록 좋음', [lineChart(ys.map(function (v) { return v + '년'; }), [
       { name: fullName(SN), color: '#1F6FD1', values: ys.map(function (v) { return g(SN, v, '0', 2); }), width: 3.5, labels: true },
       { name: '강원', color: '#C0602B', values: ys.map(function (v) { return g('강원', v, '0', 2); }), width: 2.5 },
-      { name: '전국', color: '#9AA7B8', values: ys.map(function (v) { return g('전국', v, '0', 2); }), width: 2.5, dash: '5 4' }], { fit: true, unit: '명', d: 1 }));
+      { name: '전국', color: '#9AA7B8', values: ys.map(function (v) { return g('전국', v, '0', 2); }), width: 2.5, dash: '5 4' }], { fit: true, unit: '명', d: 1 })].filter(Boolean));
   }
 
   // ---------- 흘러가기: 고른 화면만 정해진 간격으로 계속 돌려 보여 줌(새로 고침 뒤에도 이어서) ----------
@@ -3354,8 +3404,9 @@ function startApp() {
 
 
   // ---------- 최신 업데이트 알림: 탭·내용·최신 자료 교체 때(이용자 눈으로 쓴 말), 올린 날부터 7일 동안 열 때마다(자동 새로 고침 제외) ----------
-  var NEWS = { id: '2026-11-26f', day: '2026-11-26', at: '2026년 11월 26일(목) 11:00', by: '동해시 관리자', items: [
-    ['새 내용', '보건 및 의료 › 「사망 분석」', '2025년 사망자 수·사망률·사망원인 순위, 강원 시·군 비교', 'welfare:death'],
+  var NEWS = { id: '2026-11-26g', day: '2026-11-26', at: '2026년 11월 26일(목) 11:20', by: '동해시 관리자', items: [
+    ['새 내용', '보건 및 의료 › 「사망 분석」', '사망원인 순위·사망률(2025 확정), 올해 사망 신고, 시·군 비교', 'welfare:death'],
+    ['새 내용', '행정 › 「출생·사망 월별」', '올해 월별 출생·사망 신고와 18개 시·군 자연증감 순위', 'admin:vital'],
     ['화면', '휴대폰 가로 보기', '휴대폰을 가로로 돌리면 화면 크기에 딱 맞춰집니다', ''],
     ['최신 반영', '상하수도 · 최신 정보 반영', '10월 수돗물 수질검사·2026년 요금표로 교체', 'water:q'],
     ['새 메뉴', '4번 「항만」', '동해·묵호항 입출항 선박·품목별 물동량, 전국 항만 비교', 'port'],
@@ -3381,6 +3432,7 @@ function startApp() {
             if (t[0] === 'economy' && t[1]) ecoTab = t[1];
             if (t[0] === 'water' && t[1]) wtrTab = t[1];
             if (t[0] === 'welfare' && t[1]) welTab = t[1];
+            if (t[0] === 'admin' && t[1]) admTab = t[1];
             go(t[0]);
           } }));
           return el('li', {}, kids); })),
