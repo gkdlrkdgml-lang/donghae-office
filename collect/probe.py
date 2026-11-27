@@ -806,7 +806,19 @@ def status_probe():
     print('[ST] visit_last', L.get('visit_last'), '| vitalm', (L.get('vitalm') or {}).get('ym'), '| death', (L.get('death') or {}).get('years', [None])[-1:])
 
 
+def tasis_probe():
+    import sources
+    for ym in ['202611', '202610', '202609']:
+        try:
+            r = sources._tasis_map(ym, '00')
+            print('[TS]', ym, len(r) if r else 0)
+        except Exception as e:
+            print('[TS]', ym, 'err', e)
+
+
 def main():
+    if os.environ.get('PROBE_ONLY') == 'tasis':
+        return tasis_probe()
     if os.environ.get('PROBE_ONLY') == 'status':
         return status_probe()
     if os.environ.get('PROBE_ONLY') == 'visit':
