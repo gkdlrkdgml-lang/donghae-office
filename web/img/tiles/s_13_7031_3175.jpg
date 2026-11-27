@@ -1,0 +1,255 @@
+<!DOCTYPE HTML>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+<meta property="og:url" content="https://vworld.kr"/>
+<meta property="og:type" content="website"/>
+<meta property="og:title" content="브이월드"/>
+<meta property="og:description" content="국가가 보유하고 있는 공개 가능한 공간정보를 모든 국민이 자유롭게 활용할 수 있도록 다양한 방법을 제공합니다."/>
+<meta name="description" content="국가가 보유하고 있는 공개 가능한 공간정보를 모든 국민이 자유롭게 활용할 수 있도록 다양한 방법을 제공합니다."/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, minimum-scale=1.0, viewport-fit=cover">
+<meta name="naver-site-verification" content="5c96c74c3f5c7d3266c5172ebf24dba7b2a98446" />
+<meta name="robots" content="noindex" />
+<link rel="canonical" href="https://www.vworld.kr/v4po_main.do" /> 
+
+<title>브이월드</title>
+
+<!--[CSS]-->
+<link rel="preload" href="/fonts/S-CoreDream-4Regular.woff2" as="font" type="font/woff2" crossorigin>
+<!-- <link rel="stylesheet" href="/css/dtkmap/basic.css"/> -->
+<!-- <script src="//code.jquery.com/jquery-1.10.1.min.js"></script> -->
+<style type="text/css">
+@charset "utf-8";
+
+@font-face {
+    font-family: 'S-Core Dream';
+    src:local('S-Core Dream'), url('/fonts/S-CoreDream-4Regular.eot');
+    src:local('S-Core Dream'), url('/fonts/S-CoreDream-4Regular.eot?#iefix') format('embedded-opentype'),
+        url('/fonts/S-CoreDream-4Regular.woff2') format('woff2'),
+        url('/fonts/S-CoreDream-4Regular.woff') format('woff'),
+        url('/fonts/S-CoreDream-4Regular.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+* { padding: 0; margin: 0; border: 0; outline: 0; box-sizing: border-box; vertical-align: middle; }
+::before, ::after { box-sizing: border-box; }
+html { width: 100%; height: 100%; -webkit-text-size-adjust: none; }
+body { width: 100%; height: 100%; font: 400 16px/1.4 'S-Core Dream', 'Malgun Gothic', 'Dotum', sans-serif; word-break: keep-all; -webkit-overflow-scrolling: touch; }
+body::-webkit-scrollbar { width: 0; height: 0; }
+/* ERROR */
+.error { display: inline-flex; flex-direction: column; justify-content: center; align-items: center; width: 100%; height: 100%; }
+.error::before { content: ""; display: block; width: 100px; height: 100px; border-radius: 50%; background: var(--color-primary-tint10) url("alert.svg") center 50%/40px no-repeat; margin-bottom: 16px; }
+.error p { font-size: 0.6875rem; line-height: 1.8; text-align: center; }
+.error .pageTitle { color: var(--color-gray); letter-spacing: 0; margin-bottom: 8px; }
+.error .title { color: var(--color-gray); letter-spacing: 0; margin-bottom: 8px; }
+.error .btns { margin-top: 32px; }
+
+/* HEADING */
+h1.logo { position:relative; display: flex; align-items: stretch; height: 40px; color: var(--color-bk); font-size: 1.50rem; font-weight: 700;  letter-spacing: -1px; text-align: center; line-height: 1; white-space: nowrap; }
+h1.logo strong { display: inline-block; width: 186px; height: 100%; font-size: 0; background: url("../img/logo.png") 0 50%/contain no-repeat; }
+h1.logo a { display: flex; align-items: center; gap: 8px; width: 100%; height: 100%; color: inherit; text-decoration: none; justify-content: center;}
+
+h1 { position:relative; display: flex; align-items: stretch; height: 40px; color: var(--color-bk); font-size: 1.75rem; font-weight: 700;  letter-spacing: -1px; text-align: center; line-height: 1; white-space: nowrap; }
+h1 a { display: flex; align-items: center; gap: 8px; width: 100%; height: 100%; color: inherit; text-decoration: none; justify-content: center;}
+
+
+
+/******************** COMMON ********************/
+.container { position: relative; display: flex; flex-direction: column; width: 100%; height: 100%; font: 400 16px/1.4 'S-Core Dream', 'Malgun Gothic', 'Dotum', sans-serif; background-color: var(--color-gray-tint05); }
+.container :focus { outline: var(--style-outline); }
+.container mark { box-shadow: 0 -8px var(--color-marker) inset; vertical-align: baseline; }
+.container mark.bgRed { box-shadow: 0 -8px var(--color-marker-red) inset; vertical-align: baseline; }
+/* DATA */
+.data { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px 16px; }
+.data b { flex: none; display: inline-block; color: #fff; font-size: 12px; border-radius: 4px; background-color: var(--color-gray); padding: 4px 8px; }
+.data b.primary { background-color: var(--color-primary); }
+.data p { display: inline-block; font-size: 12px; font-weight: 500; }
+.data p.primary { color: var(--color-primary); font-weight: 600; }
+.data > li { flex: 1; position: relative; display: inline-flex; align-items: center; gap: 8px; font-size: 13px; }
+.data > li.full { flex: none; width: 100%; }
+.data > li.half { flex: none; width: calc(50% - 8px); }
+
+.data > li.bd { border: 1px solid var(--color-gray-tint10); border-radius: 4px; padding: 8px; }
+.data > li.bg { border-radius: 4px; background-color: var(--color-gray-tint05); padding: 8px; }
+.data + .data { margin-top: 16px; }
+.data.bg { border-radius: 4px; background-color: var(--color-primary-tint05); padding: 8px; }
+.data.br { border-radius: 4px; padding: 8px; width: 720px;}
+	.tt{margin-left:10px;font-size: 22px !important; text-align: center; width: 100%;}
+	.tf{margin-left:10px;font-size: 14px !important; text-align: left; width: 100%;}
+	p.tn{    flex: none;
+	    display: inline-flex;
+	    align-items: flex-start;
+	    gap: 4px;
+	    color: #f26522;
+	    font-size: 16px;
+	    font-weight: 500;
+	    line-height: 2;}
+	p.tn::before{content: "※";}
+	.sn{font-size: 24px;}
+	b.primary{font-size: 22px;}
+	.bg{ width:720px;}
+	p.ss{font-size: 20px;}
+	
+	
+/* VAR */
+:root {
+	
+	--style-outline: 1px dashed #f26522;
+	--style-shadow: 0 2px 4px rgba(0,0,0,0.3);
+	
+	--color-point: #f26522;
+	--color-marker: rgba(0,255,255,0.3);
+	
+	/* Primary #0072bc */
+	--color-primary: rgb(0,84,166);
+	--color-primary-tint05: rgba(11,94,215,0.05);
+	--color-primary-tint10: rgba(11,94,215,0.1);
+	--color-primary-tint20: rgba(11,94,215,0.2);
+	--color-primary-tint30: rgba(11,94,215,0.3);
+	--color-primary-tint40: rgba(11,94,215,0.4);
+	--color-primary-tint50: rgba(11,94,215,0.5);
+	--color-primary-tint60: rgba(11,94,215,0.6);
+	--color-primary-tint70: rgba(11,94,215,0.7);
+	--color-primary-tint80: rgba(11,94,215,0.8);
+	--color-primary-tint90: rgba(11,94,215,0.9);
+	
+	/* Gray */
+	--color-gray: #2e3643;
+	--color-gray-tint05: rgba(46,54,67,0.05);
+	--color-gray-tint10: rgba(46,54,67,0.1);
+	--color-gray-tint20: rgba(46,54,67,0.2);
+	--color-gray-tint30: rgba(46,54,67,0.3);
+	--color-gray-tint40: rgba(46,54,67,0.4);
+	--color-gray-tint50: rgba(46,54,67,0.5);
+	--color-gray-tint60: rgba(46,54,67,0.6);
+	--color-gray-tint70: rgba(46,54,67,0.7);
+	--color-gray-tint80: rgba(46,54,67,0.8);
+	--color-gray-tint90: rgba(46,54,67,0.9);
+	
+	/* 3차원분석 추가*/
+	--color-marker-red: rgba(255,0,0,0.3);
+
+}
+@media all and (max-width: 960px)  {
+	* {font-size: 12px;}
+	p{font-size: 12px; }
+	.sn{font-size: 12px;}
+ 	b.primary{font-size: 12px;}
+	.tt{margin-left:0;font-size: 12px !important;}
+	.bg{ width:100%;}
+	p.tn{    flex: none;
+	    display: inline-flex;
+	    align-items: flex-start;
+	    gap: 4px;
+	    color: #f26522;
+	    font-size: 12px;
+	    font-weight: 500;
+	    line-height: 2;}
+	p.ss{font-size: 12px;}
+	
+	.button.button--sacnite {
+  width: 40px !important;
+  height: 40px !important;
+  }
+	}
+	
+	
+.button {
+  min-width: 150px;
+  max-width: 250px;
+  display: block;
+  margin: 1em;
+  padding: 1em 2em;
+  border: none;
+  background:  var(--color-primary);
+  color: var(--color-primary);
+  vertical-align: middle;
+  position: relative;
+  z-index: 1;
+  -webkit-backface-visibility: hidden;
+  -moz-osx-font-smoothing: grayscale;
+}
+/* Sacnite */ .button.button--sacnite {
+  width: 60px;
+  height: 60px;
+  min-width: 0;
+  padding: 0;
+  color: #fff;
+  -webkit-transition: color 0.3s;
+  transition: color 0.3s;
+  border-radius: 50%;
+}
+.button--scanite.button--round-l {
+  border-radius: 50%;
+}
+
+</style>
+<script type="text/javascript">
+
+function fn_go_back(){
+	history.go(-1);
+}
+
+</script>
+</head>
+
+<body>
+<div class="wrapper header_area" style="top:15%; position:relative;">
+<!-- 		<div class="error"></div> -->
+<div style="justify-content: center;display: flex;">
+<button class="button button--sacnite button--round-l"><span style="font-size: 2rem; font-weight: 700;">i</span></button> 
+</div>
+		<h1 ><a href="#" title="메인화면으로 이동"><strong></strong> 브이월드 서비스 중단안내</a></h1>
+<!-- 		<h1 class="logo"><a href="#" title="메인화면으로 이동"><strong>V-world</strong>디지털트윈국토</a></h1> -->
+			<p class="sn" style="text-align: center; padding-top: 40px">브이월드의 <strong  style ="color: #f26522; display: contents;">서비스 안정화 및 점검</strong>으로 인하여</p>
+			<p class="sn" style="text-align: center; line-height: 2em; ">아래와 같이 <strong  style ="color: #f26522;display: contents;">서비스가 중지될 예정이오니</strong> 이용에 참고하시기 바랍니다.</p>
+			<p class="ss" style="text-align: center; margin-bottom: 30px;">시스템 이용에 불편을 드려 대단히 죄송합니다.</p>
+</div>
+
+	<div class="wrapper container" id="container" style="top:15%; height:62%;">
+
+		<div class="content" style="justify-content: center;display: inline-flex;">
+			<ul class="data bg" style="top: 5%; position: absolute;">
+				<li class="full"><b class="primary">일&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;시</b>
+					<p class="primary tt">2026년 11월 27일(금) 18:00 ~ 11월 28일(토) 00:00</p>
+				</li>
+				<li class="full"><b class="primary">사&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;유</b>
+					<p class="primary tt" style="line-height: 0.5em;letter-spacing:-2px">브이월드 서비스 안정화를 위한 시스템 점검<strong  style ="color: #f26522;display: contents;">(모든 서비스 중단)</strong></p>
+				</li>
+<!-- 				<li class="full"><b class="primary" style="font-size: 22px;">영 향 도</b> -->
+<!-- 					<p class="primary tt">지도, 포털, API등 브이월드 시스템 전체 중지</p> -->
+<!-- 				</li> -->
+				<li style="width: 100%;justify-content: center;text-align: center;">
+					<p class="tn">작업 진행 상황에 따라 작업 시간은 변동될 수 있습니다.</p>
+				</li>
+
+			</ul>
+			<ul class="data br" style="top: 35%; position: absolute;">
+				<li style="width: 100%;">
+					<p class="tn">서비스 중단시 아래 서비스들을 이용해 주세요.</p>
+				</li>
+				<li class="full">
+					<p class="primary tf">- K-Geop플랫폼(<a style ='color: var(--color-primary);'href="https://kgeop.go.kr">https://kgeop.go.kr/</a>)</p>
+				</li>
+				<li class="full">
+					<p class="primary tf">- 국토정보플랫폼(<a style ='color: var(--color-primary);'href="https://map.ngii.go.kr">https://map.ngii.go.kr/</a>)</p>
+				</li>
+				<li class="full">
+					<p class="primary tf">- 공공데이터포털(<a style ='color: var(--color-primary);'href="https://https://www.data.go.kr">https://www.data.go.kr</a>)</p>
+				</li>
+				<li class="full">
+					<p class="primary tf">- 부동산거래 전자계약시스템 (<a style ='color: var(--color-primary);'href="https://irts.molit.go.kr/usr/cmn/main/home/RtecsLreaSearch.do">https://irts.molit.go.kr/usr/cmn/main/home/RtecsLreaSearch.do</a>)</p>
+				</li>
+			</ul>
+		</div>
+		<div style="display:inline-block; justify-content: center; position: absolute; left: 36%;">
+					<p class="tn" style ="color:#000; font-weight: 500;">문의사항은 브이월드 고객센터(1661-0115)로 문의해 주시기 바랍니다.</p>
+		</div>
+	</div>
+</div> <!-- #wrap -->
+
+</body>
+</html>
