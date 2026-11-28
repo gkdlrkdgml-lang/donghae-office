@@ -58,12 +58,23 @@ def report(items, extra=''):
 
 
 DIGEST = '📬 대시보드 매일 아침 갱신 소식'
-SKIP = {'weather', 'air', 'cnctr', 'wq', 'wx_year', 'air_year', 'bus', 'parking', 'ev', 'taxi', 'events', 'festivals', 'places', 'licenses'}   # 실시간·매일 조금씩 바뀌는 것은 뺌
+SKIP = {'rail', 'weather', 'air', 'cnctr', 'wq', 'wx_year', 'air_year', 'bus', 'parking', 'ev', 'taxi', 'events', 'festivals', 'places', 'licenses'}   # 실시간·매일 조금씩 바뀌는 것은 뺌
 NAME = {'population': '인구 현황', 'vital': '출생·사망 신고', 'youth': '청년·고령 인구', 'migration': '전입·전출', 'dong_population': '행정동 인구', 'age': '연령별 인구',
         'stores': '상가 신규·폐업', 'cars': '자동차 등록', 'power': '전력 사용', 'demand': '전력 수요', 'tasis': '교통 통계', 'employ': '고용', 'economy': '지역 경제(GRDP)',
         'eco_ind': '경제 지표', 'finance': '예산', 'finance_final': '결산', 'bokjiro': '복지 서비스', 'social': '복지 시설·수급', 'visitors': '관광 방문자', 'attr': '관광지 방문',
         'water': '상하수도 통계', 'ordin': '조례', 'hospitals': '의료기관', 'tsafe': '교통안전', 'death': '사망 분석', 'apt': '아파트 거래', 'port': '항만', 'rail': '철도',
         'waterq': '수돗물 수질검사', 'waterfee': '상하수도 요금'}
+
+
+def short(v, k=None):
+    """「2026-10-30까지 …」, 「202610 기준 18개 시·군」 → 날짜·기간만 짧게."""
+    import re
+    m = re.search(r'(20\d\d)[-.]?(\d\d)[-.]?(\d\d)?', str(v))
+    if not m:
+        return str(v)[:30]
+    if k == 'employ':   # 지역별고용조사: 01 상반기, 02 하반기
+        return '%s년 %s반기' % (m.group(1), '상' if m.group(2) == '01' else '하')
+    return '%s년 %d월' % (m.group(1), int(m.group(2))) + (' %d일' % int(m.group(3)) if m.group(3) and len(m.group(0)) > 6 else '')
 
 
 def digest():
@@ -72,7 +83,7 @@ def digest():
         return
     d = json.load(open(p, encoding='utf-8'))
     items = [x for x in d['items'] if x[0] not in SKIP]
-    lines = ['- **%s**: %s → %s' % (NAME.get(k, k), a or '-', b) for k, a, b in items]
+    lines = ['- **%s**: %s → %s' % (NAME.get(k, k), short(a, k) if a else '-', short(b, k)) for k, a, b in items]
     body = '### %s 아침 · 대시보드에서 바뀐 자료\n\n' % d['date'] + ('\n'.join(lines) if lines else '어제 아침 이후 새로 바뀐 자료는 없습니다.') + \
         '\n\n<sub>날씨·대기·주차 등 실시간 항목은 뺐습니다 · https://gkdlrkdgml-lang.github.io/donghae-office/</sub>'
     print(body)
@@ -80,9 +91,18 @@ def digest():
         sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
         import kakao
         d8 = d['date'][5:].replace('-', '/')
-        kt = '📬 %s 대시보드 갱신\n' % d8 + ('\n'.join('· %s → %s' % (NAME.get(k, k), b) for k, a, b in items) if items else '어제 이후 바뀐 자료 없음')
-        if kakao.send(kt):
-            print('카카오 보냄')
+        lines = ['· %s → %s' % (NAME.get(k, k), short(b, k)) for k, a, b in items] or ['어제 이후 바뀐 자료 없음']
+        msgs, cur = [], '📬 %s 대시보드 갱신' % d8
+        for ln in lines:   # 카톡 글자 수 제한(200자) → 넘치면 나눠 보냄
+            if len(cur) + 1 + len(ln) > 190:
+                msgs.append(cur); cur = '(이어서)'
+            cur += '\n' + ln
+        msgs.append(cur)
+        tok = None
+        for m in msgs:
+            tok = tok or kakao.access()
+            kakao.send(m, tok)
+        print('카카오 보냄 %d통' % len(msgs))
     except Exception as e:  # noqa: BLE001
         print('카카오 실패: %s' % e)
     if not os.environ.get('GH_TOKEN'):
